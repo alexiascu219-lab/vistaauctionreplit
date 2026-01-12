@@ -72,6 +72,13 @@ const HRPortalContent = () => {
     const TEMPLATE_ID = 'template_9hirkpm';
     const PUBLIC_KEY = 'dLGF3GCwXh_sPPMei';
 
+    // Initialize EmailJS
+    useEffect(() => {
+        if (PUBLIC_KEY && PUBLIC_KEY !== 'public_key_placeholder') {
+            emailjs.init(PUBLIC_KEY);
+        }
+    }, []);
+
     // Load Data
     useEffect(() => {
         if (isAuthenticated) {
@@ -151,7 +158,7 @@ const HRPortalContent = () => {
         localStorage.setItem('vista_applications', JSON.stringify(updatedApps));
 
         const app = applications.find(a => a.id === id);
-        if (app && (newStatus === 'Accepted' || newStatus === 'Rejected')) {
+        if (app && (newStatus === 'Accepted' || newStatus === 'Rejected' || newStatus === 'Hired')) {
             await sendEmail(app, newStatus);
         }
     };
@@ -165,14 +172,17 @@ const HRPortalContent = () => {
                 await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
                     to_name: app.fullName,
                     to_email: app.email,
-                    message: status === 'Accepted' ? 'Congratulations! You have been accepted.' : 'Thank you for your application.',
+                    message: (status === 'Accepted' || status === 'Hired') ? 'Congratulations! You have been accepted for the position.' : 'Thank you for your interest. We have decided to move forward with other candidates at this time.',
                     status: status
-                }, PUBLIC_KEY);
+                }, PUBLIC_KEY); // Passing PUBLIC_KEY directly as 4th arg for older emailjs-com support
                 setNotification({ message: `Email successfully sent to ${app.fullName}`, type: 'success' });
             }
         } catch (error) {
-            console.error('Email failed:', error);
-            setNotification({ message: 'Failed to send email.', type: 'error' });
+            console.error('Email failed with details:', error);
+            // EmailJS errors often look like {status: 400, text: "..."}
+            const details = typeof error === 'object' ? JSON.stringify(error) : error;
+            setNotification({ message: `Email Failed: ${error?.text || 'Check console (F12) for details'}`, type: 'error' });
+            alert(`EmailJS Error: ${error?.text || 'Unknown Error'}. \n\nPlease verify your Public Key and Service ID are correct in the EmailJS dashboard.`);
         }
     };
 
