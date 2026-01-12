@@ -68,9 +68,9 @@ const HRPortalContent = () => {
     const [interviewDate, setInterviewDate] = useState('');
 
     // EmailJS Configuration
-    const SERVICE_ID = 'service_placeholder';
-    const TEMPLATE_ID = 'template_placeholder';
-    const PUBLIC_KEY = 'public_key_placeholder';
+    const SERVICE_ID = 'service_2l8vhyj';
+    const TEMPLATE_ID = 'template_9hirkpm';
+    const PUBLIC_KEY = 'dLGF3GCwXh_sPPMei';
 
     // Load Data
     useEffect(() => {
