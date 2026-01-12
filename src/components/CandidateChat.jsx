@@ -26,38 +26,59 @@ const CandidateChat = () => {
 
         // Simulated Bot Response
         setTimeout(() => {
-            let botText = "I'm sorry, I'm still learning! For real inquiries, please contact our HR team at (980) 220–2564.";
+            let botText = "I'm sorry, I didn't quite catch that. I'm the Vista Careers Concierge—I can help you with application status, job roles, pay, or our location. What can I help you find?";
             const lowerText = text.toLowerCase();
 
-            // Status Check Logic
-            if (lowerText.includes('status') || lowerText.includes('track')) {
+            // Broad intent matching
+            const intents = {
+                status: lowerText.includes('status') || lowerText.includes('track') || lowerText.includes('check'),
+                jobs: lowerText.includes('job') || lowerText.includes('role') || lowerText.includes('work') || lowerText.includes('position') || lowerText.includes('openings'),
+                pay: lowerText.includes('pay') || lowerText.includes('salary') || lowerText.includes('earn') || lowerText.includes('wage') || lowerText.includes('money'),
+                location: lowerText.includes('location') || lowerText.includes('address') || lowerText.includes('where') || lowerText.includes('place') || lowerText.includes('city'),
+                culture: lowerText.includes('culture') || lowerText.includes('environment') || lowerText.includes('like to work') || lowerText.includes('benefits'),
+                interview: lowerText.includes('interview') || lowerText.includes('process') || lowerText.includes('hiring') || lowerText.includes('steps')
+            };
+
+            if (intents.status) {
                 const storedApps = localStorage.getItem('vista_applications');
                 if (storedApps) {
                     const apps = JSON.parse(storedApps);
                     if (apps.length > 0) {
                         const lastApp = apps[apps.length - 1];
-                        botText = `I found an application for ${lastApp.firstName} ${lastApp.lastName} for the ${lastApp.position} role. Current Status: ${lastApp.status}.`;
+                        botText = `I've found your recent application, ${lastApp.fullName}! You applied for the ${lastApp.jobType} position (${lastApp.preferredShift}). Your current status is: **${lastApp.status}**. We usually review applications within 48 hours!`;
                     } else {
-                        botText = "I couldn't find any recent applications. You can use the 'Check Status' page for a more detailed search!";
+                        botText = "I couldn't find an application associated with this session. Make sure you've submitted your form! You can also check the 'Check Status' page for a deeper search.";
                     }
                 } else {
-                    botText = "You haven't submitted any applications from this browser yet. Use the 'Apply' link above to get started!";
+                    botText = "It looks like you haven't started an application yet. No worries! Just click 'Apply Now' and we can get you into the system in under 5 minutes.";
                 }
             }
-            // Job Matching Logic
-            else if (lowerText.includes('job') || lowerText.includes('role') || lowerText.includes('work')) {
+            else if (intents.jobs) {
                 if (lowerText.includes('warehouse') || lowerText.includes('physical')) {
-                    botText = "Based on your interest in physical work, I'd recommend our Warehouse Associate or Stacking roles. They are the heart of VISTA!";
-                } else if (lowerText.includes('customer') || lowerText.includes('people') || lowerText.includes('talk')) {
-                    botText = "If you enjoy working with people, our Customer Service or Pickups roles would be a great fit for you!";
-                } else if (lowerText.includes('tech') || lowerText.includes('detail')) {
-                    botText = "For someone with an eye for detail, the Quality Inspector or Scanning positions are perfect!";
+                    botText = "For physical roles, we have Warehouse Associate and Stacking roles. These are great for staying active and being part of the 'heavy lifting' that makes Vista work!";
+                } else if (lowerText.includes('customer') || lowerText.includes('service') || lowerText.includes('people')) {
+                    botText = "Love talking to people? Our Customer Service and Pickup teams are the face of Vista. You'll be helping bidders and ensuring a great pickup experience.";
+                } else if (lowerText.includes('scanning') || lowerText.includes('inventory') || lowerText.includes('tech')) {
+                    botText = "If you're tech-savvy or detail-oriented, our Scanning and Quality Control roles are perfect. You'll use our inventory systems to track every item that comes through.";
                 } else {
-                    botText = "We have many roles available: Scanning, Warehouse, Pickups, Customer Service, Stacking, and Conveyor. Which area sounds most interesting to you?";
+                    botText = "We're currently hiring for: \n• **Warehouse & Stacking** (Physical)\n• **Scanning & Inventory** (Detail-oriented)\n• **Customer Service** (Social)\n• **Conveyor Ops** (Fast-paced)\n\nWhich one sounds like you?";
                 }
             }
-            else if (lowerText.includes('location')) botText = "We are located in Charlotte, NC. Our main warehouse is near the airport!";
-            else if (lowerText.includes('pay') || lowerText.includes('salary')) botText = "Pay varies by position, but we offer competitive rates starting at $18/hr for most roles.";
+            else if (intents.pay) {
+                botText = "At Vista, we believe in competitive pay. Most of our roles start between **$16 - $19/hr** depending on experience and shift. We also offer shift differentials for evening crews!";
+            }
+            else if (intents.location) {
+                botText = "We have multiple locations! Our primary centers are on **Sardis Rd in Charlotte, NC** and our facility in **Monroe, NC**. Which location are you interested in?";
+            }
+            else if (intents.culture) {
+                botText = "The 'Vista Crew' is all about energy and excellence. It's fast-paced, but we favor a supportive environment. We offer flexible shifts (Morning/Evening) and a path to management for those who show initiative!";
+            }
+            else if (intents.interview) {
+                botText = "Our process is simple: \n1. **Apply Online** (5 min)\n2. **Initial Review** (1-2 days)\n3. **On-site Interview** (30 min)\n4. **Offer & Background Check**\n\nWe move fast—often hiring within the same week!";
+            }
+            else if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
+                botText = "Hey there! I'm the Vista Careers Concierge. I can help you find a role, check your status, or tell you about our culture. What's on your mind?";
+            }
 
             setMessages(prev => [...prev, { id: Date.now() + 1, type: 'bot', text: botText, time: new Date() }]);
             setIsTyping(false);
@@ -105,8 +126,8 @@ const CandidateChat = () => {
                         {messages.map(msg => (
                             <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                                 <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.type === 'user'
-                                        ? 'bg-orange-600 text-white rounded-tr-none font-medium'
-                                        : 'bg-white text-gray-700 rounded-tl-none border border-gray-100'
+                                    ? 'bg-orange-600 text-white rounded-tr-none font-medium'
+                                    : 'bg-white text-gray-700 rounded-tl-none border border-gray-100'
                                     }`}>
                                     {msg.text}
                                 </div>
