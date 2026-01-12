@@ -157,8 +157,16 @@ const HRPortalContent = () => {
         setApplications(updatedApps);
         localStorage.setItem('vista_applications', JSON.stringify(updatedApps));
 
-        const app = applications.find(a => a.id === id);
+        // Use the updated array to find the app to ensure we have the latest version
+        const app = updatedApps.find(a => a.id === id);
+
         if (app && (newStatus === 'Accepted' || newStatus === 'Rejected' || newStatus === 'Hired')) {
+            if (!app.email) {
+                console.error('CRITICAL: Cannot send email. Applicant has no email address associated with their record.');
+                setNotification({ message: 'Error: This applicant has no email address on file.', type: 'error' });
+                alert(`Error: Cannot email ${app.fullName} because their email address is missing from the record. \n\nThis can happen with older data. Please delete this test application and submit a new one via the form.`);
+                return;
+            }
             await sendEmail(app, newStatus);
         }
     };
