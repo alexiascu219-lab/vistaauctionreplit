@@ -179,8 +179,11 @@ const HRPortalContent = () => {
             } else {
                 await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
                     to_name: app.fullName,
-                    to_email: app.email,
-                    message: (status === 'Accepted' || status === 'Hired') ? 'Congratulations! You have been accepted for the position.' : 'Thank you for your interest. We have decided to move forward with other candidates at this time.',
+                    message: status === 'Accepted'
+                        ? 'Congratulations! You have been selected for an INTERVIEW. Please visit our website and check your "Application Status" to view your scheduled time or request a different date.'
+                        : status === 'Hired'
+                            ? 'Congratulations! You have been officially HIRED at Vista Auction. We are excited to have you on the team!'
+                            : 'Thank you for your interest. We have decided to move forward with other candidates at this time.',
                     status: status
                 }, PUBLIC_KEY); // Passing PUBLIC_KEY directly as 4th arg for older emailjs-com support
                 setNotification({ message: `Email successfully sent to ${app.fullName}`, type: 'success' });
