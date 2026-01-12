@@ -179,6 +179,7 @@ const HRPortalContent = () => {
             } else {
                 await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
                     to_name: app.fullName,
+                    to_email: app.email,
                     message: status === 'Accepted'
                         ? 'Congratulations! You have been selected for an INTERVIEW. Please visit our website and check your "Application Status" to view your scheduled time or request a different date.'
                         : status === 'Hired'
