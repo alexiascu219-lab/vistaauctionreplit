@@ -17,7 +17,7 @@ const Hero = () => {
                         <span className="text-primary font-bold tracking-wider text-sm">JOIN OUR TEAM</span>
                     </div>
 
-                    <h1 className="text-4xl md:text-6xl font-serif text-white leading-tight mb-8">
+                    <h1 className="text-4xl md:text-6xl font-display text-white leading-tight mb-8">
                         We're looking for dedicated individuals
                     </h1>
 
