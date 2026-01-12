@@ -202,7 +202,7 @@ const HRPortalContent = () => {
     if (!isAuthenticated) {
         return (
             <div className="min-h-screen bg-slate-950 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/src/assets/hero-shelves.jpg')] bg-cover bg-center opacity-10"></div>
+                <div className="absolute inset-0 bg-[url('/assets/hero-shelves.jpg')] bg-cover bg-center opacity-10"></div>
                 <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 to-slate-950/90"></div>
                 <Navbar />
                 <div className="pt-40 flex items-center justify-center px-4 relative z-10">

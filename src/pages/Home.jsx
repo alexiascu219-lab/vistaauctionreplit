@@ -21,32 +21,32 @@ const Home = () => {
 
     const features = [
         {
-            image: "/src/assets/role-scanning.png",
+            image: "/assets/role-scanning.png",
             title: "Scanning",
             description: "Precision in every scan. Ensure inventory accuracy using state-of-the-art handheld devices."
         },
         {
-            image: "/src/assets/warehouse.png",
+            image: "/assets/warehouse.png",
             title: "Warehouse",
             description: "The backbone of our operations. Maintain safety and organization in our fast-paced facility."
         },
         {
-            image: "/src/assets/role-pickups.png",
+            image: "/assets/role-pickups.png",
             title: "Pickups",
             description: "Connect with customers. Ensure orders are ready and handed off with a smile."
         },
         {
-            image: "/src/assets/role-customer-service.png",
+            image: "/assets/role-customer-service.png",
             title: "Customer Service",
             description: "Be the voice of Vista. Resolve inquiries and provide exceptional support to our bidders."
         },
         {
-            image: "/src/assets/role-stacking.png",
+            image: "/assets/role-stacking.png",
             title: "Stacking",
             description: "Master the art of organization. Safely stack and stage products for efficient processing."
         },
         {
-            image: "/src/assets/role-conveyor.png",
+            image: "/assets/role-conveyor.png",
             title: "Conveyor",
             description: "Keep things moving. Monitor and manage the flow of goods on our automated lines."
         }
@@ -62,7 +62,7 @@ const Home = () => {
             {/* Hero Section */}
             <div className="relative min-h-screen flex flex-col items-center justify-center text-center text-white overflow-hidden pt-32 pb-20">
                 <div className="absolute inset-0">
-                    <img src="/src/assets/hero-shelves.jpg" alt="Vista Auction Logistics" className="w-full h-full object-cover transform scale-105 animate-subtle-zoom" />
+                    <img src="/assets/hero-shelves.jpg" alt="Vista Auction Logistics" className="w-full h-full object-cover transform scale-105 animate-subtle-zoom" />
                     <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/70 to-background"></div>
                 </div>
 
@@ -128,7 +128,7 @@ const Home = () => {
                                 <div className="absolute -inset-4 bg-slate-500/10 rounded-[3rem] blur-2xl"></div>
                                 <div className="relative rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white group">
                                     <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity z-10"></div>
-                                    <img src="/src/assets/vista-storefront.jpg" alt="Vista Auction Teamwork" className="w-full h-auto transform group-hover:scale-105 transition-transform duration-700" />
+                                    <img src="/assets/vista-storefront.jpg" alt="Vista Auction Teamwork" className="w-full h-auto transform group-hover:scale-105 transition-transform duration-700" />
                                 </div>
                             </div>
                         </div>

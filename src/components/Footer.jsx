@@ -10,7 +10,7 @@ const Footer = () => {
             <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
                     <div className="space-y-8">
-                        <img src="/src/assets/vista-logo-full.png" alt="Vista Auction" className="h-16 object-contain drop-shadow-md" />
+                        <img src="/assets/vista-logo-full.png" alt="Vista Auction" className="h-16 object-contain drop-shadow-md" />
                         <p className="text-gray-500 font-medium leading-relaxed text-sm">
                             Redefining the auction experience with technology, precision, and passion. Join us in building the future of logistics.
                         </p>

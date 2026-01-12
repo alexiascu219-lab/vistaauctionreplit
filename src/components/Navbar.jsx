@@ -24,7 +24,7 @@ const Navbar = () => {
                 <div className="flex justify-between items-center h-24">
                     <div className="flex-shrink-0">
                         <Link to="/" className="flex items-center gap-4 group">
-                            <img src="/src/assets/logo-tag.png" alt="Vista Auction" className="h-14 w-auto transform transition-transform group-hover:scale-105" />
+                            <img src="/assets/logo-tag.png" alt="Vista Auction" className="h-14 w-auto transform transition-transform group-hover:scale-105" />
                             <div className="flex flex-col">
                                 <span className="font-black text-2xl text-gray-900 leading-none tracking-tight font-display">{brandText}</span>
                                 <span className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-black mt-0.5">Vista Auction</span>

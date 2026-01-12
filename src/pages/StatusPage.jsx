@@ -51,7 +51,7 @@ const StatusPage = () => {
                 {/* Hero Background Section */}
                 <div className="absolute top-0 left-0 right-0 h-[500px] overflow-hidden">
                     <img
-                        src="/src/assets/hero-warehouse.png"
+                        src="/assets/hero-warehouse.png"
                         alt="Hero background"
                         className="w-full h-full object-cover opacity-20 filter blur-sm transform scale-110"
                     />
