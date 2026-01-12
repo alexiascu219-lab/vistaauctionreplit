@@ -106,11 +106,12 @@ const HRPortalContent = () => {
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             result = result.filter(app =>
-                (app.firstName || '').toLowerCase().includes(term) ||
-                (app.lastName || '').toLowerCase().includes(term) ||
+                (app.fullName || '').toLowerCase().includes(term) ||
                 (app.email || '').toLowerCase().includes(term) ||
                 (app.position || '').toLowerCase().includes(term) ||
-                (app.experience || '').toLowerCase().includes(term)
+                (app.jobType || '').toLowerCase().includes(term) ||
+                (app.experience || '').toLowerCase().includes(term) ||
+                (app.specificRole || '').toLowerCase().includes(term)
             );
         }
         setFilteredApps(result);
@@ -159,15 +160,15 @@ const HRPortalContent = () => {
         try {
             if (SERVICE_ID === 'service_placeholder') {
                 await new Promise(resolve => setTimeout(resolve, 1500));
-                setNotification({ message: `(Simulation) Email sent to ${app.firstName}!`, type: 'success' });
+                setNotification({ message: `(Simulation) Email sent to ${app.fullName}!`, type: 'success' });
             } else {
                 await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
-                    to_name: app.firstName,
+                    to_name: app.fullName,
                     to_email: app.email,
                     message: status === 'Accepted' ? 'Congratulations! You have been accepted.' : 'Thank you for your application.',
                     status: status
                 }, PUBLIC_KEY);
-                setNotification({ message: `Email successfully sent to ${app.firstName}`, type: 'success' });
+                setNotification({ message: `Email successfully sent to ${app.fullName}`, type: 'success' });
             }
         } catch (error) {
             console.error('Email failed:', error);
@@ -176,9 +177,21 @@ const HRPortalContent = () => {
     };
 
     const exportCSV = () => {
-        const headers = ["ID", "First Name", "Last Name", "Email", "Phone", "Position", "Status", "Date", "Notes"];
+        const headers = ["ID", "Full Name", "Email", "Phone", "Work Auth", "Auth Expiry", "Age 16+", "Age 18+", "Job Type", "Shift", "Location", "Status", "Date"];
         const rows = applications.map(app => [
-            app.id, app.firstName, app.lastName, app.email, app.phone, app.position, app.status, new Date(app.submittedDate).toLocaleDateString(), `"${(app.notes || '').replace(/"/g, '""')}"`
+            app.id,
+            app.fullName,
+            app.email,
+            app.phone,
+            app.workAuth,
+            app.authExpiry || 'N/A',
+            app.is16OrOlder,
+            app.is18OrOlder,
+            app.jobType,
+            app.preferredShift,
+            app.preferredLocation,
+            app.status,
+            new Date(app.submittedDate).toLocaleDateString()
         ]);
         const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -326,15 +339,15 @@ const HRPortalContent = () => {
                                     <div key={app.id} className="glass-card p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group hover:border-orange-200 transition-all cursor-pointer" onClick={() => setSelectedApp(app)}>
                                         <div className="flex items-center gap-4">
                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-lg ${app.status === 'Accepted' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : app.status === 'Rejected' ? 'bg-gradient-to-br from-red-500 to-rose-600' : app.status === 'Interviewing' ? 'bg-gradient-to-br from-orange-400 to-amber-500' : 'bg-gradient-to-br from-gray-400 to-slate-500'}`}>
-                                                {app.firstName[0]}
+                                                {app.fullName[0]}
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <h3 className="font-bold text-lg text-gray-800 group-hover:text-orange-600 transition-colors">{app.firstName} {app.lastName}</h3>
+                                                    <h3 className="font-bold text-lg text-gray-800 group-hover:text-orange-600 transition-colors">{app.fullName}</h3>
                                                     {app.notes && <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]" title="Has internal notes"></div>}
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">{app.position}</p>
+                                                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">{app.jobType} • {app.preferredShift}</p>
                                                     <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100/50">
                                                         {calculateMatchScore(app)}% Match
                                                     </span>
@@ -379,10 +392,10 @@ const HRPortalContent = () => {
                                             {apps.map(app => (
                                                 <div key={app.id} onClick={() => setSelectedApp(app)} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all">
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <h4 className="font-bold text-gray-800 text-sm">{app.firstName} {app.lastName}</h4>
+                                                        <h4 className="font-bold text-gray-800 text-sm">{app.fullName}</h4>
                                                         {app.resumeData && <FileText size={14} className="text-orange-400" />}
                                                     </div>
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 truncate">{app.position}</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 truncate">{app.jobType} • {app.preferredShift}</p>
                                                     <div className="text-[10px] font-bold text-gray-300 text-right uppercase tracking-widest">{new Date(app.submittedDate).toLocaleDateString()}</div>
                                                 </div>
                                             ))}
@@ -397,7 +410,7 @@ const HRPortalContent = () => {
                 )}
 
                 {/* MODAL */}
-                <Modal isOpen={!!selectedApp} onClose={() => { setSelectedApp(null); setIsScheduling(false); setInterviewDate(''); }} title={`${selectedApp?.firstName} ${selectedApp?.lastName}`}>
+                <Modal isOpen={!!selectedApp} onClose={() => { setSelectedApp(null); setIsScheduling(false); setInterviewDate(''); }} title={selectedApp?.fullName}>
                     {selectedApp && (
                         <div className="space-y-8">
                             {isScheduling ? (
@@ -452,14 +465,35 @@ const HRPortalContent = () => {
                                             <div className="space-y-3">
                                                 <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Email</span> <span className="font-bold text-gray-700">{selectedApp.email}</span></p>
                                                 <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Phone</span> <span className="font-bold text-gray-700">{selectedApp.phone || 'N/A'}</span></p>
+                                                <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Location Pref</span> <span className="font-bold text-gray-700">{selectedApp.preferredLocation}</span></p>
                                             </div>
                                         </div>
                                         <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
                                             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Job Details</h4>
                                             <div className="space-y-3">
-                                                <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Position</span> <span className="font-black text-orange-600 uppercase tracking-widest">{selectedApp.position}</span></p>
+                                                <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Interest</span> <span className="font-black text-orange-600 uppercase tracking-widest">{selectedApp.jobType} • {selectedApp.preferredShift}</span></p>
+                                                <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Specific Role</span> <span className="font-bold text-gray-700">{selectedApp.specificRole || 'None specified'}</span></p>
                                                 <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Current Status</span> <span className="font-bold text-gray-700">{selectedApp.status}</span></p>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Eligibility</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Work Auth</span> <span className="font-bold text-gray-700">{selectedApp.workAuth}</span></p>
+                                            <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Expiry</span> <span className="font-bold text-gray-700">{selectedApp.authExpiry || 'N/A'}</span></p>
+                                            <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Age 16+</span> <span className="font-bold text-gray-700">{selectedApp.is16OrOlder}</span></p>
+                                            <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Age 18+</span> <span className="font-bold text-gray-700">{selectedApp.is18OrOlder}</span></p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Referral / Application Source</h4>
+                                        <div className="space-y-3">
+                                            <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Source</span> <span className="font-bold text-gray-700">{selectedApp.howHeard}</span></p>
+                                            {selectedApp.referringEmployee && <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Referring Employee</span> <span className="font-bold text-gray-700">{selectedApp.referringEmployee}</span></p>}
+                                            <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Worked here before?</span> <span className="font-bold text-gray-700">{selectedApp.workedAtVistaBefore}</span></p>
                                         </div>
                                     </div>
 
@@ -481,9 +515,14 @@ const HRPortalContent = () => {
                                     )}
 
                                     <div>
-                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Candidate Experience</h4>
-                                        <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-inner min-h-[100px] mb-8">
-                                            <p className="whitespace-pre-wrap text-sm text-gray-600 font-medium leading-relaxed">{selectedApp.experience || 'No experience details provided.'}</p>
+                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Interest Statement</h4>
+                                        <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-inner min-h-[80px] mb-6">
+                                            <p className="whitespace-pre-wrap text-sm text-gray-600 font-medium leading-relaxed">{selectedApp.interestStatement || 'Not provided.'}</p>
+                                        </div>
+
+                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Previous Experience</h4>
+                                        <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-inner min-h-[80px] mb-8">
+                                            <p className="whitespace-pre-wrap text-sm text-gray-600 font-medium leading-relaxed">{selectedApp.previousExperience || 'No experience details provided.'}</p>
                                         </div>
 
                                         <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">

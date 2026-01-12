@@ -5,7 +5,7 @@ import { Search, CheckCircle, XCircle, Clock, Calendar, AlertCircle, Loader, Mai
 
 const StatusPage = () => {
     const [email, setEmail] = useState('');
-    const [lastName, setLastName] = useState('');
+    const [fullName, setFullName] = useState('');
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -24,7 +24,7 @@ const StatusPage = () => {
                     const apps = JSON.parse(storedApps);
                     const found = apps.find(app =>
                         app.email.toLowerCase() === email.toLowerCase() &&
-                        app.lastName.toLowerCase() === lastName.toLowerCase()
+                        app.fullName.toLowerCase() === fullName.toLowerCase()
                     );
 
                     if (found) {
@@ -92,7 +92,7 @@ const StatusPage = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Verification (Last Name)</label>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Verification (Full Name)</label>
                                         <div className="relative group">
                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                                 <User className="text-gray-300 group-focus-within:text-orange-500 transition-colors" size={16} />
@@ -101,9 +101,9 @@ const StatusPage = () => {
                                                 type="text"
                                                 required
                                                 className="input-premium pl-12 w-full py-4 text-sm font-bold text-gray-700 bg-white/70 focus:bg-white rounded-2xl border-gray-100/50"
-                                                placeholder="Doe"
-                                                value={lastName}
-                                                onChange={(e) => setLastName(e.target.value)}
+                                                placeholder="Jane Doe"
+                                                value={fullName}
+                                                onChange={(e) => setFullName(e.target.value)}
                                             />
                                         </div>
                                     </div>
@@ -144,11 +144,11 @@ const StatusPage = () => {
                                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
                                     <div className="flex items-center gap-5">
                                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-orange-500/20">
-                                            {result.firstName[0]}
+                                            {result.fullName[0]}
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl font-black text-gray-900 leading-none mb-1">{result.firstName} {result.lastName}</h2>
-                                            <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{result.position}</p>
+                                            <h2 className="text-2xl font-black text-gray-900 leading-none mb-1">{result.fullName}</h2>
+                                            <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{result.jobType} • {result.preferredShift}</p>
                                         </div>
                                     </div>
                                     <div className={`px-6 py-2.5 rounded-full font-black uppercase tracking-widest text-[10px] shadow-sm border ${result.status === 'Accepted' ? 'bg-green-50 text-green-600 border-green-100' :
