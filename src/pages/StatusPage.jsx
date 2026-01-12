@@ -43,6 +43,19 @@ const StatusPage = () => {
         }, 1000);
     };
 
+    const handleReschedule = () => {
+        if (!result) return;
+        const storedApps = localStorage.getItem('vista_applications');
+        if (storedApps) {
+            const apps = JSON.parse(storedApps);
+            const updated = apps.map(app =>
+                app.id === result.id ? { ...app, rescheduleRequested: true } : app
+            );
+            localStorage.setItem('vista_applications', JSON.stringify(updated));
+            setResult({ ...result, rescheduleRequested: true });
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col">
             <Navbar />
@@ -151,7 +164,7 @@ const StatusPage = () => {
                                             <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{result.jobType} • {result.preferredShift}</p>
                                         </div>
                                     </div>
-                                    <div className={`px-6 py-2.5 rounded-full font-black uppercase tracking-widest text-[10px] shadow-sm border ${result.status === 'Accepted' ? 'bg-green-50 text-green-600 border-green-100' :
+                                    <div className={`px-6 py-2.5 rounded-full font-black uppercase tracking-widest text-[10px] shadow-sm border ${result.status === 'Accepted' || result.status === 'Hired' ? 'bg-green-50 text-green-600 border-green-100' :
                                         result.status === 'Rejected' ? 'bg-red-50 text-red-600 border-red-100' :
                                             'bg-orange-50 text-orange-600 border-orange-100'
                                         }`}>
@@ -185,19 +198,36 @@ const StatusPage = () => {
                                             </div>
 
                                             {/* Step 3: Interviewing */}
-                                            {(result.status === 'Interviewing' || result.status === 'Accepted' || result.status === 'Rejected') && (
+                                            {(result.status === 'Interviewing' || result.status === 'Accepted' || result.status === 'Rejected' || result.status === 'Hired') && (
                                                 <div className="relative pl-16">
-                                                    <div className={`absolute left-3.5 -translate-x-1/2 top-1.5 w-5 h-5 rounded-full border-4 border-white z-10 ${(result.status === 'Accepted' || result.status === 'Rejected') ? 'bg-green-500' : 'bg-orange-500 animate-pulse shadow-[0_0_0_10px_rgba(249,115,22,0.1)]'
+                                                    <div className={`absolute left-3.5 -translate-x-1/2 top-1.5 w-5 h-5 rounded-full border-4 border-white z-10 ${(result.status === 'Accepted' || result.status === 'Rejected' || result.status === 'Hired') ? 'bg-green-500' : 'bg-orange-500 animate-pulse shadow-[0_0_0_10px_rgba(249,115,22,0.1)]'
                                                         }`}></div>
                                                     <div>
                                                         <h4 className={`font-black mb-0.5 ${result.status === 'Interviewing' ? 'text-orange-600' : 'text-gray-900'}`}>Interview Stage</h4>
                                                         {result.interviewDate ? (
-                                                            <div className="mt-3 bg-orange-50/50 p-4 rounded-2xl border border-orange-100/50 inline-flex flex-col gap-1">
-                                                                <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest leading-none">Scheduled For</span>
-                                                                <div className="flex items-center gap-2 text-orange-700 font-black text-sm">
-                                                                    <Calendar size={16} />
-                                                                    {new Date(result.interviewDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                                            <div className="mt-3 flex flex-col gap-4 items-start">
+                                                                <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100/50 inline-flex flex-col gap-1 shadow-inner">
+                                                                    <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest leading-none">Scheduled For</span>
+                                                                    <div className="flex items-center gap-2 text-orange-700 font-black text-sm">
+                                                                        <Calendar size={16} />
+                                                                        {new Date(result.interviewDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                                                    </div>
                                                                 </div>
+
+                                                                {result.status === 'Interviewing' && !result.rescheduleRequested && (
+                                                                    <button
+                                                                        onClick={handleReschedule}
+                                                                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-orange-600 hover:border-orange-200 transition-all shadow-sm"
+                                                                    >
+                                                                        <Clock size={14} /> Request Different Date
+                                                                    </button>
+                                                                )}
+
+                                                                {result.rescheduleRequested && (
+                                                                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-100 text-[10px] font-black uppercase tracking-widest text-amber-600 animate-pulse">
+                                                                        <AlertCircle size={14} /> Reschedule Under Review
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         ) : (
                                                             <p className="text-sm text-gray-400 font-medium font-bold uppercase tracking-widest text-[10px]">Interviews are being coordinated.</p>
@@ -207,18 +237,17 @@ const StatusPage = () => {
                                             )}
 
                                             {/* Step 4: Final Result */}
-                                            {(result.status === 'Accepted' || result.status === 'Rejected') && (
+                                            {(result.status === 'Accepted' || result.status === 'Rejected' || result.status === 'Hired') && (
                                                 <div className="relative pl-16">
-                                                    <div className={`absolute left-3.5 -translate-x-1/2 top-1.5 w-6 h-6 rounded-full border-4 border-white z-10 flex items-center justify-center ${result.status === 'Accepted' ? 'bg-green-500 shadow-[0_0_0_10px_rgba(34,197,94,0.1)]' : 'bg-red-500'
+                                                    <div className={`absolute left-3.5 -translate-x-1/2 top-1.5 w-6 h-6 rounded-full border-4 border-white z-10 flex items-center justify-center ${result.status === 'Accepted' || result.status === 'Hired' ? 'bg-green-500 shadow-[0_0_0_10px_rgba(34,197,94,0.1)]' : 'bg-red-500 shadow-[0_0_0_10px_rgba(239,68,68,0.1)]'
                                                         }`}>
-                                                        {result.status === 'Accepted' ? <CheckCircle size={12} className="text-white" /> : <XCircle size={12} className="text-white" />}
+                                                        {result.status === 'Accepted' || result.status === 'Hired' ? <CheckCircle size={12} className="text-white" /> : <XCircle size={12} className="text-white" />}
                                                     </div>
                                                     <div>
-                                                        <h4 className={`font-black mb-0.5 ${result.status === 'Accepted' ? 'text-green-600' : 'text-red-600'}`}>
-                                                            {result.status === 'Accepted' ? 'Application Approved' : 'Application Closed'}
+                                                        <h4 className={`font-black mb-0.5 ${result.status === 'Accepted' || result.status === 'Hired' ? 'text-green-600' : 'text-red-600'}`}>
                                                         </h4>
                                                         <p className="text-sm text-gray-500 font-medium">
-                                                            {result.status === 'Accepted'
+                                                            {result.status === 'Accepted' || result.status === 'Hired'
                                                                 ? 'Welcome to Vista! Check your email for next steps.'
                                                                 : 'We appreciate your interest in Vista Auction.'}
                                                         </p>

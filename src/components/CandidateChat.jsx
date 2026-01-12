@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, X, Send, Bot, User, ChevronRight } from 'lucide-react';
 
+const MarkdownText = ({ text }) => {
+    // Simple bold markdown support: **text**
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return (
+        <span>
+            {parts.map((part, i) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    return <strong key={i} className="font-black text-orange-200">{part.slice(2, -2)}</strong>;
+                }
+                return part;
+            })}
+        </span>
+    );
+};
+
 const CandidateChat = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
@@ -36,21 +51,45 @@ const CandidateChat = () => {
                 pay: lowerText.includes('pay') || lowerText.includes('salary') || lowerText.includes('earn') || lowerText.includes('wage') || lowerText.includes('money'),
                 location: lowerText.includes('location') || lowerText.includes('address') || lowerText.includes('where') || lowerText.includes('place') || lowerText.includes('city'),
                 culture: lowerText.includes('culture') || lowerText.includes('environment') || lowerText.includes('like to work') || lowerText.includes('benefits'),
-                interview: lowerText.includes('interview') || lowerText.includes('process') || lowerText.includes('hiring') || lowerText.includes('steps')
+                interview: lowerText.includes('interview') || lowerText.includes('process') || lowerText.includes('hiring') || lowerText.includes('steps'),
+                reschedule: lowerText.includes('reschedule') || lowerText.includes('different date') || lowerText.includes('change time') || lowerText.includes('another day') || lowerText.includes('cant make it')
             };
 
             if (intents.status) {
                 const storedApps = localStorage.getItem('vista_applications');
                 if (storedApps) {
                     const apps = JSON.parse(storedApps);
-                    if (apps.length > 0) {
-                        const lastApp = apps[apps.length - 1];
-                        botText = `I've found your recent application, ${lastApp.fullName}! You applied for the ${lastApp.jobType} position (${lastApp.preferredShift}). Your current status is: **${lastApp.status}**. We usually review applications within 48 hours!`;
+                    // Match by full name from chat history if possible, or just look for recent ones
+                    const userMsgs = messages.filter(m => m.type === 'user');
+                    const possibleName = userMsgs.length > 1 ? userMsgs[0].text : "";
+                    const found = apps.find(app => (app.fullName || '').toLowerCase().includes(possibleName.toLowerCase()) && possibleName.length > 3);
+
+                    if (found) {
+                        botText = `Hi **${found.firstName}**! I found your application for **${found.jobType}**. Your current status is: **${found.status}**.`;
+                        if (found.interviewDate) botText += ` You're scheduled for **${new Date(found.interviewDate).toLocaleDateString()}** at **${new Date(found.interviewDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}**.`;
                     } else {
-                        botText = "I couldn't find an application associated with this session. Make sure you've submitted your form! You can also check the 'Check Status' page for a deeper search.";
+                        botText = "I can definitely check that! What is the **Full Name** you used on your application? (e.g., 'Check status for John Doe')";
                     }
                 } else {
-                    botText = "It looks like you haven't started an application yet. No worries! Just click 'Apply Now' and we can get you into the system in under 5 minutes.";
+                    botText = "I don't see any applications in my system yet. Have you submitted your form at the top of this page?";
+                }
+            } else if (intents.reschedule) {
+                const storedApps = localStorage.getItem('vista_applications');
+                if (storedApps) {
+                    const apps = JSON.parse(storedApps);
+                    const userMsgs = messages.filter(m => m.type === 'user');
+                    const possibleName = userMsgs.length > 1 ? userMsgs[0].text.replace(/.*for\b/i, '').trim() : "";
+                    const foundIndex = apps.findIndex(app => (app.fullName || '').toLowerCase().includes(possibleName.toLowerCase()) && possibleName.length > 3);
+
+                    if (foundIndex !== -1) {
+                        apps[foundIndex].rescheduleRequested = true;
+                        localStorage.setItem('vista_applications', JSON.stringify(apps));
+                        botText = `No problem, **${apps[foundIndex].firstName}**! I've flagged your interview for a **reschedule**. Our HR team will reach out to coordinate a new time.`;
+                    } else {
+                        botText = "I can help with that! To find your schedule, please tell me your **Full Name** (e.g., 'Reschedule for John Doe').";
+                    }
+                } else {
+                    botText = "I don't see an application for you yet. Once you're invited to an interview, I can help you change the date!";
                 }
             }
             else if (intents.jobs) {
@@ -125,11 +164,23 @@ const CandidateChat = () => {
                     <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
                         {messages.map(msg => (
                             <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                                <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.type === 'user'
+                                <div className={`relative max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.type === 'user'
                                     ? 'bg-orange-600 text-white rounded-tr-none font-medium'
                                     : 'bg-white text-gray-700 rounded-tl-none border border-gray-100'
                                     }`}>
-                                    {msg.text}
+                                    {/* Bubble Tail */}
+                                    <div className={`absolute top-0 w-3 h-3 ${msg.type === 'user'
+                                        ? '-right-1.5 bg-orange-600 [clip-path:polygon(0_0,0_100%,100%_0)]'
+                                        : '-left-1.5 bg-white border-l border-t border-gray-100 [clip-path:polygon(100%_0,100%_100%,0_0)]'
+                                        }`}></div>
+
+                                    <div className="relative z-10">
+                                        {msg.type === 'bot' ? <MarkdownText text={msg.text} /> : msg.text}
+                                    </div>
+
+                                    <div className={`text-[9px] mt-1.5 opacity-50 font-black uppercase tracking-tight ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
+                                        {new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
                                 </div>
                             </div>
                         ))}

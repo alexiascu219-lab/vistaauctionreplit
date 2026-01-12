@@ -208,7 +208,7 @@ const HRPortalContent = () => {
     const boardColumns = {
         Pending: filteredApps.filter(a => a.status === 'Pending'),
         Interviewing: filteredApps.filter(a => a.status === 'Interviewing'),
-        Accepted: filteredApps.filter(a => a.status === 'Accepted'),
+        Hired: filteredApps.filter(a => a.status === 'Hired'),
         Rejected: filteredApps.filter(a => a.status === 'Rejected')
     };
 
@@ -285,7 +285,7 @@ const HRPortalContent = () => {
                                 />
                             </div>
                             <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
-                                {['All', 'Pending', 'Interviewing', 'Accepted', 'Rejected'].map(status => (
+                                {['All', 'Pending', 'Interviewing', 'Hired', 'Rejected'].map(status => (
                                     <button
                                         key={status}
                                         onClick={() => setFilterStatus(status)}
@@ -338,7 +338,7 @@ const HRPortalContent = () => {
                                 {filteredApps.map(app => (
                                     <div key={app.id} className="glass-card p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group hover:border-orange-200 transition-all cursor-pointer" onClick={() => setSelectedApp(app)}>
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-lg ${app.status === 'Accepted' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : app.status === 'Rejected' ? 'bg-gradient-to-br from-red-500 to-rose-600' : app.status === 'Interviewing' ? 'bg-gradient-to-br from-orange-400 to-amber-500' : 'bg-gradient-to-br from-gray-400 to-slate-500'}`}>
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-lg ${app.status === 'Hired' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : app.status === 'Rejected' ? 'bg-gradient-to-br from-red-500 to-rose-600' : app.status === 'Interviewing' ? 'bg-gradient-to-br from-orange-400 to-amber-500' : 'bg-gradient-to-br from-gray-400 to-slate-500'}`}>
                                                 {app.fullName[0]}
                                             </div>
                                             <div>
@@ -356,7 +356,7 @@ const HRPortalContent = () => {
                                         </div>
                                         <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
                                             <div className="flex flex-col items-end">
-                                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border ${app.status === 'Accepted' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border ${app.status === 'Hired' ? 'bg-green-50 text-green-700 border-green-100' :
                                                     app.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' :
                                                         app.status === 'Interviewing' ? 'bg-orange-50 text-orange-700 border-orange-100' :
                                                             'bg-gray-50 text-gray-500 border-gray-100'
@@ -474,6 +474,12 @@ const HRPortalContent = () => {
                                                 <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Interest</span> <span className="font-black text-orange-600 uppercase tracking-widest">{selectedApp.jobType} • {selectedApp.preferredShift}</span></p>
                                                 <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Specific Role</span> <span className="font-bold text-gray-700">{selectedApp.specificRole || 'None specified'}</span></p>
                                                 <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Current Status</span> <span className="font-bold text-gray-700">{selectedApp.status}</span></p>
+                                                {selectedApp.rescheduleRequested && (
+                                                    <div className="mt-4 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-3">
+                                                        <AlertCircle size={18} className="text-amber-500" />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Reschedule Requested</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -560,8 +566,14 @@ const HRPortalContent = () => {
                                         {selectedApp.status === 'Interviewing' && (
                                             <>
                                                 <button onClick={() => { updateStatus(selectedApp.id, 'Rejected'); setSelectedApp(null); }} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors">Reject</button>
-                                                <button onClick={() => { updateStatus(selectedApp.id, 'Accepted'); setSelectedApp(null); }} className="glass-button px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">Hire Candidate</button>
+                                                <button onClick={() => { updateStatus(selectedApp.id, 'Hired'); setSelectedApp(null); setNotification({ message: `Candidate ${selectedApp.fullName} successfully HIRED!`, type: 'success' }); }} className="bg-green-600 text-white px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-green-500/20 hover:bg-green-700 transition-all hover:-translate-y-0.5 active:scale-95">Hire Candidate</button>
                                             </>
+                                        )}
+                                        {selectedApp.status === 'Hired' && (
+                                            <div className="flex items-center gap-3 bg-green-50 px-6 py-3 rounded-2xl border border-green-100">
+                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white"><Check size={14} /></div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-green-700 text-shadow-none">Employee Hired & Onboarded</span>
+                                            </div>
                                         )}
                                         {selectedApp.status === 'Rejected' && (
                                             <button onClick={() => { updateStatus(selectedApp.id, 'Pending'); setSelectedApp(null); }} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors border border-gray-100">Reconsider</button>
