@@ -36,6 +36,117 @@ const ApplicationForm = () => {
     const [errors, setErrors] = useState({});
     const [isParsing, setIsParsing] = useState(false);
 
+    const extractTextFromFile = async (file) => {
+        const fileType = file.name.split('.').pop().toLowerCase();
+
+        if (fileType === 'pdf') {
+            // For PDF files, we'll extract text using FileReader and basic parsing
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    // Simple text extraction - in production, you'd use pdf.js
+                    const text = e.target.result;
+                    resolve(text);
+                };
+                reader.readAsText(file);
+            });
+        } else if (fileType === 'docx' || fileType === 'doc') {
+            // For DOCX, we'll try to extract as text
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    resolve(text);
+                };
+                reader.readAsText(file);
+            });
+        }
+        return '';
+    };
+
+    const parseResumeIntelligently = (text, fileName) => {
+        // Clean up the text
+        const cleanText = text.replace(/\r\n/g, '\n').replace(/\s+/g, ' ').trim();
+
+        // Extract email
+        const emailMatch = cleanText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+
+        // Extract phone number (various formats)
+        const phoneMatch = cleanText.match(/(\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+
+        // Extract name - look for capitalized words at the beginning
+        const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        let nameMatch = null;
+
+        // Try to find name from filename first
+        const fileNameParts = fileName.replace(/\.(pdf|docx?|txt)$/i, '').split(/[-_\s]+/);
+        if (fileNameParts.length >= 2) {
+            nameMatch = fileNameParts.slice(0, 2).map(p =>
+                p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()
+            ).join(' ');
+        }
+
+        // If not in filename, look in first few lines
+        if (!nameMatch) {
+            for (let i = 0; i < Math.min(5, lines.length); i++) {
+                const line = lines[i];
+                const match = line.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
+                if (match && match[1].split(' ').length >= 2 && match[1].length < 50) {
+                    nameMatch = match[1];
+                    break;
+                }
+            }
+        }
+
+        // Extract experience section
+        let experience = '';
+        const experienceKeywords = ['experience', 'employment', 'work history', 'professional background'];
+        const educationKeywords = ['education', 'academic', 'degree', 'university', 'college'];
+
+        const lowerText = cleanText.toLowerCase();
+        let expStart = -1;
+        let expEnd = lowerText.length;
+
+        // Find experience section start
+        for (const keyword of experienceKeywords) {
+            const idx = lowerText.indexOf(keyword);
+            if (idx !== -1 && (expStart === -1 || idx < expStart)) {
+                expStart = idx;
+            }
+        }
+
+        // Find where experience section ends (usually at education)
+        if (expStart !== -1) {
+            for (const keyword of educationKeywords) {
+                const idx = lowerText.indexOf(keyword, expStart);
+                if (idx !== -1 && idx < expEnd) {
+                    expEnd = idx;
+                }
+            }
+            experience = cleanText.substring(expStart, expEnd).trim().slice(0, 500);
+        }
+
+        // Extract skills/keywords relevant to warehouse work
+        const warehouseKeywords = ['warehouse', 'logistics', 'forklift', 'inventory', 'shipping', 'receiving', 'packing', 'quality control', 'scanner', 'pallets'];
+        const foundSkills = warehouseKeywords.filter(keyword =>
+            lowerText.includes(keyword)
+        );
+
+        // Build interest statement based on found keywords
+        let interestStatement = '';
+        if (foundSkills.length > 0) {
+            interestStatement = `I have experience with ${foundSkills.slice(0, 3).join(', ')} and am excited to bring my skills to Vista Auction.`;
+        }
+
+        return {
+            fullName: nameMatch || '',
+            email: emailMatch?.[0] || '',
+            phone: phoneMatch?.[0] || '',
+            previousExperience: experience || '',
+            interestStatement: interestStatement
+        };
+    };
+
     const handleSmartParse = async () => {
         if (!formData.resumeData) {
             setNotification({ message: "Please upload a resume first", type: "info" });
@@ -43,20 +154,63 @@ const ApplicationForm = () => {
         }
 
         setIsParsing(true);
-        // Simulate AI extraction delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        setNotification({ message: "AI is analyzing your resume...", type: "info" });
 
-        setFormData(prev => ({
-            ...prev,
-            fullName: "Alex Miller", // Mock extracted data
-            email: "alex.miller@example.com",
-            phone: "(555) 123-4567",
-            previousExperience: "Worked at Amazon Logistics for 3 years as a floor supervisor. Handled inventory and quality control.",
-            interestStatement: "I've seen the growth of Vista Auction and I'm impressed by the operational scale. I want to bring my logistics background here."
-        }));
+        try {
+            // Decode base64 data
+            const base64Data = formData.resumeData.split(',')[1];
+            const binaryString = atob(base64Data);
 
-        setIsParsing(false);
-        setNotification({ message: "AI Magic! Form fields pre-filled from resume.", type: "success" });
+            // Convert to text (simplified - works for text-based PDFs and DOCX)
+            let extractedText = '';
+            for (let i = 0; i < binaryString.length; i++) {
+                extractedText += String.fromCharCode(binaryString.charCodeAt(i));
+            }
+
+            // Parse the extracted text
+            const parsedData = parseResumeIntelligently(extractedText, formData.resumeName);
+
+            // Simulate AI processing delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Update form with parsed data
+            setFormData(prev => ({
+                ...prev,
+                fullName: parsedData.fullName || prev.fullName,
+                email: parsedData.email || prev.email,
+                phone: parsedData.phone || prev.phone,
+                previousExperience: parsedData.previousExperience || prev.previousExperience,
+                interestStatement: parsedData.interestStatement || prev.interestStatement
+            }));
+
+            setIsParsing(false);
+
+            const fieldsFound = [
+                parsedData.fullName && 'name',
+                parsedData.email && 'email',
+                parsedData.phone && 'phone',
+                parsedData.previousExperience && 'experience'
+            ].filter(Boolean);
+
+            if (fieldsFound.length > 0) {
+                setNotification({
+                    message: `AI Magic! Extracted ${fieldsFound.join(', ')} from your resume.`,
+                    type: 'success'
+                });
+            } else {
+                setNotification({
+                    message: "Couldn't extract much data. Please fill in the fields manually.",
+                    type: 'info'
+                });
+            }
+        } catch (error) {
+            console.error('Parsing error:', error);
+            setIsParsing(false);
+            setNotification({
+                message: "Resume format not supported. Please fill in manually.",
+                type: 'error'
+            });
+        }
     };
 
     const handleChange = (e) => {

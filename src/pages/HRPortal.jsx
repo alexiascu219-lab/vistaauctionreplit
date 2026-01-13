@@ -77,6 +77,16 @@ const HRPortalContent = () => {
         skillset: 5,
         culturalFit: 5
     });
+    const [trainingRecords, setTrainingRecords] = useState([]);
+    const [courses, setCourses] = useState([
+        { id: '1', name: 'General Onboarding', type: 'PDF', required: true, description: 'Required reading for all new Vista employees.' },
+        { id: '2', name: 'Wholesale Logic', type: 'Video', required: true, description: 'Advanced scanning & quality control workflows.' },
+        { id: '3', name: 'Forklift Safety', type: 'Video', required: false, description: 'Safety certification for forklift operators.' },
+        { id: '4', name: 'Customer Service Excellence', type: 'PDF', required: false, description: 'Best practices for customer interactions.' }
+    ]);
+    const [showAddCourse, setShowAddCourse] = useState(false);
+    const [newCourse, setNewCourse] = useState({ name: '', type: 'PDF', required: false, description: '' });
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     // EmailJS Configuration
     const SERVICE_ID = 'service_2l8vhyj';
@@ -89,6 +99,108 @@ const HRPortalContent = () => {
             emailjs.init(PUBLIC_KEY);
         }
     }, []);
+
+    // Load Training Records
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchTrainingRecords();
+        }
+    }, [isAuthenticated]);
+
+    const fetchTrainingRecords = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('vista_training')
+                .select('*')
+                .order('assigned_date', { ascending: false });
+
+            if (error) throw error;
+            setTrainingRecords(data || []);
+        } catch (error) {
+            console.error('Error fetching training records:', error);
+        }
+    };
+
+    const assignCourseToEmployee = async (employeeName, employeeEmail, courseId) => {
+        const course = courses.find(c => c.id === courseId);
+        if (!course) return;
+
+        const newRecord = {
+            id: Date.now().toString(),
+            employee_name: employeeName,
+            employee_email: employeeEmail,
+            course_name: course.name,
+            course_type: course.type,
+            status: 'Not Started',
+            assigned_date: new Date().toISOString(),
+            completed_date: null,
+            notes: ''
+        };
+
+        try {
+            const { error } = await supabase
+                .from('vista_training')
+                .insert([newRecord]);
+
+            if (error) throw error;
+
+            setTrainingRecords(prev => [newRecord, ...prev]);
+            setNotification({ message: `${course.name} assigned to ${employeeName}`, type: 'success' });
+
+            // Send email notification
+            if (PUBLIC_KEY && PUBLIC_KEY !== 'public_key_placeholder') {
+                await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+                    to_email: employeeEmail,
+                    to_name: employeeName,
+                    subject: `New Training Assignment: ${course.name}`,
+                    message: `You have been assigned a new training course: ${course.name}. Please complete it at your earliest convenience.`
+                });
+            }
+        } catch (error) {
+            console.error('Error assigning course:', error);
+            setNotification({ message: 'Failed to assign course', type: 'error' });
+        }
+    };
+
+    const updateTrainingStatus = async (recordId, newStatus) => {
+        try {
+            const updateData = {
+                status: newStatus,
+                ...(newStatus === 'Completed' && { completed_date: new Date().toISOString() })
+            };
+
+            const { error } = await supabase
+                .from('vista_training')
+                .update(updateData)
+                .eq('id', recordId);
+
+            if (error) throw error;
+
+            setTrainingRecords(prev => prev.map(r =>
+                r.id === recordId ? { ...r, ...updateData } : r
+            ));
+            setNotification({ message: 'Training status updated', type: 'success' });
+        } catch (error) {
+            console.error('Error updating training status:', error);
+        }
+    };
+
+    const addNewCourse = () => {
+        if (!newCourse.name.trim()) {
+            setNotification({ message: 'Course name is required', type: 'error' });
+            return;
+        }
+
+        const course = {
+            id: Date.now().toString(),
+            ...newCourse
+        };
+
+        setCourses(prev => [...prev, course]);
+        setNewCourse({ name: '', type: 'PDF', required: false, description: '' });
+        setShowAddCourse(false);
+        setNotification({ message: 'Course added successfully', type: 'success' });
+    };
 
     // Load Data & Subscribe to Changes
     useEffect(() => {
@@ -559,57 +671,140 @@ const HRPortalContent = () => {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
-                            className="space-y-12 pb-20"
+                            className="space-y-8 pb-20"
                         >
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
-                                        <FileText size={24} />
-                                    </div>
-                                    <h3 className="font-black text-xs uppercase tracking-widest text-gray-900 mb-2">General Onboarding</h3>
-                                    <p className="text-[10px] font-bold text-gray-400 mb-6">Required reading for all new Vista employees.</p>
-                                    <button className="w-full py-3 bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-400 rounded-xl hover:bg-gray-100 transition-all">Download PDF</button>
+                            {/* Header with Add Course Button */}
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-2xl font-black text-gray-900 mb-1">Training Management</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Manage courses and track employee progress</p>
                                 </div>
-                                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-4">
-                                        <span className="bg-orange-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Video</span>
+                                <button
+                                    onClick={() => setShowAddCourse(true)}
+                                    className="px-6 py-3 bg-orange-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-500/20"
+                                >
+                                    + Add Course
+                                </button>
+                            </div>
+
+                            {/* Course Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {courses.map(course => (
+                                    <div key={course.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600">
+                                                {course.type === 'Video' ? <Trophy size={20} /> : <FileText size={20} />}
+                                            </div>
+                                            {course.required && (
+                                                <span className="bg-red-50 text-red-600 text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Required</span>
+                                            )}
+                                        </div>
+                                        <h3 className="font-black text-sm text-gray-900 mb-2">{course.name}</h3>
+                                        <p className="text-[10px] font-medium text-gray-400 mb-4 line-clamp-2">{course.description}</p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setSelectedEmployee({ course })}
+                                                className="flex-1 py-2 bg-gray-50 text-[9px] font-black uppercase tracking-widest text-gray-600 rounded-lg hover:bg-gray-100 transition-all"
+                                            >
+                                                Assign
+                                            </button>
+                                            <button className="px-3 py-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-all">
+                                                <FileText size={14} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
-                                        <Trophy size={24} />
-                                    </div>
-                                    <h3 className="font-black text-xs uppercase tracking-widest text-gray-900 mb-2">Wholesale Logic</h3>
-                                    <p className="text-[10px] font-bold text-gray-400 mb-6">Advanced scanning & quality control workflows.</p>
-                                    <button className="w-full py-3 bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 rounded-xl hover:bg-orange-100 transition-all">Launch Course</button>
-                                </div>
-                                <div className="bg-gray-100/50 p-8 rounded-[2.5rem] border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
-                                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-300 mb-4">
-                                        <Briefcase size={24} />
-                                    </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Add New Resource</p>
+                                ))}
+                            </div>
+
+                            {/* Employee Training Progress */}
+                            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/80 shadow-sm">
+                                <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-6">Employee Training Progress</h3>
+                                <div className="space-y-3">
+                                    {applications.filter(app => app.status === 'Hired').length === 0 ? (
+                                        <div className="text-center py-12">
+                                            <p className="text-gray-400 text-sm font-medium">No hired employees yet</p>
+                                        </div>
+                                    ) : (
+                                        applications.filter(app => app.status === 'Hired').map(employee => {
+                                            const employeeRecords = trainingRecords.filter(r => r.employee_email === employee.email);
+                                            const completedCount = employeeRecords.filter(r => r.status === 'Completed').length;
+                                            const requiredCourses = courses.filter(c => c.required).length;
+                                            const completedRequired = employeeRecords.filter(r =>
+                                                r.status === 'Completed' && courses.find(c => c.name === r.course_name && c.required)
+                                            ).length;
+
+                                            return (
+                                                <div key={employee.id} className="p-4 bg-white rounded-xl border border-gray-100 hover:border-orange-200 transition-all">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-black text-sm">
+                                                                {employee.fullName[0]}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-black text-gray-900">{employee.fullName}</p>
+                                                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                                                                    {completedRequired}/{requiredCourses} Required • {completedCount} Total
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="text-right">
+                                                                <div className="text-xs font-black text-orange-600">
+                                                                    {requiredCourses > 0 ? Math.round((completedRequired / requiredCourses) * 100) : 0}%
+                                                                </div>
+                                                                <div className="text-[8px] font-bold text-gray-300 uppercase tracking-widest">Complete</div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => setSelectedEmployee({ employee })}
+                                                                className="px-4 py-2 bg-orange-50 text-orange-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-orange-100 transition-all"
+                                                            >
+                                                                Manage
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="glass-panel p-10 rounded-[3rem] border border-white/80 shadow-sm">
-                                <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-8">Recent Training Activity</h2>
-                                <div className="space-y-4">
-                                    {[
-                                        { user: "Sarah Jenkins", course: "Forklift Safety", status: "Completed", date: "2 hrs ago" },
-                                        { user: "Mike Ross", course: "Customer Service", status: "In Progress", date: "5 hrs ago" }
-                                    ].map((activity, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-black text-gray-400">{activity.user[0]}</div>
+                            {/* Recent Activity */}
+                            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/80 shadow-sm">
+                                <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-6">Recent Training Activity</h3>
+                                <div className="space-y-3">
+                                    {trainingRecords.slice(0, 10).map(record => (
+                                        <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[10px] font-black text-gray-400">
+                                                    {record.employee_name[0]}
+                                                </div>
                                                 <div>
-                                                    <p className="text-xs font-black text-gray-800">{activity.user}</p>
-                                                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">{activity.course}</p>
+                                                    <p className="text-xs font-black text-gray-800">{record.employee_name}</p>
+                                                    <p className="text-[9px] font-bold text-orange-600 uppercase tracking-widest">{record.course_name}</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-900">{activity.status}</p>
-                                                <p className="text-[10px] font-bold text-gray-300">{activity.date}</p>
+                                            <div className="flex items-center gap-3">
+                                                <select
+                                                    value={record.status}
+                                                    onChange={(e) => updateTrainingStatus(record.id, e.target.value)}
+                                                    className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                >
+                                                    <option value="Not Started">Not Started</option>
+                                                    <option value="In Progress">In Progress</option>
+                                                    <option value="Completed">Completed</option>
+                                                </select>
+                                                <p className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">
+                                                    {new Date(record.assigned_date).toLocaleDateString()}
+                                                </p>
                                             </div>
                                         </div>
                                     ))}
+                                    {trainingRecords.length === 0 && (
+                                        <div className="text-center py-8">
+                                            <p className="text-gray-400 text-sm font-medium">No training records yet</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </motion.div>
@@ -859,6 +1054,157 @@ const HRPortalContent = () => {
                         </div>
                     )}
                 </Modal>
+
+                {/* Course Assignment Modal */}
+                {selectedEmployee?.course && (
+                    <Modal isOpen={true} onClose={() => setSelectedEmployee(null)} title={`Assign ${selectedEmployee.course.name}`}>
+                        <div className="space-y-6">
+                            <p className="text-sm text-gray-600 font-medium">Select employees to assign this course to:</p>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {applications.filter(app => app.status === 'Hired').map(employee => (
+                                    <div
+                                        key={employee.id}
+                                        onClick={() => {
+                                            assignCourseToEmployee(employee.fullName, employee.email, selectedEmployee.course.id);
+                                            setSelectedEmployee(null);
+                                        }}
+                                        className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/30 cursor-pointer transition-all"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-black text-sm">
+                                                {employee.fullName[0]}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-gray-900">{employee.fullName}</p>
+                                                <p className="text-[10px] font-bold text-gray-400">{employee.email}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {applications.filter(app => app.status === 'Hired').length === 0 && (
+                                    <p className="text-center text-gray-400 py-8 text-sm">No hired employees to assign</p>
+                                )}
+                            </div>
+                        </div>
+                    </Modal>
+                )}
+
+                {/* Employee Training Management Modal */}
+                {selectedEmployee?.employee && (
+                    <Modal isOpen={true} onClose={() => setSelectedEmployee(null)} title={`${selectedEmployee.employee.fullName} - Training`}>
+                        <div className="space-y-6">
+                            <div className="p-4 bg-orange-50/50 rounded-xl border border-orange-100">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Assign New Course</p>
+                                <select
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            assignCourseToEmployee(
+                                                selectedEmployee.employee.fullName,
+                                                selectedEmployee.employee.email,
+                                                e.target.value
+                                            );
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                    className="w-full p-3 rounded-lg border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm font-bold"
+                                >
+                                    <option value="">Select a course...</option>
+                                    {courses.map(course => (
+                                        <option key={course.id} value={course.id}>{course.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Assigned Courses</p>
+                                <div className="space-y-2">
+                                    {trainingRecords
+                                        .filter(r => r.employee_email === selectedEmployee.employee.email)
+                                        .map(record => (
+                                            <div key={record.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-black text-gray-900">{record.course_name}</p>
+                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{record.course_type}</p>
+                                                    </div>
+                                                    <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${record.status === 'Completed' ? 'bg-green-50 text-green-600' :
+                                                            record.status === 'In Progress' ? 'bg-orange-50 text-orange-600' :
+                                                                'bg-gray-100 text-gray-500'
+                                                        }`}>
+                                                        {record.status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    }
+                                    {trainingRecords.filter(r => r.employee_email === selectedEmployee.employee.email).length === 0 && (
+                                        <p className="text-center text-gray-400 py-4 text-sm">No courses assigned yet</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </Modal>
+                )}
+
+                {/* Add Course Modal */}
+                {showAddCourse && (
+                    <Modal isOpen={true} onClose={() => setShowAddCourse(false)} title="Add New Training Course">
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Course Name *</label>
+                                <input
+                                    type="text"
+                                    value={newCourse.name}
+                                    onChange={(e) => setNewCourse(prev => ({ ...prev, name: e.target.value }))}
+                                    className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold"
+                                    placeholder="e.g., Safety Training"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Description</label>
+                                <textarea
+                                    value={newCourse.description}
+                                    onChange={(e) => setNewCourse(prev => ({ ...prev, description: e.target.value }))}
+                                    className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium min-h-[100px]"
+                                    placeholder="Brief description of the course..."
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Type</label>
+                                    <select
+                                        value={newCourse.type}
+                                        onChange={(e) => setNewCourse(prev => ({ ...prev, type: e.target.value }))}
+                                        className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold"
+                                    >
+                                        <option value="PDF">PDF</option>
+                                        <option value="Video">Video</option>
+                                        <option value="Quiz">Quiz</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Required?</label>
+                                    <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={newCourse.required}
+                                            onChange={(e) => setNewCourse(prev => ({ ...prev, required: e.target.checked }))}
+                                            className="w-5 h-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                        />
+                                        <span className="text-sm font-bold text-gray-700">Required Course</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button
+                                onClick={addNewCourse}
+                                className="w-full py-4 bg-orange-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-500/20"
+                            >
+                                Add Course
+                            </button>
+                        </div>
+                    </Modal>
+                )}
+
                 {notification && <Toast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
             </main>
         </div>
