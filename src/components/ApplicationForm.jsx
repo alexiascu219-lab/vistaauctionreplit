@@ -209,9 +209,84 @@ const ApplicationForm = () => {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
-                                className="space-y-6"
+                                className="space-y-8"
                             >
-                                <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Personal Details</h2>
+                                <div className="flex items-center justify-between mb-2">
+                                    <h2 className="text-3xl font-black text-gray-900 font-display tracking-tight">Basic Info</h2>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 rounded-lg border border-orange-100">
+                                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-orange-600">AI Magic Enabled</span>
+                                    </div>
+                                </div>
+
+                                {/* Step 1: AI Magic Draft Section */}
+                                <div className="p-8 bg-gradient-to-br from-orange-50/50 to-white rounded-[2.5rem] border border-orange-100 shadow-inner relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <Brain size={80} className="text-orange-500" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <h3 className="text-sm font-black text-gray-900 uppercase tracking-[0.2em] mb-4">AI Magic Draft</h3>
+                                        <p className="text-xs text-gray-500 font-medium mb-6 leading-relaxed max-w-sm">Upload your resume and our AI will pre-fill the application for you in seconds.</p>
+
+                                        {!formData.resumeName ? (
+                                            <div className="relative">
+                                                <input
+                                                    type="file"
+                                                    onChange={handleFileChange}
+                                                    accept=".pdf,.doc,.docx"
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                                />
+                                                <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border-2 border-dashed border-orange-200 group-hover:border-orange-400 transition-all">
+                                                    <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500">
+                                                        <Upload size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-black text-gray-900 uppercase tracking-widest">Upload Resume</p>
+                                                        <p className="text-[10px] font-bold text-gray-400">PDF, DOC (Max 10MB)</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-orange-200">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500">
+                                                            <FileText size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-black text-gray-900 truncate max-w-[150px]">{formData.resumeName}</p>
+                                                            <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Ready to parse</p>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" onClick={removeFile} className="p-2 hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors">
+                                                        <X size={18} />
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSmartParse}
+                                                    disabled={isParsing}
+                                                    className={`w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${isParsing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white shadow-xl shadow-gray-900/20 hover:scale-[1.02] active:scale-95'}`}
+                                                >
+                                                    {isParsing ? (
+                                                        <>
+                                                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                                                            AI is Reading...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Brain size={16} />
+                                                            Run AI Magic Draft
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-gray-100 w-full my-4" />
+
                                 <div className="space-y-6">
                                     <div>
                                         <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Full Name *</label>
@@ -219,10 +294,10 @@ const ApplicationForm = () => {
                                             name="fullName"
                                             value={formData.fullName}
                                             onChange={handleChange}
-                                            className={`input-premium w-full p-4 rounded-xl ${errors.fullName ? 'border-red-500 ring-4 ring-red-50' : ''}`}
+                                            className={`input-premium w-full p-4 rounded-xl ${errors.fullName ? 'border-red-500' : ''}`}
                                             placeholder="Jane Doe"
                                         />
-                                        {errors.fullName && <p className="text-red-500 text-xs mt-1 font-bold">{errors.fullName}</p>}
+                                        {errors.fullName && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-1 ml-1">{errors.fullName}</p>}
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
@@ -232,10 +307,10 @@ const ApplicationForm = () => {
                                                 name="phone"
                                                 value={formData.phone}
                                                 onChange={handleChange}
-                                                className={`input-premium w-full p-4 rounded-xl ${errors.phone ? 'border-red-500 ring-4 ring-red-50' : ''}`}
+                                                className={`input-premium w-full p-4 rounded-xl ${errors.phone ? 'border-red-500' : ''}`}
                                                 placeholder="(555) 123-4567"
                                             />
-                                            {errors.phone && <p className="text-red-500 text-xs mt-1 font-bold">{errors.phone}</p>}
+                                            {errors.phone && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-1 ml-1">{errors.phone}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Your Email *</label>
@@ -244,10 +319,10 @@ const ApplicationForm = () => {
                                                 name="email"
                                                 value={formData.email}
                                                 onChange={handleChange}
-                                                className={`input-premium w-full p-4 rounded-xl ${errors.email ? 'border-red-500 ring-4 ring-red-50' : ''}`}
+                                                className={`input-premium w-full p-4 rounded-xl ${errors.email ? 'border-red-500' : ''}`}
                                                 placeholder="jane@example.com"
                                             />
-                                            {errors.email && <p className="text-red-500 text-xs mt-1 font-bold">{errors.email}</p>}
+                                            {errors.email && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-1 ml-1">{errors.email}</p>}
                                         </div>
                                     </div>
                                 </div>
