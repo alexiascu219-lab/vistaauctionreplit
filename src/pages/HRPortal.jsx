@@ -3,7 +3,8 @@ import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
 import CalendarView from '../components/CalendarView';
 import DateTimePicker from '../components/DateTimePicker';
-import { Check, X as XIcon, Brain, Mail, ChevronDown, ChevronUp, Search, Filter, Users, Clock, AlertCircle, LayoutGrid, List, FileText, Download, Briefcase, Calendar } from 'lucide-react';
+import { Check, X as XIcon, Brain, Mail, ChevronDown, ChevronUp, Search, Filter, Users, Clock, AlertCircle, LayoutGrid, List, FileText, Download, Briefcase, Calendar, Trophy } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import emailjs from 'emailjs-com';
 import { supabase } from '../supabaseClient';
 
@@ -342,241 +343,278 @@ const HRPortalContent = () => {
                         <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest text-orange-600 hover:bg-white/50 transition-all mr-2">
                             <Download size={14} /> Export CSV
                         </button>
-                        <button
-                            onClick={() => setActiveTab('applications')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${activeTab === 'applications' ? 'bg-white shadow-md text-orange-600 scale-105' : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'}`}
-                        >
-                            <Users size={16} /> Applications
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('calendar')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${activeTab === 'calendar' ? 'bg-white shadow-md text-orange-600 scale-105' : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'}`}
-                        >
-                            <Calendar size={16} /> Calendar
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('training')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${activeTab === 'training' ? 'bg-white shadow-md text-orange-600 scale-105' : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'}`}
-                        >
-                            <Briefcase size={16} /> Training
-                        </button>
+                        <div className="flex bg-white shadow-sm p-1 rounded-2xl border border-gray-100 items-center">
+                            {[
+                                { id: 'applications', label: 'Applications', icon: <Users size={16} /> },
+                                { id: 'calendar', label: 'Calendar', icon: <Calendar size={16} /> },
+                                { id: 'training', label: 'Training', icon: <Briefcase size={16} /> }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`relative flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-500 ${activeTab === tab.id ? 'text-orange-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    {tab.icon} {tab.label}
+                                    {activeTab === tab.id && (
+                                        <motion.div
+                                            layoutId="activeTab"
+                                            className="absolute inset-0 bg-orange-50 rounded-xl -z-10 border border-orange-100/50"
+                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                        />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                {activeTab === 'applications' ? (
-                    <div className="animate-fade-in space-y-6">
-                        {/* Filters */}
-                        <div className="flex flex-col md:flex-row gap-4 justify-between bg-white/70 p-4 rounded-2xl border border-white/60 shadow-sm backdrop-blur-sm">
-                            <div className="flex gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 items-center shadow-inner flex-1 max-w-md">
-                                <Search size={20} className="text-gray-300" />
-                                <input
-                                    type="text"
-                                    placeholder="Search candidates..."
-                                    className="bg-transparent border-none outline-none text-gray-700 font-bold placeholder-gray-400 w-full"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
-                                {['All', 'Pending', 'Interviewing', 'Hired', 'Rejected'].map(status => (
-                                    <button
-                                        key={status}
-                                        onClick={() => setFilterStatus(status)}
-                                        className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest whitespace-nowrap transition-all border ${filterStatus === status ? 'bg-gray-900 text-white border-gray-900 shadow-lg shadow-gray-900/20' : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-700'}`}
-                                    >
-                                        {status}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
-                                <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}><List size={20} /></button>
-                                <button onClick={() => setViewMode('board')} className={`p-2 rounded-lg transition-all ${viewMode === 'board' ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}><LayoutGrid size={20} /></button>
-                            </div>
-                        </div>
-
-                        {/* Quick Tags / Batch Actions */}
-                        <div className="flex items-center justify-between gap-4 px-2 overflow-x-auto pb-2 scrollbar-hide">
-                            <div className="flex items-center gap-4">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] whitespace-nowrap">Quick Tags:</span>
-                                <div className="flex gap-2">
-                                    {[
-                                        { label: 'Warehouse Exp', icon: <Briefcase size={12} />, match: 'warehouse' },
-                                        { label: 'Certified', icon: <Check size={12} />, match: 'certified' },
-                                        { label: 'Quality', icon: <Brain size={12} />, match: 'quality' }
-                                    ].map(tag => (
+                <AnimatePresence mode="wait">
+                    {activeTab === 'applications' ? (
+                        <motion.div
+                            key="applications"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="space-y-6"
+                        >
+                            {/* Filters */}
+                            <div className="flex flex-col md:flex-row gap-4 justify-between bg-white/70 p-4 rounded-2xl border border-white/60 shadow-sm backdrop-blur-sm">
+                                <div className="flex gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 items-center shadow-inner flex-1 max-w-md">
+                                    <Search size={20} className="text-gray-300" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search candidates..."
+                                        className="bg-transparent border-none outline-none text-gray-700 font-bold placeholder-gray-400 w-full"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
+                                    {['All', 'Pending', 'Interviewing', 'Hired', 'Rejected'].map(status => (
                                         <button
-                                            key={tag.label}
-                                            onClick={() => {
-                                                setSearchTerm(tag.match);
-                                                setNotification({ message: `Filtering for ${tag.label}...`, type: 'info' });
-                                            }}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-orange-200 hover:text-orange-600 hover:bg-white transition-all shadow-sm"
+                                            key={status}
+                                            onClick={() => setFilterStatus(status)}
+                                            className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest whitespace-nowrap transition-all border ${filterStatus === status ? 'bg-gray-900 text-white border-gray-900 shadow-lg shadow-gray-900/20' : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-700'}`}
                                         >
-                                            {tag.icon}
-                                            {tag.label}
+                                            {status}
                                         </button>
                                     ))}
-                                    <button
-                                        onClick={() => { setSearchTerm(''); setFilterStatus('All'); }}
-                                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-red-500 transition-colors"
-                                    >
-                                        Clear All
-                                    </button>
+                                </div>
+                                <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
+                                    <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}><List size={20} /></button>
+                                    <button onClick={() => setViewMode('board')} className={`p-2 rounded-lg transition-all ${viewMode === 'board' ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}><LayoutGrid size={20} /></button>
                                 </div>
                             </div>
 
-                            {selectedIds.length > 0 && (
-                                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-orange-200 shadow-sm animate-fade-in whitespace-nowrap">
-                                    <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">{selectedIds.length} Selected</span>
-                                    <div className="h-4 w-px bg-gray-100 mx-2" />
-                                    <button onClick={() => handleBatchAction('Interviewing')} className="text-[9px] font-black uppercase tracking-widest text-blue-600 hover:underline">Mass Accept</button>
-                                    <button onClick={() => handleBatchAction('Rejected')} className="text-[9px] font-black uppercase tracking-widest text-red-600 hover:underline">Mass Reject</button>
-                                    <button onClick={() => setSelectedIds([])} className="text-[9px] font-black uppercase tracking-widest text-gray-400 hover:underline">Cancel</button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* App List / Board */}
-                        {viewMode === 'list' ? (
-                            <div className="grid grid-cols-1 gap-4">
-                                {filteredApps.map(app => (
-                                    <div key={app.id} className={`glass-card p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group transition-all cursor-pointer ${selectedIds.includes(app.id) ? 'border-orange-500 bg-orange-50/20' : 'hover:border-orange-200'}`} onClick={() => setSelectedApp(app)}>
-                                        <div className="flex items-center gap-4">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedIds.includes(app.id)}
-                                                onChange={(e) => {
-                                                    e.stopPropagation();
-                                                    if (e.target.checked) setSelectedIds([...selectedIds, app.id]);
-                                                    else setSelectedIds(selectedIds.filter(id => id !== app.id));
+                            {/* Quick Tags / Batch Actions */}
+                            <div className="flex items-center justify-between gap-4 px-2 overflow-x-auto pb-2 scrollbar-hide">
+                                <div className="flex items-center gap-4">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] whitespace-nowrap">Quick Tags:</span>
+                                    <div className="flex gap-2">
+                                        {[
+                                            { label: 'Warehouse Exp', icon: <Briefcase size={12} />, match: 'warehouse' },
+                                            { label: 'Certified', icon: <Check size={12} />, match: 'certified' },
+                                            { label: 'Quality', icon: <Brain size={12} />, match: 'quality' }
+                                        ].map(tag => (
+                                            <button
+                                                key={tag.label}
+                                                onClick={() => {
+                                                    setSearchTerm(tag.match);
+                                                    setNotification({ message: `Filtering for ${tag.label}...`, type: 'info' });
                                                 }}
-                                                className="w-5 h-5 rounded-lg border-gray-300 text-orange-600 focus:ring-orange-500 transition-all cursor-pointer"
-                                            />
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-lg ${app.status === 'Hired' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : app.status === 'Rejected' ? 'bg-gradient-to-br from-red-500 to-rose-600' : app.status === 'Interviewing' ? 'bg-gradient-to-br from-orange-400 to-amber-500' : 'bg-gradient-to-br from-gray-400 to-slate-500'}`}>
-                                                {app.fullName[0]}
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="font-bold text-lg text-gray-800 group-hover:text-orange-600 transition-colors">{app.fullName}</h3>
-                                                    {app.notes && <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]" title="Has internal notes"></div>}
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">{app.jobType} • {app.preferredShift}</p>
-                                                    <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100/50">
-                                                        {calculateMatchScore(app)}% Match
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                                            <div className="flex flex-col items-end">
-                                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border ${app.status === 'Hired' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                    app.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                        app.status === 'Interviewing' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                                            'bg-gray-50 text-gray-500 border-gray-100'
-                                                    }`}>
-                                                    {app.status}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-gray-300 mt-1 uppercase tracking-widest">{new Date(app.submittedDate).toLocaleDateString()}</span>
-                                            </div>
-                                            <ChevronDown size={20} className="text-gray-300 md:-rotate-90" />
-                                        </div>
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-orange-200 hover:text-orange-600 hover:bg-white transition-all shadow-sm"
+                                            >
+                                                {tag.icon}
+                                                {tag.label}
+                                            </button>
+                                        ))}
+                                        <button
+                                            onClick={() => { setSearchTerm(''); setFilterStatus('All'); }}
+                                            className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-red-500 transition-colors"
+                                        >
+                                            Clear All
+                                        </button>
                                     </div>
-                                ))}
-                                {filteredApps.length === 0 && (
-                                    <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in group w-full">
-                                        <div className="w-24 h-24 bg-gray-100/50 rounded-3xl flex items-center justify-center mb-6 border border-gray-100 group-hover:scale-110 transition-transform duration-500">
-                                            <Briefcase className="text-gray-300" size={40} />
-                                        </div>
-                                        <h3 className="text-xl font-black text-gray-800 mb-2">No Candidates Found</h3>
-                                        <p className="text-gray-500 max-w-xs font-black uppercase tracking-widest text-[10px] leading-loose mx-auto">Try adjusting your filters or search terms to find more talent.</p>
+                                </div>
+
+                                {selectedIds.length > 0 && (
+                                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-orange-200 shadow-sm animate-fade-in whitespace-nowrap">
+                                        <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">{selectedIds.length} Selected</span>
+                                        <div className="h-4 w-px bg-gray-100 mx-2" />
+                                        <button onClick={() => handleBatchAction('Interviewing')} className="text-[9px] font-black uppercase tracking-widest text-blue-600 hover:underline">Mass Accept</button>
+                                        <button onClick={() => handleBatchAction('Rejected')} className="text-[9px] font-black uppercase tracking-widest text-red-600 hover:underline">Mass Reject</button>
+                                        <button onClick={() => setSelectedIds([])} className="text-[9px] font-black uppercase tracking-widest text-gray-400 hover:underline">Cancel</button>
                                     </div>
                                 )}
                             </div>
-                        ) : (
-                            // Board View
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-[calc(100vh-250px)] overflow-hidden">
-                                {Object.entries(boardColumns).map(([status, apps]) => (
-                                    <div key={status} className="flex flex-col h-full bg-gray-100/30 rounded-3xl p-4 border border-gray-200/50 backdrop-blur-sm">
-                                        <h3 className="font-black text-gray-400 uppercase tracking-widest text-[10px] mb-4 flex items-center justify-between px-2">
-                                            {status}
-                                            <span className="bg-white border border-gray-200 px-2 py-0.5 rounded-lg text-gray-500">{apps.length}</span>
-                                        </h3>
-                                        <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
-                                            {apps.map(app => (
-                                                <div key={app.id} onClick={() => setSelectedApp(app)} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <h4 className="font-bold text-gray-800 text-sm">{app.fullName}</h4>
-                                                        {app.resumeData && <FileText size={14} className="text-orange-400" />}
-                                                    </div>
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 truncate">{app.jobType} • {app.preferredShift}</p>
-                                                    <div className="text-[10px] font-bold text-gray-300 text-right uppercase tracking-widest">{new Date(app.submittedDate).toLocaleDateString()}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ) : activeTab === 'calendar' ? (
-                    <CalendarView applications={applications} onSelectApp={setSelectedApp} />
-                ) : (
-                    /* Training Portal Tab */
-                    <div className="animate-fade-in space-y-12 pb-20">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
-                                    <FileText size={24} />
-                                </div>
-                                <h3 className="font-black text-xs uppercase tracking-widest text-gray-900 mb-2">General Onboarding</h3>
-                                <p className="text-[10px] font-bold text-gray-400 mb-6">Required reading for all new Vista employees.</p>
-                                <button className="w-full py-3 bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-400 rounded-xl hover:bg-gray-100 transition-all">Download PDF</button>
-                            </div>
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4">
-                                    <span className="bg-orange-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Video</span>
-                                </div>
-                                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
-                                    <Trophy size={24} />
-                                </div>
-                                <h3 className="font-black text-xs uppercase tracking-widest text-gray-900 mb-2">Wholesale Logic</h3>
-                                <p className="text-[10px] font-bold text-gray-400 mb-6">Advanced scanning & quality control workflows.</p>
-                                <button className="w-full py-3 bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 rounded-xl hover:bg-orange-100 transition-all">Launch Course</button>
-                            </div>
-                            <div className="bg-gray-100/50 p-8 rounded-[2.5rem] border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
-                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-300 mb-4">
-                                    <Briefcase size={24} />
-                                </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Add New Resource</p>
-                            </div>
-                        </div>
 
-                        <div className="glass-panel p-10 rounded-[3rem] border border-white/80 shadow-sm">
-                            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-8">Recent Training Activity</h2>
-                            <div className="space-y-4">
-                                {[
-                                    { user: "Sarah Jenkins", course: "Forklift Safety", status: "Completed", date: "2 hrs ago" },
-                                    { user: "Mike Ross", course: "Customer Service", status: "In Progress", date: "5 hrs ago" }
-                                ].map((activity, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-black text-gray-400">{activity.user[0]}</div>
-                                            <div>
-                                                <p className="text-xs font-black text-gray-800">{activity.user}</p>
-                                                <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">{activity.course}</p>
+                            {/* App List / Board */}
+                            <AnimatePresence mode="wait">
+                                {viewMode === 'list' ? (
+                                    <motion.div
+                                        key="list"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="grid grid-cols-1 gap-4"
+                                    >
+                                        {filteredApps.map(app => (
+                                            <div key={app.id} className={`glass-card p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group transition-all cursor-pointer ${selectedIds.includes(app.id) ? 'border-orange-500 bg-orange-50/20' : 'hover:border-orange-200'}`} onClick={() => setSelectedApp(app)}>
+                                                <div className="flex items-center gap-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.includes(app.id)}
+                                                        onChange={(e) => {
+                                                            e.stopPropagation();
+                                                            if (e.target.checked) setSelectedIds([...selectedIds, app.id]);
+                                                            else setSelectedIds(selectedIds.filter(id => id !== app.id));
+                                                        }}
+                                                        className="w-5 h-5 rounded-lg border-gray-300 text-orange-600 focus:ring-orange-500 transition-all cursor-pointer"
+                                                    />
+                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-lg ${app.status === 'Hired' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : app.status === 'Rejected' ? 'bg-gradient-to-br from-red-500 to-rose-600' : app.status === 'Interviewing' ? 'bg-gradient-to-br from-orange-400 to-amber-500' : 'bg-gradient-to-br from-gray-400 to-slate-500'}`}>
+                                                        {app.fullName[0]}
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <h3 className="font-bold text-lg text-gray-800 group-hover:text-orange-600 transition-colors">{app.fullName}</h3>
+                                                            {app.notes && <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]" title="Has internal notes"></div>}
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">{app.jobType} • {app.preferredShift}</p>
+                                                            <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100/50">
+                                                                {calculateMatchScore(app)}% Match
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                                                    <div className="flex flex-col items-end">
+                                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border ${app.status === 'Hired' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                            app.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                                app.status === 'Interviewing' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                                                    'bg-gray-50 text-gray-500 border-gray-100'
+                                                            }`}>
+                                                            {app.status}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-gray-300 mt-1 uppercase tracking-widest">{new Date(app.submittedDate).toLocaleDateString()}</span>
+                                                    </div>
+                                                    <ChevronDown size={20} className="text-gray-300 md:-rotate-90" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {filteredApps.length === 0 && (
+                                            <div className="flex flex-col items-center justify-center py-20 text-center w-full">
+                                                <div className="w-24 h-24 bg-gray-100/50 rounded-3xl flex items-center justify-center mb-6 border border-gray-100">
+                                                    <Briefcase className="text-gray-300" size={40} />
+                                                </div>
+                                                <h3 className="text-xl font-black text-gray-800 mb-2">No Candidates Found</h3>
+                                                <p className="text-gray-500 max-w-xs font-black uppercase tracking-widest text-[10px] leading-loose mx-auto">Try adjusting your filters or search terms to find more talent.</p>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="board"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-[calc(100vh-250px)] overflow-hidden"
+                                    >
+                                        {Object.entries(boardColumns).map(([status, apps]) => (
+                                            <div key={status} className="flex flex-col h-full bg-gray-100/30 rounded-3xl p-4 border border-gray-200/50 backdrop-blur-sm">
+                                                <h3 className="font-black text-gray-400 uppercase tracking-widest text-[10px] mb-4 flex items-center justify-between px-2">
+                                                    {status}
+                                                    <span className="bg-white border border-gray-200 px-2 py-0.5 rounded-lg text-gray-500">{apps.length}</span>
+                                                </h3>
+                                                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                                                    {apps.map(app => (
+                                                        <div key={app.id} onClick={() => setSelectedApp(app)} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all">
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <h4 className="font-bold text-gray-800 text-sm">{app.fullName}</h4>
+                                                                {app.resumeData && <FileText size={14} className="text-orange-400" />}
+                                                            </div>
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 truncate">{app.jobType} • {app.preferredShift}</p>
+                                                            <div className="text-[10px] font-bold text-gray-300 text-right uppercase tracking-widest">{new Date(app.submittedDate).toLocaleDateString()}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    ) : activeTab === 'calendar' ? (
+                        <motion.div
+                            key="calendar"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                        >
+                            <CalendarView applications={applications} onSelectApp={setSelectedApp} />
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="training"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="space-y-12 pb-20"
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                                    <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
+                                        <FileText size={24} />
+                                    </div>
+                                    <h3 className="font-black text-xs uppercase tracking-widest text-gray-900 mb-2">General Onboarding</h3>
+                                    <p className="text-[10px] font-bold text-gray-400 mb-6">Required reading for all new Vista employees.</p>
+                                    <button className="w-full py-3 bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-400 rounded-xl hover:bg-gray-100 transition-all">Download PDF</button>
+                                </div>
+                                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-4">
+                                        <span className="bg-orange-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Video</span>
+                                    </div>
+                                    <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
+                                        <Trophy size={24} />
+                                    </div>
+                                    <h3 className="font-black text-xs uppercase tracking-widest text-gray-900 mb-2">Wholesale Logic</h3>
+                                    <p className="text-[10px] font-bold text-gray-400 mb-6">Advanced scanning & quality control workflows.</p>
+                                    <button className="w-full py-3 bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 rounded-xl hover:bg-orange-100 transition-all">Launch Course</button>
+                                </div>
+                                <div className="bg-gray-100/50 p-8 rounded-[2.5rem] border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-300 mb-4">
+                                        <Briefcase size={24} />
+                                    </div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Add New Resource</p>
+                                </div>
+                            </div>
+
+                            <div className="glass-panel p-10 rounded-[3rem] border border-white/80 shadow-sm">
+                                <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-8">Recent Training Activity</h2>
+                                <div className="space-y-4">
+                                    {[
+                                        { user: "Sarah Jenkins", course: "Forklift Safety", status: "Completed", date: "2 hrs ago" },
+                                        { user: "Mike Ross", course: "Customer Service", status: "In Progress", date: "5 hrs ago" }
+                                    ].map((activity, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-black text-gray-400">{activity.user[0]}</div>
+                                                <div>
+                                                    <p className="text-xs font-black text-gray-800">{activity.user}</p>
+                                                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">{activity.course}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-900">{activity.status}</p>
+                                                <p className="text-[10px] font-bold text-gray-300">{activity.date}</p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-900">{activity.status}</p>
-                                            <p className="text-[10px] font-bold text-gray-300">{activity.date}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* MODAL */}
                 <Modal isOpen={!!selectedApp} onClose={() => { setSelectedApp(null); setIsScheduling(false); setInterviewDate(''); }} title={selectedApp?.fullName}>

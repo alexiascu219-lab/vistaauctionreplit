@@ -377,52 +377,30 @@ const ApplicationForm = () => {
                                 exit={{ opacity: 0, x: -20 }}
                                 className="space-y-8"
                             >
-                                <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Final Step</h2>
-                                <div className="bg-gray-50/50 p-8 rounded-[2rem] border-2 border-gray-100 border-dashed hover:border-orange-400 hover:bg-orange-50/30 transition-all relative">
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Resume (optional)</label>
-                                    {!formData.resumeName ? (
-                                        <div className="flex flex-col items-center justify-center py-6 cursor-pointer">
-                                            <Upload className="text-orange-500 mb-4" size={32} />
-                                            <span className="text-orange-600 font-black uppercase tracking-widest text-[10px]">Click to upload</span>
-                                            <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col gap-4 w-full">
-                                            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-2xl border border-orange-100 animate-fade-in group w-full">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-white rounded-lg text-orange-600 shadow-sm"><FileText size={20} /></div>
-                                                    <span className="text-sm font-bold text-orange-900 truncate max-w-[200px]">{formData.resumeName}</span>
-                                                </div>
-                                                <button onClick={removeFile} className="p-2 hover:bg-orange-100 rounded-full text-orange-400 transition-colors"><X size={16} /></button>
-                                            </div>
+                                <h2 className="text-3xl font-black text-gray-900 mb-2 font-display tracking-tight">Final Confirmation</h2>
+                                <p className="text-gray-500 font-medium mb-8">Almost there! Just one last check.</p>
 
-                                            <button
-                                                onClick={handleSmartParse}
-                                                disabled={isParsing}
-                                                className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${isParsing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-orange-600 text-white shadow-lg shadow-orange-500/20 hover:scale-[1.02] hover:bg-orange-700 active:scale-95'}`}
-                                            >
-                                                {isParsing ? (
-                                                    <>
-                                                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full" />
-                                                        Parsing Resume...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <ShieldCheck size={14} /> AI Magic Draft
-                                                    </>
-                                                )}
-                                            </button>
+                                <div className="bg-orange-50/50 p-8 rounded-[2rem] border border-orange-100">
+                                    <label className="flex items-start cursor-pointer group">
+                                        <div className="relative flex items-center mt-1">
+                                            <input
+                                                type="checkbox"
+                                                name="backgroundConsent"
+                                                checked={formData.backgroundConsent}
+                                                onChange={handleChange}
+                                                className="w-6 h-6 rounded-lg border-orange-200 text-orange-600 focus:ring-orange-500 transition-all cursor-pointer"
+                                            />
                                         </div>
-                                    )}
-                                </div>
-                                <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-100">
-                                    <label className="flex items-start cursor-pointer">
-                                        <input type="checkbox" name="backgroundConsent" checked={formData.backgroundConsent} onChange={handleChange} className="w-5 h-5 text-orange-600 rounded mt-1" />
-                                        <p className="ml-4 text-[11px] text-gray-700 font-bold leading-relaxed">
-                                            I acknowledge that Vista Auction conducts background checks as part of its hiring process.
+                                        <p className="ml-4 text-sm text-gray-700 font-bold leading-relaxed group-hover:text-gray-900 transition-colors">
+                                            I acknowledge that Vista Auction conducts background checks as part of its hiring process and I consent to a screening if selected.
                                         </p>
                                     </label>
-                                    {errors.backgroundConsent && <p className="text-red-500 text-xs mt-3 font-bold">{errors.backgroundConsent}</p>}
+                                    {errors.backgroundConsent && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-4 ml-10">{errors.backgroundConsent}</p>}
+                                </div>
+
+                                <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 italic text-gray-400 text-xs text-center">
+                                    By submitting, you agree to our terms of service and privacy policy.
+                                    Your data is securely stored in our cloud infrastructure.
                                 </div>
                             </motion.div>
                         )}
