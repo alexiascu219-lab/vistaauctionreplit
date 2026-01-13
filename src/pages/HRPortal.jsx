@@ -497,9 +497,33 @@ const HRPortalContent = () => {
                                                 <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Specific Role</span> <span className="font-bold text-gray-700">{selectedApp.specificRole || 'None specified'}</span></p>
                                                 <p className="text-sm"><span className="font-black uppercase tracking-widest text-[10px] text-gray-400 block mb-0.5">Current Status</span> <span className="font-bold text-gray-700">{selectedApp.status}</span></p>
                                                 {selectedApp.rescheduleRequested && (
-                                                    <div className="mt-4 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-3">
-                                                        <AlertCircle size={18} className="text-amber-500" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Reschedule Requested</span>
+                                                    <div className="mt-4 p-5 bg-amber-50 border border-amber-100 rounded-2xl space-y-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <AlertCircle size={18} className="text-amber-500" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Reschedule Requested</span>
+                                                        </div>
+                                                        {selectedApp.suggestedInterviewDate && (
+                                                            <div className="space-y-3">
+                                                                <p className="text-[11px] font-bold text-amber-800">
+                                                                    Candidate suggested: <br />
+                                                                    <span className="text-sm font-black text-gray-900">{new Date(selectedApp.suggestedInterviewDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                                                </p>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        updateStatus(selectedApp.id, 'Interviewing', {
+                                                                            interviewDate: selectedApp.suggestedInterviewDate,
+                                                                            rescheduleRequested: false
+                                                                        });
+                                                                        setSelectedApp(prev => ({ ...prev, interviewDate: selectedApp.suggestedInterviewDate, rescheduleRequested: false }));
+                                                                        setNotification({ message: 'Reschedule confirmed!', type: 'success' });
+                                                                    }}
+                                                                    className="w-full py-2.5 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-amber-600 transition-all active:scale-95"
+                                                                >
+                                                                    Accept Suggested Date
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>

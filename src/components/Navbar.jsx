@@ -27,7 +27,7 @@ const Navbar = () => {
                             <img src="/assets/logo-tag.png" alt="Vista Auction" className="h-14 w-auto transform transition-transform group-hover:scale-105" />
                             <div className="flex flex-col">
                                 <span className="font-black text-2xl text-gray-900 leading-none tracking-tight font-display">{brandText}</span>
-                                <span className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-black mt-0.5">Vista Auction</span>
+                                <span className="text-[11px] uppercase tracking-[0.25em] text-orange-600 font-black mt-1 bg-orange-50 px-2 py-0.5 rounded-md self-start">Vista Auction</span>
                             </div>
                         </Link>
                     </div>

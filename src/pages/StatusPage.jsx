@@ -43,22 +43,87 @@ const StatusPage = () => {
         }, 1000);
     };
 
-    const handleReschedule = () => {
-        if (!result) return;
+    const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+    const [suggestedDate, setSuggestedDate] = useState('');
+    const [suggestedTime, setSuggestedTime] = useState('');
+
+    const handleReschedule = (e) => {
+        e.preventDefault();
+        if (!result || !suggestedDate || !suggestedTime) return;
+
         const storedApps = localStorage.getItem('vista_applications');
         if (storedApps) {
             const apps = JSON.parse(storedApps);
             const updated = apps.map(app =>
-                app.id === result.id ? { ...app, rescheduleRequested: true } : app
+                app.id === result.id ? {
+                    ...app,
+                    rescheduleRequested: true,
+                    suggestedInterviewDate: `${suggestedDate}T${suggestedTime}`
+                } : app
             );
             localStorage.setItem('vista_applications', JSON.stringify(updated));
-            setResult({ ...result, rescheduleRequested: true });
+            setResult({
+                ...result,
+                rescheduleRequested: true,
+                suggestedInterviewDate: `${suggestedDate}T${suggestedTime}`
+            });
+            setShowRescheduleModal(false);
         }
     };
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col">
             <Navbar />
+
+            {/* Reschedule Modal */}
+            {showRescheduleModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-md p-10 shadow-2xl border border-gray-100 animate-scale-in">
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-2xl font-black text-gray-900 tracking-tight">Suggest New Date</h3>
+                            <button onClick={() => setShowRescheduleModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
+                                <XCircle size={24} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleReschedule} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Preferred Date</label>
+                                <input
+                                    type="date"
+                                    required
+                                    min={new Date().toISOString().split('T')[0]}
+                                    value={suggestedDate}
+                                    onChange={(e) => setSuggestedDate(e.target.value)}
+                                    className="input-premium w-full py-4 rounded-2xl"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Preferred Time</label>
+                                <input
+                                    type="time"
+                                    required
+                                    value={suggestedTime}
+                                    onChange={(e) => setSuggestedTime(e.target.value)}
+                                    className="input-premium w-full py-4 rounded-2xl"
+                                />
+                            </div>
+
+                            <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 text-[10px] font-bold text-orange-700 leading-relaxed shadow-inner">
+                                <AlertCircle size={14} className="inline mr-2 mb-0.5" />
+                                Our HR team will review your suggested slot and reach out via email to confirm the change.
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="glass-button w-full py-4 rounded-2xl font-black text-lg shadow-xl shadow-orange-500/20"
+                            >
+                                Submit Request
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <main className="flex-grow pt-24 pb-20 relative overflow-hidden">
                 {/* Hero Background Section */}
@@ -216,16 +281,24 @@ const StatusPage = () => {
 
                                                                 {result.status === 'Interviewing' && !result.rescheduleRequested && (
                                                                     <button
-                                                                        onClick={handleReschedule}
+                                                                        onClick={() => setShowRescheduleModal(true)}
                                                                         className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-orange-600 hover:border-orange-200 transition-all shadow-sm"
                                                                     >
-                                                                        <Clock size={14} /> Request Different Date
+                                                                        <Calendar size={14} /> Request Different Date
                                                                     </button>
                                                                 )}
 
                                                                 {result.rescheduleRequested && (
-                                                                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-100 text-[10px] font-black uppercase tracking-widest text-amber-600 animate-pulse">
-                                                                        <AlertCircle size={14} /> Reschedule Under Review
+                                                                    <div className="space-y-3 w-full">
+                                                                        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-100 text-[10px] font-black uppercase tracking-widest text-amber-600 animate-pulse">
+                                                                            <AlertCircle size={14} /> Reschedule Under Review
+                                                                        </div>
+                                                                        {result.suggestedInterviewDate && (
+                                                                            <div className="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-[10px] font-bold text-gray-500">
+                                                                                <span className="text-gray-400 uppercase tracking-widest block mb-1">Your Suggestion:</span>
+                                                                                {new Date(result.suggestedInterviewDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </div>

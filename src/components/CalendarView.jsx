@@ -77,6 +77,16 @@ const CalendarView = ({ applications, onSelectApp }) => {
                                         </div>
                                     </div>
 
+                                    {isReschedule && app.suggestedInterviewDate && (
+                                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 shadow-inner">
+                                            <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest block mb-1">CANDIDATE SUGGESTION:</span>
+                                            <div className="flex items-center gap-2 text-amber-700 font-bold text-xs uppercase tracking-tight">
+                                                <CalendarIcon size={12} />
+                                                {new Date(app.suggestedInterviewDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest px-1">
                                         <span className="text-gray-300 hover:text-orange-500 flex items-center gap-2 transition-colors">
                                             Details <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all" />
