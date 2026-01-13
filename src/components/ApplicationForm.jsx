@@ -146,39 +146,8 @@ const ApplicationForm = () => {
             setTimeout(() => navigate('/status'), 2000);
         } catch (error) {
             console.error('Submission failed:', error);
-            const msg = error?.message || 'Unknown Error';
+            const msg = error?.message || 'Check your internet connection';
             setNotification({ message: `Cloud Sync Failed: ${msg}`, type: 'error' });
-            alert("Submission Error: " + msg);
-        }
-    };
-
-    const handleTestSubmit = async () => {
-        const testData = {
-            fullName: "Test Candidate " + Math.floor(Math.random() * 1000),
-            email: "test@example.com",
-            phone: "555-0199",
-            workAuth: "Citizen",
-            is16OrOlder: "Yes",
-            is18OrOlder: "Yes",
-            jobType: "Full Time",
-            preferredShift: "Morning",
-            preferredLocation: "Charlotte (Sardis Rd)",
-            howHeard: "Internal",
-            interestStatement: "This is a prompt automated test application to verify cloud sync.",
-            backgroundConsent: true,
-            status: 'Pending',
-            id: Date.now().toString(),
-            submittedDate: new Date().toISOString()
-        };
-
-        try {
-            setNotification({ message: 'Syncing test data...', type: 'info' });
-            const { error } = await supabase.from('vista_applications').upsert([testData]);
-            if (error) throw error;
-            confetti({ particleCount: 50, spread: 40, origin: { y: 0.9 } });
-            setNotification({ message: 'Test Uploaded Successfully!', type: 'success' });
-        } catch (error) {
-            alert("Test Submission Error: " + (error?.message || 'Check connection'));
         }
     };
 
@@ -186,15 +155,7 @@ const ApplicationForm = () => {
         <div className="max-w-4xl mx-auto my-10 relative px-4 sm:px-0">
 
             {/* Steps Indicator */}
-            <div className="mb-12 flex flex-col items-center">
-                <button
-                    type="button"
-                    onClick={handleTestSubmit}
-                    className="mb-6 px-4 py-2 bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all flex items-center gap-2"
-                >
-                    <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                    Debug: One-Click Test Submit
-                </button>
+            <div className="mb-12">
                 <div className="flex justify-between items-center relative z-10">
                     {[
                         { id: 1, label: "Basics", icon: User },

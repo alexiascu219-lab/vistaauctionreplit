@@ -114,12 +114,6 @@ const HRPortalContent = () => {
             console.error("Failed to load applications from Supabase", e);
             const errorMessage = e && typeof e === 'object' ? e.message || JSON.stringify(e) : String(e);
             setNotification({ message: `Cloud Sync Error: ${errorMessage}`, type: 'error' });
-            // Add a temporary alert so the user sees the error without console
-            if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
-                alert("Database Error: The 'vista_applications' table was not found. Please make sure you ran the SQL code in the Supabase 'SQL Editor' and clicked 'Run'.");
-            } else {
-                alert("Supabase Error: " + errorMessage);
-            }
         }
     };
 
