@@ -85,7 +85,16 @@ const HRPortalContent = () => {
         { id: '4', name: 'Customer Service Excellence', type: 'PDF', required: false, description: 'Best practices for customer interactions.' }
     ]);
     const [showAddCourse, setShowAddCourse] = useState(false);
-    const [newCourse, setNewCourse] = useState({ name: '', type: 'PDF', required: false, description: '' });
+    const [newCourse, setNewCourse] = useState({
+        name: '',
+        type: 'PDF',
+        required: false,
+        description: '',
+        content_url: '',
+        video_url: '',
+        minimum_time_seconds: 180,
+        estimated_duration_minutes: 5
+    });
     const [selectedEmployee, setSelectedEmployee] = useState(null);
 
     // EmailJS Configuration
@@ -197,7 +206,16 @@ const HRPortalContent = () => {
         };
 
         setCourses(prev => [...prev, course]);
-        setNewCourse({ name: '', type: 'PDF', required: false, description: '' });
+        setNewCourse({
+            name: '',
+            type: 'PDF',
+            required: false,
+            description: '',
+            content_url: '',
+            video_url: '',
+            minimum_time_seconds: 180,
+            estimated_duration_minutes: 5
+        });
         setShowAddCourse(false);
         setNotification({ message: 'Course added successfully', type: 'success' });
     };
@@ -1128,8 +1146,8 @@ const HRPortalContent = () => {
                                                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{record.course_type}</p>
                                                     </div>
                                                     <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${record.status === 'Completed' ? 'bg-green-50 text-green-600' :
-                                                            record.status === 'In Progress' ? 'bg-orange-50 text-orange-600' :
-                                                                'bg-gray-100 text-gray-500'
+                                                        record.status === 'In Progress' ? 'bg-orange-50 text-orange-600' :
+                                                            'bg-gray-100 text-gray-500'
                                                         }`}>
                                                         {record.status}
                                                     </span>
@@ -1169,6 +1187,60 @@ const HRPortalContent = () => {
                                     placeholder="Brief description of the course..."
                                 />
                             </div>
+
+                            {/* Content URLs */}
+                            {newCourse.type === 'PDF' && (
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">PDF URL</label>
+                                    <input
+                                        type="url"
+                                        value={newCourse.content_url}
+                                        onChange={(e) => setNewCourse(prev => ({ ...prev, content_url: e.target.value }))}
+                                        className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                                        placeholder="https://example.com/document.pdf"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1 ml-1">Upload PDF to Google Drive or Dropbox and paste the shareable link</p>
+                                </div>
+                            )}
+
+                            {newCourse.type === 'Video' && (
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Video URL</label>
+                                    <input
+                                        type="url"
+                                        value={newCourse.video_url}
+                                        onChange={(e) => setNewCourse(prev => ({ ...prev, video_url: e.target.value }))}
+                                        className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                                        placeholder="https://example.com/video.mp4"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1 ml-1">Direct video file URL or YouTube embed link</p>
+                                </div>
+                            )}
+
+                            {/* Duration Settings */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Est. Duration (min)</label>
+                                    <input
+                                        type="number"
+                                        value={newCourse.estimated_duration_minutes}
+                                        onChange={(e) => setNewCourse(prev => ({ ...prev, estimated_duration_minutes: parseInt(e.target.value) || 0 }))}
+                                        className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold"
+                                        min="1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Min. Time (sec)</label>
+                                    <input
+                                        type="number"
+                                        value={newCourse.minimum_time_seconds}
+                                        onChange={(e) => setNewCourse(prev => ({ ...prev, minimum_time_seconds: parseInt(e.target.value) || 0 }))}
+                                        className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold"
+                                        min="30"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Type</label>

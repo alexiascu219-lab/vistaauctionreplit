@@ -54,6 +54,11 @@ const Navbar = () => {
                                 Check Status
                             </Link>
                         </motion.div>
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                            <Link to="/training" className="text-[10px] font-black text-gray-500 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
+                                Training
+                            </Link>
+                        </motion.div>
                         <motion.button
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -103,6 +108,13 @@ const Navbar = () => {
                                 className="block text-xl font-black text-gray-900 py-4 border-b border-gray-50 tracking-tight"
                             >
                                 Check Status
+                            </Link>
+                            <Link
+                                to="/training"
+                                onClick={() => setIsOpen(false)}
+                                className="block text-xl font-black text-gray-900 py-4 border-b border-gray-50 tracking-tight"
+                            >
+                                Training
                             </Link>
                             <button
                                 onClick={handleApplyClick}
