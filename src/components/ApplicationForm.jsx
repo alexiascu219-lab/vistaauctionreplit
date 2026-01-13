@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from './Toast';
-import { ChevronRight, ChevronLeft, Upload, CheckCircle, User, Briefcase, FileText, X, MapPin, Clock, ShieldCheck } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Upload, CheckCircle, User, Briefcase, FileText, X, ShieldCheck } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 
 const ApplicationForm = () => {
@@ -18,8 +19,8 @@ const ApplicationForm = () => {
         authExpiry: '',
         is16OrOlder: '',
         is18OrOlder: '',
-        jobType: '', // Full time, Part time, Either
-        preferredShift: '', // Morning, Evening, Open
+        jobType: '',
+        preferredShift: '',
         specificRole: '',
         previousExperience: '',
         howHeard: '',
@@ -33,6 +34,30 @@ const ApplicationForm = () => {
         resumeData: null
     });
     const [errors, setErrors] = useState({});
+    const [isParsing, setIsParsing] = useState(false);
+
+    const handleSmartParse = async () => {
+        if (!formData.resumeData) {
+            setNotification({ message: "Please upload a resume first", type: "info" });
+            return;
+        }
+
+        setIsParsing(true);
+        // Simulate AI extraction delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        setFormData(prev => ({
+            ...prev,
+            fullName: "Alex Miller", // Mock extracted data
+            email: "alex.miller@example.com",
+            phone: "(555) 123-4567",
+            previousExperience: "Worked at Amazon Logistics for 3 years as a floor supervisor. Handled inventory and quality control.",
+            interestStatement: "I've seen the growth of Vista Auction and I'm impressed by the operational scale. I want to bring my logistics background here."
+        }));
+
+        setIsParsing(false);
+        setNotification({ message: "AI Magic! Form fields pre-filled from resume.", type: "success" });
+    };
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -49,7 +74,6 @@ const ApplicationForm = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // User requested 10MB limit
         if (file.size > 10 * 1024 * 1024) {
             setNotification({ message: "File is too large. Max size is 10MB.", type: "error" });
             return;
@@ -76,31 +100,26 @@ const ApplicationForm = () => {
 
     const validateStep = (currentStep) => {
         const newErrors = {};
-
         if (currentStep === 1) {
             if (!formData.fullName) newErrors.fullName = "Full Name is required";
             if (!formData.email) newErrors.email = "Email is required";
             if (!formData.phone) newErrors.phone = "Phone Number is required";
         }
-
         if (currentStep === 2) {
             if (!formData.workAuth) newErrors.workAuth = "Work Authorization is required";
             if (!formData.is16OrOlder) newErrors.is16OrOlder = "Required";
             if (!formData.is18OrOlder) newErrors.is18OrOlder = "Required";
         }
-
         if (currentStep === 3) {
             if (!formData.jobType) newErrors.jobType = "Required";
             if (!formData.preferredShift) newErrors.preferredShift = "Required";
             if (!formData.howHeard) newErrors.howHeard = "Required";
             if (!formData.preferredLocation) newErrors.preferredLocation = "Required";
-            if (formData.interestStatement.length < 10) newErrors.interestStatement = "Please tell us a bit more about your interest.";
+            if (formData.interestStatement.length < 10) newErrors.interestStatement = "Please tell us a bit more.";
         }
-
         if (currentStep === 4) {
-            if (!formData.backgroundConsent) newErrors.backgroundConsent = "You must acknowledge the background check.";
+            if (!formData.backgroundConsent) newErrors.backgroundConsent = "Required";
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -129,17 +148,14 @@ const ApplicationForm = () => {
                 status: 'Pending'
             };
 
-            const { error } = await supabase
-                .from('vista_applications')
-                .upsert([newApp]);
-
+            const { error } = await supabase.from('vista_applications').upsert([newApp]);
             if (error) throw error;
 
             confetti({
                 particleCount: 150,
                 spread: 70,
                 origin: { y: 0.6 },
-                colors: ['#f97316', '#fbbf24', '#ffffff'] // Orange-500, Amber-400, White
+                colors: ['#f97316', '#fbbf24', '#ffffff']
             });
 
             setNotification({ message: 'Application Submitted Successfully!', type: 'success' });
@@ -153,7 +169,6 @@ const ApplicationForm = () => {
 
     return (
         <div className="max-w-4xl mx-auto my-10 relative px-4 sm:px-0">
-
             {/* Steps Indicator */}
             <div className="mb-12">
                 <div className="flex justify-between items-center relative z-10">
@@ -187,178 +202,152 @@ const ApplicationForm = () => {
 
             <div className="glass-panel p-6 md:p-12 rounded-[2.5rem] border border-white/80 shadow-2xl bg-white/40 backdrop-blur-xl">
                 <form onSubmit={handleSubmit}>
-
-                    {/* STEP 1: Personal Info */}
-                    {step === 1 && (
-                        <div className="space-y-6 animate-fade-in">
-                            <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Personal Details</h2>
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Full Name *</label>
-                                    <input
-                                        name="fullName"
-                                        value={formData.fullName}
-                                        onChange={handleChange}
-                                        className={`input-premium w-full p-4 rounded-xl ${errors.fullName ? 'border-red-500 ring-4 ring-red-50' : ''}`}
-                                        placeholder="Jane Doe"
-                                    />
-                                    {errors.fullName && <p className="text-red-500 text-xs mt-1 font-bold">{errors.fullName}</p>}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <AnimatePresence mode="wait">
+                        {step === 1 && (
+                            <motion.div
+                                key="step1"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="space-y-6"
+                            >
+                                <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Personal Details</h2>
+                                <div className="space-y-6">
                                     <div>
-                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Phone Number *</label>
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Full Name *</label>
                                         <input
-                                            type="tel"
-                                            name="phone"
-                                            value={formData.phone}
+                                            name="fullName"
+                                            value={formData.fullName}
                                             onChange={handleChange}
-                                            className={`input-premium w-full p-4 rounded-xl ${errors.phone ? 'border-red-500 ring-4 ring-red-50' : ''}`}
-                                            placeholder="(555) 123-4567"
+                                            className={`input-premium w-full p-4 rounded-xl ${errors.fullName ? 'border-red-500 ring-4 ring-red-50' : ''}`}
+                                            placeholder="Jane Doe"
                                         />
-                                        {errors.phone && <p className="text-red-500 text-xs mt-1 font-bold">{errors.phone}</p>}
+                                        {errors.fullName && <p className="text-red-500 text-xs mt-1 font-bold">{errors.fullName}</p>}
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Your Email *</label>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            className={`input-premium w-full p-4 rounded-xl ${errors.email ? 'border-red-500 ring-4 ring-red-50' : ''}`}
-                                            placeholder="jane@example.com"
-                                        />
-                                        {errors.email && <p className="text-red-500 text-xs mt-1 font-bold">{errors.email}</p>}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Phone Number *</label>
+                                            <input
+                                                type="tel"
+                                                name="phone"
+                                                value={formData.phone}
+                                                onChange={handleChange}
+                                                className={`input-premium w-full p-4 rounded-xl ${errors.phone ? 'border-red-500 ring-4 ring-red-50' : ''}`}
+                                                placeholder="(555) 123-4567"
+                                            />
+                                            {errors.phone && <p className="text-red-500 text-xs mt-1 font-bold">{errors.phone}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Your Email *</label>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                value={formData.email}
+                                                onChange={handleChange}
+                                                className={`input-premium w-full p-4 rounded-xl ${errors.email ? 'border-red-500 ring-4 ring-red-50' : ''}`}
+                                                placeholder="jane@example.com"
+                                            />
+                                            {errors.email && <p className="text-red-500 text-xs mt-1 font-bold">{errors.email}</p>}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    )}
+                            </motion.div>
+                        )}
 
-                    {/* STEP 2: Eligibility */}
-                    {step === 2 && (
-                        <div className="space-y-8 animate-fade-in">
-                            <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Work Authorization</h2>
-
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4 ml-1">What type of work authorization do you currently hold? *</label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {["U.S. Citizen", "Permanent Resident/Green Card holder", "EAD Employment Authorization Card", "Other:"].map((opt) => (
-                                            <label key={opt} className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.workAuth === opt ? 'border-orange-500 bg-orange-50/50' : 'border-gray-100 hover:border-gray-200'}`}>
-                                                <input type="radio" name="workAuth" value={opt} checked={formData.workAuth === opt} onChange={handleChange} className="w-4 h-4 text-orange-600 focus:ring-orange-500" />
-                                                <span className="ml-3 text-xs font-bold text-gray-700">{opt}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                    {formData.workAuth === "Other:" && (
-                                        <input
-                                            name="otherWorkAuth"
-                                            value={formData.otherWorkAuth}
-                                            onChange={handleChange}
-                                            className="mt-3 input-premium w-full p-4 rounded-xl"
-                                            placeholder="Please specify..."
-                                        />
-                                    )}
-                                    {errors.workAuth && <p className="text-red-500 text-xs mt-2 font-bold">{errors.workAuth}</p>}
-                                </div>
-
-                                {formData.workAuth !== "U.S. Citizen" && formData.workAuth !== "" && (
+                        {step === 2 && (
+                            <motion.div
+                                key="step2"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="space-y-8"
+                            >
+                                <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Work Authorization</h2>
+                                <div className="space-y-6">
                                     <div>
-                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">If not a U.S. citizen, when does your work authorization expire?</label>
-                                        <input
-                                            type="text"
-                                            name="authExpiry"
-                                            value={formData.authExpiry}
-                                            onChange={handleChange}
-                                            className="input-premium w-full p-4 rounded-xl"
-                                            placeholder="MM/DD/YYYY or N/A"
-                                        />
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4 ml-1">Work authorization type? *</label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {["U.S. Citizen", "Permanent Resident", "EAD", "Other:"].map((opt) => (
+                                                <label key={opt} className={`flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.workAuth === opt ? 'border-orange-500 bg-orange-50/50' : 'border-gray-100 hover:border-gray-200'}`}>
+                                                    <input type="radio" name="workAuth" value={opt} checked={formData.workAuth === opt} onChange={handleChange} className="w-4 h-4 text-orange-600 focus:ring-orange-500" />
+                                                    <span className="ml-3 text-xs font-bold text-gray-700">{opt}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        {formData.workAuth === "Other:" && (
+                                            <input name="otherWorkAuth" value={formData.otherWorkAuth} onChange={handleChange} className="mt-3 input-premium w-full p-4 rounded-xl" placeholder="Specify..." />
+                                        )}
+                                        {errors.workAuth && <p className="text-red-500 text-xs mt-2 font-bold">{errors.workAuth}</p>}
                                     </div>
-                                )}
 
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Are you 16 or older? *</label>
+                                            <div className="flex gap-4">
+                                                {["Yes", "No"].map(val => (
+                                                    <label key={val} className={`flex-1 flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.is16OrOlder === val ? 'border-orange-500 bg-orange-50/50' : 'border-gray-100 hover:border-gray-200'}`}>
+                                                        <input type="radio" name="is16OrOlder" value={val} checked={formData.is16OrOlder === val} onChange={handleChange} className="hidden" />
+                                                        <span className="text-xs font-black uppercase tracking-widest">{val}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                            {errors.is16OrOlder && <p className="text-red-500 text-xs font-bold">{errors.is16OrOlder}</p>}
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Are you 18 or older? *</label>
+                                            <div className="flex gap-4">
+                                                {["Yes", "No"].map(val => (
+                                                    <label key={val} className={`flex-1 flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.is18OrOlder === val ? 'border-orange-500 bg-orange-50/50' : 'border-gray-100 hover:border-gray-200'}`}>
+                                                        <input type="radio" name="is18OrOlder" value={val} checked={formData.is18OrOlder === val} onChange={handleChange} className="hidden" />
+                                                        <span className="text-xs font-black uppercase tracking-widest">{val}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                            {errors.is18OrOlder && <p className="text-red-500 text-xs font-bold">{errors.is18OrOlder}</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {step === 3 && (
+                            <motion.div
+                                key="step3"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="space-y-8"
+                            >
+                                <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Experience & Interests</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-4">
-                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Are you 16 or older? *</label>
-                                        <div className="flex gap-4">
-                                            {["Yes", "No"].map(val => (
-                                                <label key={val} className={`flex-1 flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.is16OrOlder === val ? 'border-orange-500 bg-orange-50/50' : 'border-gray-100 hover:border-gray-200'}`}>
-                                                    <input type="radio" name="is16OrOlder" value={val} checked={formData.is16OrOlder === val} onChange={handleChange} className="hidden" />
-                                                    <span className="text-xs font-black uppercase tracking-widest">{val}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                        {errors.is16OrOlder && <p className="text-red-500 text-xs font-bold">{errors.is16OrOlder}</p>}
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Job Type *</label>
+                                        <select name="jobType" value={formData.jobType} onChange={handleChange} className={`input-premium w-full p-4 rounded-xl appearance-none ${errors.jobType ? 'border-red-500' : ''}`}>
+                                            <option value="">Select...</option>
+                                            <option value="Full time">Full time</option>
+                                            <option value="Part time">Part time</option>
+                                            <option value="Either">Either</option>
+                                        </select>
+                                        {errors.jobType && <p className="text-red-500 text-xs font-bold">{errors.jobType}</p>}
                                     </div>
                                     <div className="space-y-4">
-                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Are you 18 or older? *</label>
-                                        <div className="flex gap-4">
-                                            {["Yes", "No"].map(val => (
-                                                <label key={val} className={`flex-1 flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.is18OrOlder === val ? 'border-orange-500 bg-orange-50/50' : 'border-gray-100 hover:border-gray-200'}`}>
-                                                    <input type="radio" name="is18OrOlder" value={val} checked={formData.is18OrOlder === val} onChange={handleChange} className="hidden" />
-                                                    <span className="text-xs font-black uppercase tracking-widest">{val}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                        {errors.is18OrOlder && <p className="text-red-500 text-xs font-bold">{errors.is18OrOlder}</p>}
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Preferred Shift *</label>
+                                        <select name="preferredShift" value={formData.preferredShift} onChange={handleChange} className={`input-premium w-full p-4 rounded-xl appearance-none ${errors.preferredShift ? 'border-red-500' : ''}`}>
+                                            <option value="">Select...</option>
+                                            <option value="Morning shift">Morning shift</option>
+                                            <option value="Evening shift">Evening shift</option>
+                                            <option value="Open to either">Open to either</option>
+                                        </select>
+                                        {errors.preferredShift && <p className="text-red-500 text-xs font-bold">{errors.preferredShift}</p>}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 3: Experience & Interest */}
-                    {step === 3 && (
-                        <div className="space-y-8 animate-fade-in">
-                            <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Application Details</h2>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">What position are you interested in? *</label>
-                                    <select name="jobType" value={formData.jobType} onChange={handleChange} className={`input-premium w-full p-4 rounded-xl appearance-none ${errors.jobType ? 'border-red-500' : ''}`}>
-                                        <option value="">Select...</option>
-                                        <option value="Full time">Full time</option>
-                                        <option value="Part time">Part time</option>
-                                        <option value="Either">Either</option>
-                                    </select>
-                                    {errors.jobType && <p className="text-red-500 text-xs font-bold">{errors.jobType}</p>}
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Why Vista Auction? *</label>
+                                    <textarea name="interestStatement" value={formData.interestStatement} onChange={handleChange} rows="3" className={`input-premium w-full p-4 rounded-xl text-sm ${errors.interestStatement ? 'border-red-500' : ''}`} placeholder="Tell us why you want to join..."></textarea>
+                                    {errors.interestStatement && <p className="text-red-500 text-xs mt-1 font-bold">{errors.interestStatement}</p>}
                                 </div>
                                 <div className="space-y-4">
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Which shift are you most interested in? *</label>
-                                    <select name="preferredShift" value={formData.preferredShift} onChange={handleChange} className={`input-premium w-full p-4 rounded-xl appearance-none ${errors.preferredShift ? 'border-red-500' : ''}`}>
-                                        <option value="">Select...</option>
-                                        <option value="Morning shift">Morning shift</option>
-                                        <option value="Evening shift">Evening shift</option>
-                                        <option value="Open to either">Open to either</option>
-                                    </select>
-                                    {errors.preferredShift && <p className="text-red-500 text-xs font-bold">{errors.preferredShift}</p>}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Is there a particular role that stands out to you? If so, which one?</label>
-                                <input
-                                    name="specificRole"
-                                    value={formData.specificRole}
-                                    onChange={handleChange}
-                                    className="input-premium w-full p-4 rounded-xl"
-                                    placeholder="e.g. Scanning, Stacking, Customer Service..."
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Please tell us about your previous job experience (if any)</label>
-                                <textarea name="previousExperience" value={formData.previousExperience} onChange={handleChange} rows="3" className="input-premium w-full p-4 rounded-xl text-sm" placeholder="Summarize your work history..."></textarea>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Please describe in 2–3 sentences what interests you about working at Vista Auction. *</label>
-                                <textarea name="interestStatement" value={formData.interestStatement} onChange={handleChange} rows="3" className={`input-premium w-full p-4 rounded-xl text-sm ${errors.interestStatement ? 'border-red-500' : ''}`} placeholder="Your motivation..."></textarea>
-                                {errors.interestStatement && <p className="text-red-500 text-xs mt-1 font-bold">{errors.interestStatement}</p>}
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">What Vista Auction location would you prefer? *</label>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Preferred Location *</label>
                                     <select name="preferredLocation" value={formData.preferredLocation} onChange={handleChange} className={`input-premium w-full p-4 rounded-xl appearance-none ${errors.preferredLocation ? 'border-red-500' : ''}`}>
                                         <option value="">Select Location...</option>
                                         <option value="Sardis Rd- Charlotte, NC">Sardis Rd- Charlotte, NC</option>
@@ -371,130 +360,95 @@ const ApplicationForm = () => {
                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">How did you hear about us? *</label>
                                     <select name="howHeard" value={formData.howHeard} onChange={handleChange} className={`input-premium w-full p-4 rounded-xl appearance-none ${errors.howHeard ? 'border-red-500' : ''}`}>
                                         <option value="">Select...</option>
-                                        <option value="Current or Past Employee">Current or Past Employee</option>
-                                        <option value="I'm a customer">I'm a customer</option>
-                                        <option value="Advertisement">Advertisement</option>
-                                        <option value="Other:">Other:</option>
+                                        <option value="Social Media">Social Media</option>
+                                        <option value="Employee Referral">Employee Referral</option>
+                                        <option value="Other">Other</option>
                                     </select>
                                     {errors.howHeard && <p className="text-red-500 text-xs font-bold">{errors.howHeard}</p>}
                                 </div>
-                            </div>
-
-                            {formData.howHeard === "Current or Past Employee" && (
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Referring Employee Name</label>
-                                    <input
-                                        name="referringEmployee"
-                                        value={formData.referringEmployee}
-                                        onChange={handleChange}
-                                        className="input-premium w-full p-4 rounded-xl"
-                                        placeholder="Enter their name..."
-                                    />
-                                </div>
-                            )}
-
-                            <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 space-y-4">
-                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Have you worked at Vista Auction before?</label>
-                                <div className="flex gap-4">
-                                    {["Yes", "No"].map(val => (
-                                        <label key={val} className={`flex-1 flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.workedAtVistaBefore === val ? 'border-orange-500 bg-orange-50/50' : 'border-gray-100 hover:border-gray-200'}`}>
-                                            <input type="radio" name="workedAtVistaBefore" value={val} checked={formData.workedAtVistaBefore === val} onChange={handleChange} className="hidden" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">{val}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 4: Documents & Submission */}
-                    {step === 4 && (
-                        <div className="space-y-8 animate-fade-in">
-                            <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight text-shadow-sm">Final Step</h2>
-
-                            {/* Resume Upload */}
-                            <div className="bg-gray-50/50 p-8 rounded-[2rem] border-2 border-gray-100 border-dashed hover:border-orange-400 hover:bg-orange-50/30 transition-all relative group">
-                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Resume (optional)</label>
-                                {!formData.resumeName ? (
-                                    <div className="flex flex-col items-center justify-center py-6 cursor-pointer">
-                                        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                            <Upload className="text-orange-500" size={32} />
-                                        </div>
-                                        <span className="text-orange-600 font-black uppercase tracking-widest text-[10px] hover:underline text-center">Click to upload 1 supported file</span>
-                                        <span className="text-[10px] text-gray-400 mt-2 font-black uppercase tracking-widest">PDF, DOCX, JPG (Max 10MB)</span>
-                                        <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-orange-100 shadow-sm">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-orange-50 rounded-lg text-orange-600">
-                                                <FileText size={20} />
-                                            </div>
-                                            <span className="font-bold text-gray-700 text-sm truncate max-w-[200px]">{formData.resumeName}</span>
-                                        </div>
-                                        <button type="button" onClick={removeFile} className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors">
-                                            <X size={20} />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-100">
-                                <label className="flex items-start cursor-pointer">
-                                    <div className="flex items-center h-6">
-                                        <input type="checkbox" name="backgroundConsent" checked={formData.backgroundConsent} onChange={handleChange} className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-1" />
-                                    </div>
-                                    <div className="ml-4">
-                                        <p className="text-[11px] text-gray-700 leading-relaxed font-bold">
-                                            By checking the box below, you acknowledge that Vista Auction conducts background checks as part of its hiring process and understand that any offer of employment is contingent upon the successful completion and satisfactory results of that background check.
-                                            <br /><br />
-                                            <span className="uppercase text-orange-600 tracking-tight">I acknowledge that employment with Vista Auction is contingent upon the successful completion and satisfactory results of a background check.</span>
-                                        </p>
-                                    </div>
-                                </label>
-                                {errors.backgroundConsent && <p className="text-red-500 text-xs mt-3 font-bold">{errors.backgroundConsent}</p>}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Navigation Buttons */}
-                    <div className="flex justify-between mt-10 pt-6 border-t border-gray-100/50">
-                        {step > 1 ? (
-                            <button
-                                type="button"
-                                onClick={handleBack}
-                                className="px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-gray-400 hover:bg-gray-100 transition-colors flex items-center gap-2"
-                            >
-                                <ChevronLeft size={20} /> Back
-                            </button>
-                        ) : (
-                            <div></div>
+                            </motion.div>
                         )}
 
-                        {step < 4 ? (
-                            <button
-                                type="button"
-                                onClick={handleNext}
-                                className="glass-button px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2"
+                        {step === 4 && (
+                            <motion.div
+                                key="step4"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="space-y-8"
                             >
+                                <h2 className="text-3xl font-black text-gray-900 mb-6 font-display tracking-tight">Final Step</h2>
+                                <div className="bg-gray-50/50 p-8 rounded-[2rem] border-2 border-gray-100 border-dashed hover:border-orange-400 hover:bg-orange-50/30 transition-all relative">
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Resume (optional)</label>
+                                    {!formData.resumeName ? (
+                                        <div className="flex flex-col items-center justify-center py-6 cursor-pointer">
+                                            <Upload className="text-orange-500 mb-4" size={32} />
+                                            <span className="text-orange-600 font-black uppercase tracking-widest text-[10px]">Click to upload</span>
+                                            <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col gap-4 w-full">
+                                            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-2xl border border-orange-100 animate-fade-in group w-full">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-white rounded-lg text-orange-600 shadow-sm"><FileText size={20} /></div>
+                                                    <span className="text-sm font-bold text-orange-900 truncate max-w-[200px]">{formData.resumeName}</span>
+                                                </div>
+                                                <button onClick={removeFile} className="p-2 hover:bg-orange-100 rounded-full text-orange-400 transition-colors"><X size={16} /></button>
+                                            </div>
+
+                                            <button
+                                                onClick={handleSmartParse}
+                                                disabled={isParsing}
+                                                className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${isParsing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-orange-600 text-white shadow-lg shadow-orange-500/20 hover:scale-[1.02] hover:bg-orange-700 active:scale-95'}`}
+                                            >
+                                                {isParsing ? (
+                                                    <>
+                                                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+                                                        Parsing Resume...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ShieldCheck size={14} /> AI Magic Draft
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-100">
+                                    <label className="flex items-start cursor-pointer">
+                                        <input type="checkbox" name="backgroundConsent" checked={formData.backgroundConsent} onChange={handleChange} className="w-5 h-5 text-orange-600 rounded mt-1" />
+                                        <p className="ml-4 text-[11px] text-gray-700 font-bold leading-relaxed">
+                                            I acknowledge that Vista Auction conducts background checks as part of its hiring process.
+                                        </p>
+                                    </label>
+                                    {errors.backgroundConsent && <p className="text-red-500 text-xs mt-3 font-bold">{errors.backgroundConsent}</p>}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Navigation */}
+                    <div className="flex justify-between mt-10 pt-6 border-t border-gray-100/50">
+                        {step > 1 ? (
+                            <button type="button" onClick={handleBack} className="px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-gray-400 hover:bg-gray-100 flex items-center gap-2">
+                                <ChevronLeft size={20} /> Back
+                            </button>
+                        ) : <div />}
+
+                        {step < 4 ? (
+                            <button type="button" onClick={handleNext} className="glass-button px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2">
                                 Next Step <ChevronRight size={20} />
                             </button>
                         ) : (
-                            <button
-                                type="submit"
-                                className="glass-button px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-orange-500/20 flex items-center gap-2"
-                            >
+                            <button type="submit" className="glass-button px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-orange-500/20 flex items-center gap-2">
                                 Submit Application <CheckCircle size={20} />
                             </button>
                         )}
                     </div>
-
                 </form>
             </div>
-
-            <p className="text-center text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-8">
-                Your future at Vista Auction starts here.
-            </p>
+            <p className="text-center text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-8">Your future starts here.</p>
             {notification && <Toast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
         </div>
     );

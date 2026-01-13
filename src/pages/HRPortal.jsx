@@ -68,6 +68,14 @@ const HRPortalContent = () => {
     const [notification, setNotification] = useState(null);
     const [isScheduling, setIsScheduling] = useState(false);
     const [interviewDate, setInterviewDate] = useState('');
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showScorecard, setShowScorecard] = useState(false);
+    const [scorecard, setScorecard] = useState({
+        punctuality: 5,
+        attitude: 5,
+        skillset: 5,
+        culturalFit: 5
+    });
 
     // EmailJS Configuration
     const SERVICE_ID = 'service_2l8vhyj';
@@ -223,9 +231,41 @@ const HRPortalContent = () => {
         }
     };
 
+    const handleBatchAction = async (newStatus) => {
+        if (!selectedIds.length) return;
+        if (!window.confirm(`Perform batch ${newStatus} on ${selectedIds.length} candidates?`)) return;
+
+        try {
+            const { error } = await supabase
+                .from('vista_applications')
+                .update({ status: newStatus })
+                .in('id', selectedIds);
+
+            if (error) throw error;
+
+            setApplications(prev => prev.map(a => selectedIds.includes(a.id) ? { ...a, status: newStatus } : a));
+            setNotification({ message: `Successfully updated ${selectedIds.length} candidates.`, type: 'success' });
+            setSelectedIds([]);
+        } catch (e) {
+            setNotification({ message: 'Batch update failed.', type: 'error' });
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === filteredApps.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredApps.map(app => app.id));
+        }
+    };
+
     const exportCSV = () => {
+        const appsToExport = selectedIds.length > 0
+            ? applications.filter(a => selectedIds.includes(a.id))
+            : applications;
+
         const headers = ["ID", "Full Name", "Email", "Phone", "Work Auth", "Auth Expiry", "Age 16+", "Age 18+", "Job Type", "Shift", "Location", "Status", "Date"];
-        const rows = applications.map(app => [
+        const rows = appsToExport.map(app => [
             app.id,
             app.fullName,
             app.email,
@@ -245,7 +285,7 @@ const HRPortalContent = () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", "candidates_export.csv");
+        link.setAttribute("download", `candidates_export_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -314,6 +354,12 @@ const HRPortalContent = () => {
                         >
                             <Calendar size={16} /> Calendar
                         </button>
+                        <button
+                            onClick={() => setActiveTab('training')}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${activeTab === 'training' ? 'bg-white shadow-md text-orange-600 scale-105' : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'}`}
+                        >
+                            <Briefcase size={16} /> Training
+                        </button>
                     </div>
                 </div>
 
@@ -348,43 +394,64 @@ const HRPortalContent = () => {
                             </div>
                         </div>
 
-                        {/* Quick Tags */}
-                        <div className="flex items-center gap-4 px-2 overflow-x-auto pb-2 scrollbar-hide">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] whitespace-nowrap">Quick Tags:</span>
-                            <div className="flex gap-2">
-                                {[
-                                    { label: 'Warehouse Exp', icon: <Briefcase size={12} />, match: 'warehouse' },
-                                    { label: 'Certified', icon: <Check size={12} />, match: 'certified' },
-                                    { label: 'Forklift', icon: <ChevronDown size={12} className="rotate-90" />, match: 'forklift' },
-                                    { label: 'Quality', icon: <Brain size={12} />, match: 'quality' }
-                                ].map(tag => (
+                        {/* Quick Tags / Batch Actions */}
+                        <div className="flex items-center justify-between gap-4 px-2 overflow-x-auto pb-2 scrollbar-hide">
+                            <div className="flex items-center gap-4">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] whitespace-nowrap">Quick Tags:</span>
+                                <div className="flex gap-2">
+                                    {[
+                                        { label: 'Warehouse Exp', icon: <Briefcase size={12} />, match: 'warehouse' },
+                                        { label: 'Certified', icon: <Check size={12} />, match: 'certified' },
+                                        { label: 'Quality', icon: <Brain size={12} />, match: 'quality' }
+                                    ].map(tag => (
+                                        <button
+                                            key={tag.label}
+                                            onClick={() => {
+                                                setSearchTerm(tag.match);
+                                                setNotification({ message: `Filtering for ${tag.label}...`, type: 'info' });
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-orange-200 hover:text-orange-600 hover:bg-white transition-all shadow-sm"
+                                        >
+                                            {tag.icon}
+                                            {tag.label}
+                                        </button>
+                                    ))}
                                     <button
-                                        key={tag.label}
-                                        onClick={() => {
-                                            setSearchTerm(tag.match);
-                                            setNotification({ message: `Filtering for ${tag.label}...`, type: 'info' });
-                                        }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-orange-200 hover:text-orange-600 hover:bg-white transition-all shadow-sm"
+                                        onClick={() => { setSearchTerm(''); setFilterStatus('All'); }}
+                                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-red-500 transition-colors"
                                     >
-                                        {tag.icon}
-                                        {tag.label}
+                                        Clear All
                                     </button>
-                                ))}
-                                <button
-                                    onClick={() => { setSearchTerm(''); setFilterStatus('All'); }}
-                                    className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-red-500 transition-colors"
-                                >
-                                    Clear All
-                                </button>
+                                </div>
                             </div>
+
+                            {selectedIds.length > 0 && (
+                                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-orange-200 shadow-sm animate-fade-in whitespace-nowrap">
+                                    <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">{selectedIds.length} Selected</span>
+                                    <div className="h-4 w-px bg-gray-100 mx-2" />
+                                    <button onClick={() => handleBatchAction('Interviewing')} className="text-[9px] font-black uppercase tracking-widest text-blue-600 hover:underline">Mass Accept</button>
+                                    <button onClick={() => handleBatchAction('Rejected')} className="text-[9px] font-black uppercase tracking-widest text-red-600 hover:underline">Mass Reject</button>
+                                    <button onClick={() => setSelectedIds([])} className="text-[9px] font-black uppercase tracking-widest text-gray-400 hover:underline">Cancel</button>
+                                </div>
+                            )}
                         </div>
 
                         {/* App List / Board */}
                         {viewMode === 'list' ? (
                             <div className="grid grid-cols-1 gap-4">
                                 {filteredApps.map(app => (
-                                    <div key={app.id} className="glass-card p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group hover:border-orange-200 transition-all cursor-pointer" onClick={() => setSelectedApp(app)}>
+                                    <div key={app.id} className={`glass-card p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group transition-all cursor-pointer ${selectedIds.includes(app.id) ? 'border-orange-500 bg-orange-50/20' : 'hover:border-orange-200'}`} onClick={() => setSelectedApp(app)}>
                                         <div className="flex items-center gap-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.includes(app.id)}
+                                                onChange={(e) => {
+                                                    e.stopPropagation();
+                                                    if (e.target.checked) setSelectedIds([...selectedIds, app.id]);
+                                                    else setSelectedIds(selectedIds.filter(id => id !== app.id));
+                                                }}
+                                                className="w-5 h-5 rounded-lg border-gray-300 text-orange-600 focus:ring-orange-500 transition-all cursor-pointer"
+                                            />
                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-lg ${app.status === 'Hired' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : app.status === 'Rejected' ? 'bg-gradient-to-br from-red-500 to-rose-600' : app.status === 'Interviewing' ? 'bg-gradient-to-br from-orange-400 to-amber-500' : 'bg-gradient-to-br from-gray-400 to-slate-500'}`}>
                                                 {app.fullName[0]}
                                             </div>
@@ -452,8 +519,63 @@ const HRPortalContent = () => {
                             </div>
                         )}
                     </div>
-                ) : (
+                ) : activeTab === 'calendar' ? (
                     <CalendarView applications={applications} onSelectApp={setSelectedApp} />
+                ) : (
+                    /* Training Portal Tab */
+                    <div className="animate-fade-in space-y-12 pb-20">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
+                                    <FileText size={24} />
+                                </div>
+                                <h3 className="font-black text-xs uppercase tracking-widest text-gray-900 mb-2">General Onboarding</h3>
+                                <p className="text-[10px] font-bold text-gray-400 mb-6">Required reading for all new Vista employees.</p>
+                                <button className="w-full py-3 bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-400 rounded-xl hover:bg-gray-100 transition-all">Download PDF</button>
+                            </div>
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4">
+                                    <span className="bg-orange-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Video</span>
+                                </div>
+                                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
+                                    <Trophy size={24} />
+                                </div>
+                                <h3 className="font-black text-xs uppercase tracking-widest text-gray-900 mb-2">Wholesale Logic</h3>
+                                <p className="text-[10px] font-bold text-gray-400 mb-6">Advanced scanning & quality control workflows.</p>
+                                <button className="w-full py-3 bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 rounded-xl hover:bg-orange-100 transition-all">Launch Course</button>
+                            </div>
+                            <div className="bg-gray-100/50 p-8 rounded-[2.5rem] border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-300 mb-4">
+                                    <Briefcase size={24} />
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Add New Resource</p>
+                            </div>
+                        </div>
+
+                        <div className="glass-panel p-10 rounded-[3rem] border border-white/80 shadow-sm">
+                            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-8">Recent Training Activity</h2>
+                            <div className="space-y-4">
+                                {[
+                                    { user: "Sarah Jenkins", course: "Forklift Safety", status: "Completed", date: "2 hrs ago" },
+                                    { user: "Mike Ross", course: "Customer Service", status: "In Progress", date: "5 hrs ago" }
+                                ].map((activity, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs font-black text-gray-400">{activity.user[0]}</div>
+                                            <div>
+                                                <p className="text-xs font-black text-gray-800">{activity.user}</p>
+                                                <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">{activity.course}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-900">{activity.status}</p>
+                                            <p className="text-[10px] font-bold text-gray-300">{activity.date}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* MODAL */}
@@ -621,29 +743,73 @@ const HRPortalContent = () => {
                                     </div>
 
                                     {/* Modal Actions */}
-                                    <div className="flex gap-4 pt-8 border-t border-gray-100 justify-end flex-wrap">
-                                        {selectedApp.status === 'Pending' && (
-                                            <>
-                                                <button onClick={() => { updateStatus(selectedApp.id, 'Rejected'); setSelectedApp(null); }} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors">Reject</button>
-                                                <button onClick={() => { updateStatus(selectedApp.id, 'Accepted'); setSelectedApp(null); }} className="glass-button px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">Accept Candidate</button>
-                                            </>
+                                    <div className="flex flex-col gap-8 pt-8 border-t border-gray-100">
+                                        <div className="flex justify-between items-center">
+                                            <button
+                                                onClick={() => setShowScorecard(!showScorecard)}
+                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:bg-white transition-all"
+                                            >
+                                                <Brain size={14} /> {showScorecard ? 'Hide Scorecard' : 'Open Scorecard'}
+                                            </button>
+                                            <div className="flex gap-4">
+                                                {selectedApp.status === 'Pending' && (
+                                                    <>
+                                                        <button onClick={() => { updateStatus(selectedApp.id, 'Rejected'); setSelectedApp(null); }} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors">Reject</button>
+                                                        <button onClick={() => { updateStatus(selectedApp.id, 'Accepted'); setSelectedApp(null); }} className="glass-button px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">Accept Candidate</button>
+                                                    </>
+                                                )}
+                                                {selectedApp.status === 'Accepted' && (
+                                                    <>
+                                                        <button onClick={() => { updateStatus(selectedApp.id, 'Rejected'); setSelectedApp(null); }} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors">Reject</button>
+                                                        <button onClick={() => setIsScheduling(true)} className="px-10 py-3 rounded-xl bg-orange-50 text-orange-600 font-black text-[10px] uppercase tracking-widest border border-orange-100 hover:bg-orange-100 transition-colors">Schedule Interview</button>
+                                                    </>
+                                                )}
+                                                {selectedApp.status === 'Interviewing' && (
+                                                    <>
+                                                        <button onClick={() => { updateStatus(selectedApp.id, 'Rejected'); setSelectedApp(null); }} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors">Reject</button>
+                                                        <button onClick={() => { updateStatus(selectedApp.id, 'Hired'); setSelectedApp(null); setNotification({ message: `Candidate ${selectedApp.fullName} successfully HIRED!`, type: 'success' }); }} className="bg-green-600 text-white px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-green-500/20 hover:bg-green-700 transition-all hover:-translate-y-0.5 active:scale-95">Hire Candidate</button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {showScorecard && (
+                                            <div className="bg-orange-50/50 p-8 rounded-[2rem] border border-orange-100 animate-fade-in">
+                                                <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6">Candidate Scorecard</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                    {[
+                                                        { id: 'punctuality', label: 'Punctuality' },
+                                                        { id: 'attitude', label: 'Attitude / Energy' },
+                                                        { id: 'skillset', label: 'Relevant Skills' },
+                                                        { id: 'culturalFit', label: 'Vista Cultural Fit' }
+                                                    ].map(metric => (
+                                                        <div key={metric.id} className="space-y-3">
+                                                            <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                                                <span>{metric.label}</span>
+                                                                <span className="text-orange-600">{scorecard[metric.id]}/10</span>
+                                                            </div>
+                                                            <input
+                                                                type="range" min="1" max="10"
+                                                                value={scorecard[metric.id]}
+                                                                onChange={(e) => setScorecard({ ...scorecard, [metric.id]: parseInt(e.target.value) })}
+                                                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="mt-8 pt-6 border-t border-orange-100 flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                                    <span className="text-gray-400">Average Grade</span>
+                                                    <span className="text-lg text-orange-600">
+                                                        {((scorecard.punctuality + scorecard.attitude + scorecard.skillset + scorecard.culturalFit) / 4).toFixed(1)} / 10
+                                                    </span>
+                                                </div>
+                                            </div>
                                         )}
-                                        {selectedApp.status === 'Accepted' && (
-                                            <>
-                                                <button onClick={() => { updateStatus(selectedApp.id, 'Rejected'); setSelectedApp(null); }} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors">Reject</button>
-                                                <button onClick={() => setIsScheduling(true)} className="px-10 py-3 rounded-xl bg-orange-50 text-orange-600 font-black text-[10px] uppercase tracking-widest border border-orange-100 hover:bg-orange-100 transition-colors">Schedule Interview</button>
-                                            </>
-                                        )}
-                                        {selectedApp.status === 'Interviewing' && (
-                                            <>
-                                                <button onClick={() => { updateStatus(selectedApp.id, 'Rejected'); setSelectedApp(null); }} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors">Reject</button>
-                                                <button onClick={() => { updateStatus(selectedApp.id, 'Hired'); setSelectedApp(null); setNotification({ message: `Candidate ${selectedApp.fullName} successfully HIRED!`, type: 'success' }); }} className="bg-green-600 text-white px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-green-500/20 hover:bg-green-700 transition-all hover:-translate-y-0.5 active:scale-95">Hire Candidate</button>
-                                            </>
-                                        )}
+
                                         {selectedApp.status === 'Hired' && (
                                             <div className="flex items-center gap-3 bg-green-50 px-6 py-3 rounded-2xl border border-green-100">
                                                 <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white"><Check size={14} /></div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-green-700 text-shadow-none">Employee Hired & Onboarded</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-green-700">Employee Hired & Onboarded</span>
                                             </div>
                                         )}
                                         {selectedApp.status === 'Rejected' && (

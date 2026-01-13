@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import DateTimePicker from '../components/DateTimePicker';
-import { Search, CheckCircle, XCircle, Clock, Calendar, AlertCircle, Loader, Mail, User } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, Calendar, AlertCircle, Loader, Mail, User, ShieldCheck, Trophy, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 
 const StatusPage = () => {
@@ -201,124 +202,150 @@ const StatusPage = () => {
                     </div>
 
                     {result && (
-                        <div className="w-full max-w-2xl animate-fade-in-up">
-                            <div className="glass-panel p-10 rounded-[2.5rem] border border-white/80 shadow-2xl relative overflow-hidden">
-                                {/* Accent decoration */}
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="w-full max-w-3xl"
+                        >
+                            <div className="glass-panel p-8 md:p-12 rounded-[3rem] border border-white/80 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] relative overflow-hidden bg-white/60 backdrop-blur-2xl">
+                                {/* Ambient Background Glow */}
+                                <div className="absolute -top-24 -right-24 w-64 h-64 bg-orange-500/10 rounded-full blur-[100px] pointer-events-none" />
+                                <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-orange-500/20">
+                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6 relative">
+                                    <div className="flex items-center gap-6">
+                                        <motion.div
+                                            whileHover={{ rotate: 10, scale: 1.1 }}
+                                            className="w-20 h-20 rounded-3xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-black text-3xl shadow-2xl shadow-orange-500/30"
+                                        >
                                             {result.fullName[0]}
-                                        </div>
+                                        </motion.div>
                                         <div>
-                                            <h2 className="text-2xl font-black text-gray-900 leading-none mb-1">{result.fullName}</h2>
-                                            <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{result.jobType} • {result.preferredShift}</p>
+                                            <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">{result.fullName}</h2>
+                                            <div className="flex flex-wrap gap-3">
+                                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[9px] font-black uppercase tracking-widest text-gray-500 border border-gray-200/50">
+                                                    {result.jobType}
+                                                </span>
+                                                <span className="px-3 py-1 bg-orange-50 rounded-full text-[9px] font-black uppercase tracking-widest text-orange-600 border border-orange-100">
+                                                    {result.preferredLocation.split(',')[0]}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className={`px-6 py-2.5 rounded-full font-black uppercase tracking-widest text-[10px] shadow-sm border ${result.status === 'Accepted' || result.status === 'Hired' ? 'bg-green-50 text-green-600 border-green-100' :
-                                        result.status === 'Rejected' ? 'bg-red-50 text-red-600 border-red-100' :
-                                            'bg-orange-50 text-orange-600 border-orange-100'
-                                        }`}>
-                                        Status: {result.status}
-                                    </div>
+
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className={`px-8 py-3 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-sm border ${result.status === 'Accepted' || result.status === 'Hired' ? 'bg-green-500 text-white border-green-400 shadow-green-500/20' :
+                                                result.status === 'Rejected' ? 'bg-red-500 text-white border-red-400 shadow-red-500/20' :
+                                                    'bg-white text-orange-600 border-orange-100 shadow-orange-500/5'
+                                            }`}
+                                    >
+                                        Current: {result.status}
+                                    </motion.div>
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-12">
-                                    {/* Detailed Progress Timeline */}
-                                    <div className="relative">
-                                        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-100"></div>
+                                {/* Premium Interactive Timeline */}
+                                <div className="space-y-4">
+                                    {[
+                                        {
+                                            id: 'Pending',
+                                            label: 'Application Received',
+                                            desc: `Successfully logged on ${new Date(result.submittedDate).toLocaleDateString()}`,
+                                            icon: FileText,
+                                            active: true
+                                        },
+                                        {
+                                            id: 'Review',
+                                            label: 'HR Assessment',
+                                            desc: 'Our team is currently reviewing your profile.',
+                                            icon: ShieldCheck,
+                                            active: result.status !== 'Pending'
+                                        },
+                                        {
+                                            id: 'Interviewing',
+                                            label: 'Interview Stage',
+                                            desc: result.interviewDate ? 'Your slot is confirmed.' : 'Coordinates are being finalized.',
+                                            icon: Calendar,
+                                            active: ['Interviewing', 'Accepted', 'Rejected', 'Hired'].includes(result.status)
+                                        },
+                                        {
+                                            id: 'Final',
+                                            label: 'Decision',
+                                            desc: result.status === 'Accepted' || result.status === 'Hired' ? 'Welcome to the team!' : result.status === 'Rejected' ? 'Not at this time.' : 'Selection in progress.',
+                                            icon: Trophy,
+                                            active: ['Accepted', 'Rejected', 'Hired'].includes(result.status)
+                                        }
+                                    ].map((step, idx, arr) => {
+                                        const isCurrent = (step.id === 'Pending' && result.status === 'Pending') ||
+                                            (step.id === 'Review' && result.status === 'Pending') || // Small logic tweak for UX
+                                            (step.id === 'Interviewing' && result.status === 'Interviewing') ||
+                                            (step.id === 'Final' && ['Accepted', 'Rejected', 'Hired'].includes(result.status));
 
-                                        <div className="space-y-10">
-                                            {/* Step 1: Submission */}
-                                            <div className="relative pl-16">
-                                                <div className="absolute left-3.5 -translate-x-1/2 top-1.5 w-5 h-5 rounded-full bg-green-500 border-4 border-white shadow-[0_0_0_1px_rgba(34,197,94,0.2)] z-10"></div>
-                                                <div>
-                                                    <h4 className="font-black text-gray-900 mb-0.5 text-shadow-sm">Application Submitted</h4>
-                                                    <p className="text-sm text-gray-500 font-medium">Verified on {new Date(result.submittedDate).toLocaleDateString()}</p>
+                                        const isCompleted = step.active && !isCurrent;
+
+                                        return (
+                                            <motion.div
+                                                key={step.id}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: idx * 0.1 }}
+                                                className="relative pl-16 py-4"
+                                            >
+                                                {/* Connector Line */}
+                                                {idx !== arr.length - 1 && (
+                                                    <div className={`absolute left-[23px] top-14 bottom-0 w-0.5 ${step.active ? 'bg-orange-500' : 'bg-gray-100'}`} />
+                                                )}
+
+                                                {/* Node */}
+                                                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 z-10 ${isCompleted ? 'bg-orange-500 text-white shadow-lg' :
+                                                        isCurrent ? 'bg-white border-4 border-orange-500 text-orange-600 shadow-xl' :
+                                                            'bg-white border-2 border-gray-100 text-gray-300'
+                                                    }`}>
+                                                    {isCompleted ? <CheckCircle size={20} /> : <step.icon size={20} />}
+
+                                                    {isCurrent && (
+                                                        <motion.div
+                                                            layoutId="glow"
+                                                            className="absolute inset-0 rounded-2xl bg-orange-500/20"
+                                                            animate={{ scale: [1, 1.2, 1] }}
+                                                            transition={{ duration: 2, repeat: Infinity }}
+                                                        />
+                                                    )}
                                                 </div>
-                                            </div>
 
-                                            {/* Step 2: Review */}
-                                            <div className="relative pl-16">
-                                                <div className={`absolute left-3.5 -translate-x-1/2 top-1.5 w-5 h-5 rounded-full border-4 border-white z-10 ${result.status !== 'Pending' ? 'bg-green-500 shadow-[0_0_0_1px_rgba(34,197,94,0.2)]' : 'bg-orange-500 animate-pulse shadow-[0_0_0_10px_rgba(249,115,22,0.1)]'
-                                                    }`}></div>
-                                                <div>
-                                                    <h4 className={`font-black mb-0.5 ${result.status !== 'Pending' ? 'text-gray-900' : 'text-orange-600'}`}>Under HR Review</h4>
-                                                    <p className="text-sm text-gray-500 font-medium">Your qualifications are being assessed by our hiring leads.</p>
+                                                <div className={`transition-all duration-500 ${isCurrent ? 'translate-x-2' : ''}`}>
+                                                    <h4 className={`font-black text-sm uppercase tracking-widest ${isCurrent ? 'text-orange-600' : isCompleted ? 'text-gray-900' : 'text-gray-400'}`}>
+                                                        {step.label}
+                                                    </h4>
+                                                    <p className={`text-xs font-bold leading-relaxed ${isCurrent ? 'text-gray-600' : 'text-gray-400'}`}>
+                                                        {step.desc}
+                                                    </p>
+
+                                                    {/* Contextual Action: Reschedule */}
+                                                    {isCurrent && step.id === 'Interviewing' && result.interviewDate && !result.rescheduleRequested && (
+                                                        <motion.button
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            onClick={() => setShowRescheduleModal(true)}
+                                                            className="mt-4 flex items-center gap-2 px-6 py-2 rounded-xl bg-white border border-gray-100 text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-orange-600 hover:border-orange-200 transition-all shadow-sm"
+                                                        >
+                                                            <Calendar size={12} /> Need to reschedule?
+                                                        </motion.button>
+                                                    )}
+
+                                                    {isCurrent && step.id === 'Interviewing' && result.rescheduleRequested && (
+                                                        <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-100 text-[8px] font-black uppercase tracking-widest text-amber-600">
+                                                            <AlertCircle size={12} /> Reschedule request pending review
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
-
-                                            {/* Step 3: Interviewing */}
-                                            {(result.status === 'Interviewing' || result.status === 'Accepted' || result.status === 'Rejected' || result.status === 'Hired') && (
-                                                <div className="relative pl-16">
-                                                    <div className={`absolute left-3.5 -translate-x-1/2 top-1.5 w-5 h-5 rounded-full border-4 border-white z-10 ${(result.status === 'Accepted' || result.status === 'Rejected' || result.status === 'Hired') ? 'bg-green-500' : 'bg-orange-500 animate-pulse shadow-[0_0_0_10px_rgba(249,115,22,0.1)]'
-                                                        }`}></div>
-                                                    <div>
-                                                        <h4 className={`font-black mb-0.5 ${result.status === 'Interviewing' ? 'text-orange-600' : 'text-gray-900'}`}>Interview Stage</h4>
-                                                        {result.interviewDate ? (
-                                                            <div className="mt-3 flex flex-col gap-4 items-start">
-                                                                <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100/50 inline-flex flex-col gap-1 shadow-inner">
-                                                                    <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest leading-none">Scheduled For</span>
-                                                                    <div className="flex items-center gap-2 text-orange-700 font-black text-sm">
-                                                                        <Calendar size={16} />
-                                                                        {new Date(result.interviewDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                                                                    </div>
-                                                                </div>
-
-                                                                {result.status === 'Interviewing' && !result.rescheduleRequested && (
-                                                                    <button
-                                                                        onClick={() => setShowRescheduleModal(true)}
-                                                                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-orange-600 hover:border-orange-200 transition-all shadow-sm"
-                                                                    >
-                                                                        <Calendar size={14} /> Request Different Date
-                                                                    </button>
-                                                                )}
-
-                                                                {result.rescheduleRequested && (
-                                                                    <div className="space-y-3 w-full">
-                                                                        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-100 text-[10px] font-black uppercase tracking-widest text-amber-600 animate-pulse">
-                                                                            <AlertCircle size={14} /> Reschedule Under Review
-                                                                        </div>
-                                                                        {result.suggestedInterviewDate && (
-                                                                            <div className="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-[10px] font-bold text-gray-500">
-                                                                                <span className="text-gray-400 uppercase tracking-widest block mb-1">Your Suggestion:</span>
-                                                                                {new Date(result.suggestedInterviewDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-sm text-gray-400 font-medium font-bold uppercase tracking-widest text-[10px]">Interviews are being coordinated.</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Step 4: Final Result */}
-                                            {(result.status === 'Accepted' || result.status === 'Rejected' || result.status === 'Hired') && (
-                                                <div className="relative pl-16">
-                                                    <div className={`absolute left-3.5 -translate-x-1/2 top-1.5 w-6 h-6 rounded-full border-4 border-white z-10 flex items-center justify-center ${result.status === 'Accepted' || result.status === 'Hired' ? 'bg-green-500 shadow-[0_0_0_10px_rgba(34,197,94,0.1)]' : 'bg-red-500 shadow-[0_0_0_10px_rgba(239,68,68,0.1)]'
-                                                        }`}>
-                                                        {result.status === 'Accepted' || result.status === 'Hired' ? <CheckCircle size={12} className="text-white" /> : <XCircle size={12} className="text-white" />}
-                                                    </div>
-                                                    <div>
-                                                        <h4 className={`font-black mb-0.5 ${result.status === 'Accepted' || result.status === 'Hired' ? 'text-green-600' : 'text-red-600'}`}>
-                                                        </h4>
-                                                        <p className="text-sm text-gray-500 font-medium">
-                                                            {result.status === 'Accepted' || result.status === 'Hired'
-                                                                ? 'Welcome to Vista! Check your email for next steps.'
-                                                                : 'We appreciate your interest in Vista Auction.'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                            </motion.div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     )}
 
                     {/* Career Path Elevation (Cool Feature) */}
