@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Toast from './Toast';
 import { ChevronRight, ChevronLeft, Upload, CheckCircle, User, Briefcase, FileText, X, MapPin, Clock, ShieldCheck } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { supabase } from '../supabaseClient';
 
 const ApplicationForm = () => {
     const navigate = useNavigate();
@@ -116,29 +117,37 @@ const ApplicationForm = () => {
         window.scrollTo(0, 0);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateStep(4)) return;
 
-        const existingApps = JSON.parse(localStorage.getItem('vista_applications') || '[]');
-        const newApp = {
-            ...formData,
-            id: Date.now().toString(),
-            submittedDate: new Date().toISOString(),
-            status: 'Pending'
-        };
-        existingApps.push(newApp);
-        localStorage.setItem('vista_applications', JSON.stringify(existingApps));
+        try {
+            const newApp = {
+                ...formData,
+                id: Date.now().toString(),
+                submittedDate: new Date().toISOString(),
+                status: 'Pending'
+            };
 
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#f97316', '#fbbf24', '#ffffff'] // Orange-500, Amber-400, White
-        });
+            const { error } = await supabase
+                .from('vista_applications')
+                .upsert([newApp]);
 
-        setNotification({ message: 'Application Submitted Successfully!', type: 'success' });
-        setTimeout(() => navigate('/status'), 2000);
+            if (error) throw error;
+
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#f97316', '#fbbf24', '#ffffff'] // Orange-500, Amber-400, White
+            });
+
+            setNotification({ message: 'Application Submitted Successfully!', type: 'success' });
+            setTimeout(() => navigate('/status'), 2000);
+        } catch (error) {
+            console.error('Submission failed:', error);
+            setNotification({ message: 'Cloud Sync Failed. Please try again.', type: 'error' });
+        }
     };
 
     return (

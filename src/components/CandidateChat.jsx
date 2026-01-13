@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, X, Send, Bot, User, ChevronRight } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 const MarkdownText = ({ text }) => {
     // Simple bold markdown support: **text**
@@ -57,8 +58,7 @@ const CandidateChat = () => {
                 thanks: lowerText.includes('thank') || lowerText.includes('thx') || lowerText.includes('appreciate')
             };
 
-            const storedApps = localStorage.getItem('vista_applications');
-            const apps = storedApps ? JSON.parse(storedApps) : [];
+
             const userMsgs = messages.filter(m => m.type === 'user');
 
             // Context Tracking: Find candidate name
@@ -83,32 +83,52 @@ const CandidateChat = () => {
                 botText = "Hello! I'm the **Vista Concierge**, your personal guide to building a career at Vista Auction. I can check your **status**, show you **open positions**, or help you **reschedule**. What can I do for you?";
             } else if (intents.status) {
                 const possibleName = currentContextName || lowerText.replace(/.*status for\b/i, '').trim();
-                const found = apps.find(app => (app.fullName || '').toLowerCase().includes(possibleName.toLowerCase()) && possibleName.length > 2);
 
-                if (found) {
-                    botText = `Great news **${found.fullName.split(' ')[0]}**! I found your application. Your current status for the **${found.jobType}** role is: **${found.status}**.`;
-                    if (found.interviewDate) {
-                        botText += ` You're currently scheduled for an interview on **${new Date(found.interviewDate).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}**. Need a different time? Just say **reschedule**.`;
-                    }
-                } else if (possibleName.length > 2 && possibleName !== 'status') {
-                    botText = `I searched my records for "**${possibleName}**" but didn't find an active application. Please make sure you used the correct Full Name, or head to the top of the page to apply!`;
+                if (possibleName.length > 2 && possibleName !== 'status') {
+                    supabase
+                        .from('vista_applications')
+                        .select('*')
+                        .ilike('fullName', `%${possibleName}%`)
+                        .then(({ data }) => {
+                            if (data && data.length > 0) {
+                                const found = data[0];
+                                botText = `Great news **${found.fullName.split(' ')[0]}**! I found your application. Your current status for the **${found.jobType}** role is: **${found.status}**.`;
+                                if (found.interviewDate) {
+                                    botText += ` You're currently scheduled for an interview on **${new Date(found.interviewDate).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}**. Need a different time? Just say **reschedule**.`;
+                                }
+                            } else {
+                                botText = `I searched my records for "**${possibleName}**" but didn't find an active application. Please make sure you used the correct Full Name, or head to the top of the page to apply!`;
+                            }
+                            finishBotResponse(botText);
+                        });
+                    return; // async handling
                 } else {
                     botText = "I'd love to check that for you! Could you please provide your **Full Name** exactly as it appears on your application?";
                 }
             } else if (intents.reschedule) {
                 const possibleName = currentContextName || lowerText.replace(/.*reschedule for\b/i, '').trim();
-                const foundIndex = apps.findIndex(app => (app.fullName || '').toLowerCase().includes(possibleName.toLowerCase()) && possibleName.length > 2);
 
-                if (foundIndex !== -1) {
-                    apps[foundIndex].rescheduleRequested = true;
-                    localStorage.setItem('vista_applications', JSON.stringify(apps));
-                    botText = `Understood, **${apps[foundIndex].fullName.split(' ')[0]}**. I've marked your interview for a **reschedule**. Our HR team will reach out shortly to confirm the change. You can also pick a specific new time on your **Status Page** right now!`;
-                } else if (possibleName.length > 2 && possibleName !== 'reschedule') {
-                    botText = `I couldn't find an interview on file for "**${possibleName}**". Have you been invited for an interview yet?`;
+                if (possibleName.length > 2 && possibleName !== 'reschedule') {
+                    supabase
+                        .from('vista_applications')
+                        .select('*')
+                        .ilike('fullName', `%${possibleName}%`)
+                        .then(async ({ data }) => {
+                            if (data && data.length > 0) {
+                                const found = data[0];
+                                await supabase.from('vista_applications').update({ rescheduleRequested: true }).eq('id', found.id);
+                                botText = `Understood, **${found.fullName.split(' ')[0]}**. I've marked your interview for a **reschedule**. Our HR team will reach out shortly to confirm the change. You can also pick a specific new time on your **Status Page** right now!`;
+                            } else {
+                                botText = `I couldn't find an interview on file for "**${possibleName}**". Have you been invited for an interview yet?`;
+                            }
+                            finishBotResponse(botText);
+                        });
+                    return; // async handling
                 } else {
                     botText = "I can definitely help with that. What is the **Full Name** associated with your application?";
                 }
-            } else if (intents.pay) {
+            }
+            else if (intents.pay) {
                 botText = "At Vista, we value our team. Entry-level warehouse positions start between **$16 and $19 per hour**. Leadership and specialized roles often start at **$22+**. We also offer shift differentials for our evening crews!";
             } else if (intents.location) {
                 botText = "We have two main facilities powering our auctions! One is located on **Sardis Rd in Charlotte, NC**, and our other facility is in **Monroe, NC**. Most candidates choose the one closest to home!";
@@ -122,10 +142,14 @@ const CandidateChat = () => {
             else {
                 botText = "I'm still learning, but I can help you with your **status**, **rescheduling**, or info on **jobs and pay**. What else would you like to know?";
             }
-            const botMessage = { id: Date.now() + 1, text: botText, type: 'bot' };
-            setMessages(prev => [...prev.slice(0, -1), botMessage]);
-            setIsTyping(false);
+            finishBotResponse(botText);
         }, 1200);
+    };
+
+    const finishBotResponse = (botText) => {
+        const botMessage = { id: Date.now() + 1, text: botText, type: 'bot' };
+        setMessages(prev => [...prev.slice(0, -1), botMessage]);
+        setIsTyping(false);
     };
 
     const quickActions = [

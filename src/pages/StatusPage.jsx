@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import DateTimePicker from '../components/DateTimePicker';
 import { Search, CheckCircle, XCircle, Clock, Calendar, AlertCircle, Loader, Mail, User } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 const StatusPage = () => {
     const [email, setEmail] = useState('');
@@ -11,63 +12,64 @@ const StatusPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const checkStatus = (e) => {
+    const checkStatus = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
         setResult(null);
 
-        // Simulate network delay
-        setTimeout(() => {
-            try {
-                const storedApps = localStorage.getItem('vista_applications');
-                if (storedApps) {
-                    const apps = JSON.parse(storedApps);
-                    const found = apps.find(app =>
-                        app.email.toLowerCase() === email.toLowerCase() &&
-                        app.fullName.toLowerCase() === fullName.toLowerCase()
-                    );
+        try {
+            const { data, error: fetchError } = await supabase
+                .from('vista_applications')
+                .select('*')
+                .eq('email', email.trim())
+                .ilike('fullName', fullName.trim())
+                .single();
 
-                    if (found) {
-                        setResult(found);
-                    } else {
-                        setError('No application found with these details.');
-                    }
+            if (fetchError) {
+                if (fetchError.code === 'PGRST116') {
+                    setError('No application found with these details.');
                 } else {
-                    setError('No application records found.');
+                    throw fetchError;
                 }
-            } catch (err) {
-                setError('System error. Please try again.');
-            } finally {
-                setLoading(false);
+            } else {
+                setResult(data);
             }
-        }, 1000);
+        } catch (err) {
+            console.error('Status check error:', err);
+            setError('System error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
     const [suggestedFullDate, setSuggestedFullDate] = useState('');
 
-    const handleReschedule = (e) => {
+    const handleReschedule = async (e) => {
         e.preventDefault();
         if (!result || !suggestedFullDate) return;
 
-        const storedApps = localStorage.getItem('vista_applications');
-        if (storedApps) {
-            const apps = JSON.parse(storedApps);
-            const updated = apps.map(app =>
-                app.id === result.id ? {
-                    ...app,
+        try {
+            const { error: updateError } = await supabase
+                .from('vista_applications')
+                .update({
                     rescheduleRequested: true,
                     suggestedInterviewDate: suggestedFullDate
-                } : app
-            );
-            localStorage.setItem('vista_applications', JSON.stringify(updated));
+                })
+                .eq('id', result.id);
+
+            if (updateError) throw updateError;
+
             setResult({
                 ...result,
                 rescheduleRequested: true,
                 suggestedInterviewDate: suggestedFullDate
             });
             setShowRescheduleModal(false);
+        } catch (err) {
+            console.error('Reschedule error:', err);
+            alert('Failed to request reschedule. Please try again.');
         }
     };
 

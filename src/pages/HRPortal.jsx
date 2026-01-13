@@ -5,6 +5,7 @@ import CalendarView from '../components/CalendarView';
 import DateTimePicker from '../components/DateTimePicker';
 import { Check, X as XIcon, Brain, Mail, ChevronDown, ChevronUp, Search, Filter, Users, Clock, AlertCircle, LayoutGrid, List, FileText, Download, Briefcase, Calendar } from 'lucide-react';
 import emailjs from 'emailjs-com';
+import { supabase } from '../supabaseClient';
 
 // -----------------------------------------------------------------------------
 // Error Boundary
@@ -80,32 +81,40 @@ const HRPortalContent = () => {
         }
     }, []);
 
-    // Load Data
+    // Load Data & Subscribe to Changes
     useEffect(() => {
         if (isAuthenticated) {
-            try {
-                const storedApps = localStorage.getItem('vista_applications');
-                const storedResumes = localStorage.getItem('vista_resumes');
+            fetchApplications();
 
-                let initialApps = [];
-                if (storedApps) {
-                    const parsedApps = JSON.parse(storedApps);
-                    const parsedResumes = storedResumes ? JSON.parse(storedResumes) : {};
-                    initialApps = parsedApps.map(app => ({
-                        ...app,
-                        resumeData: parsedResumes[app.id]?.data || null,
-                        resumeName: parsedResumes[app.id]?.name || null
-                    }));
-                }
-                setApplications(initialApps);
-                setFilteredApps(initialApps);
-            } catch (e) {
-                console.error("Failed to load applications", e);
-                setApplications([]);
-                setFilteredApps([]);
-            }
+            // Real-time subscription
+            const subscription = supabase
+                .channel('public:vista_applications')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'vista_applications' }, () => {
+                    fetchApplications();
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(subscription);
+            };
         }
     }, [isAuthenticated]);
+
+    const fetchApplications = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('vista_applications')
+                .select('*')
+                .order('submittedDate', { ascending: false });
+
+            if (error) throw error;
+            setApplications(data || []);
+            setFilteredApps(data || []);
+        } catch (e) {
+            console.error("Failed to load applications from Supabase", e);
+            setNotification({ message: 'Cloud Sync Failed. Check console.', type: 'error' });
+        }
+    };
 
     // Filter Logic
     useEffect(() => {
@@ -125,13 +134,17 @@ const HRPortalContent = () => {
         setFilteredApps(result);
     }, [filterStatus, searchTerm, applications]);
 
-    const purgeApplications = () => {
+    const purgeApplications = async () => {
         if (window.confirm("Are you sure you want to delete ALL application data? This cannot be undone.")) {
-            localStorage.removeItem('vista_applications');
-            localStorage.removeItem('vista_resumes');
-            setApplications([]);
-            setFilteredApps([]);
-            setNotification({ message: 'All data has been purged successfully.', type: 'success' });
+            try {
+                const { error } = await supabase.from('vista_applications').delete().neq('id', '0'); // Delete all
+                if (error) throw error;
+                setApplications([]);
+                setFilteredApps([]);
+                setNotification({ message: 'Cloud data purged successfully.', type: 'success' });
+            } catch (e) {
+                setNotification({ message: 'Purge failed.', type: 'error' });
+            }
         }
     };
 
@@ -154,21 +167,31 @@ const HRPortalContent = () => {
     };
 
     const updateStatus = async (id, newStatus, additionalUpdates = {}) => {
-        const updatedApps = applications.map(a => a.id === id ? { ...a, status: newStatus, ...additionalUpdates } : a);
-        setApplications(updatedApps);
-        localStorage.setItem('vista_applications', JSON.stringify(updatedApps));
+        try {
+            const { error } = await supabase
+                .from('vista_applications')
+                .update({ status: newStatus, ...additionalUpdates })
+                .eq('id', id);
 
-        // Use the updated array to find the app to ensure we have the latest version
-        const app = updatedApps.find(a => a.id === id);
+            if (error) throw error;
 
-        if (app && (newStatus === 'Accepted' || newStatus === 'Rejected' || newStatus === 'Hired')) {
-            if (!app.email) {
-                console.error('CRITICAL: Cannot send email. Applicant has no email address associated with their record.');
-                setNotification({ message: 'Error: This applicant has no email address on file.', type: 'error' });
-                alert(`Error: Cannot email ${app.fullName} because their email address is missing from the record. \n\nThis can happen with older data. Please delete this test application and submit a new one via the form.`);
-                return;
+            // Update local state immediately for snappy UI
+            const updatedApps = applications.map(a => a.id === id ? { ...a, status: newStatus, ...additionalUpdates } : a);
+            setApplications(updatedApps);
+
+            const updatedApp = updatedApps.find(a => a.id === id);
+
+            if (updatedApp && (newStatus === 'Accepted' || newStatus === 'Rejected' || newStatus === 'Hired')) {
+                if (!updatedApp.email) {
+                    console.error('CRITICAL: Cannot send email. Applicant has no email address associated with their record.');
+                    setNotification({ message: 'Error: This applicant has no email address on file.', type: 'error' });
+                    return;
+                }
+                await sendEmail(updatedApp, newStatus);
             }
-            await sendEmail(app, newStatus);
+        } catch (e) {
+            console.error("Update failed", e);
+            setNotification({ message: 'Sync Update Failed', type: 'error' });
         }
     };
 
@@ -584,12 +607,14 @@ const HRPortalContent = () => {
                                             placeholder="Add private candidate notes, interview scores, or internal feedback here..."
                                             onClick={(e) => e.stopPropagation()}
                                             value={selectedApp.notes || ''}
-                                            onChange={(e) => {
+                                            onChange={async (e) => {
                                                 const val = e.target.value;
                                                 const updated = applications.map(a => a.id === selectedApp.id ? { ...a, notes: val } : a);
                                                 setApplications(updated);
-                                                localStorage.setItem('vista_applications', JSON.stringify(updated));
                                                 setSelectedApp(prev => ({ ...prev, notes: val }));
+
+                                                // Debounced or direct cloud update
+                                                await supabase.from('vista_applications').update({ notes: val }).eq('id', selectedApp.id);
                                             }}
                                         />
                                     </div>
