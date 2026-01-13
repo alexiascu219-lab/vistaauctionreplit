@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from './Toast';
-import { ChevronRight, ChevronLeft, Upload, CheckCircle, User, Briefcase, FileText, X, ShieldCheck } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Upload, CheckCircle, User, Briefcase, FileText, X, ShieldCheck, Brain } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
