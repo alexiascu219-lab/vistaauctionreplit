@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import DateTimePicker from '../components/DateTimePicker';
 import { Search, CheckCircle, XCircle, Clock, Calendar, AlertCircle, Loader, Mail, User } from 'lucide-react';
 
 const StatusPage = () => {
@@ -44,12 +45,11 @@ const StatusPage = () => {
     };
 
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-    const [suggestedDate, setSuggestedDate] = useState('');
-    const [suggestedTime, setSuggestedTime] = useState('');
+    const [suggestedFullDate, setSuggestedFullDate] = useState('');
 
     const handleReschedule = (e) => {
         e.preventDefault();
-        if (!result || !suggestedDate || !suggestedTime) return;
+        if (!result || !suggestedFullDate) return;
 
         const storedApps = localStorage.getItem('vista_applications');
         if (storedApps) {
@@ -58,14 +58,14 @@ const StatusPage = () => {
                 app.id === result.id ? {
                     ...app,
                     rescheduleRequested: true,
-                    suggestedInterviewDate: `${suggestedDate}T${suggestedTime}`
+                    suggestedInterviewDate: suggestedFullDate
                 } : app
             );
             localStorage.setItem('vista_applications', JSON.stringify(updated));
             setResult({
                 ...result,
                 rescheduleRequested: true,
-                suggestedInterviewDate: `${suggestedDate}T${suggestedTime}`
+                suggestedInterviewDate: suggestedFullDate
             });
             setShowRescheduleModal(false);
         }
@@ -86,28 +86,12 @@ const StatusPage = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleReschedule} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Preferred Date</label>
-                                <input
-                                    type="date"
-                                    required
-                                    min={new Date().toISOString().split('T')[0]}
-                                    value={suggestedDate}
-                                    onChange={(e) => setSuggestedDate(e.target.value)}
-                                    className="input-premium w-full py-4 rounded-2xl"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Preferred Time</label>
-                                <input
-                                    type="time"
-                                    required
-                                    value={suggestedTime}
-                                    onChange={(e) => setSuggestedTime(e.target.value)}
-                                    className="input-premium w-full py-4 rounded-2xl"
-                                />
-                            </div>
+                        <form onSubmit={handleReschedule} className="space-y-8">
+                            <DateTimePicker
+                                label="Choose New Interview Slot"
+                                value={suggestedFullDate}
+                                onChange={setSuggestedFullDate}
+                            />
 
                             <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 text-[10px] font-bold text-orange-700 leading-relaxed shadow-inner">
                                 <AlertCircle size={14} className="inline mr-2 mb-0.5" />
@@ -116,7 +100,8 @@ const StatusPage = () => {
 
                             <button
                                 type="submit"
-                                className="glass-button w-full py-4 rounded-2xl font-black text-lg shadow-xl shadow-orange-500/20"
+                                disabled={!suggestedFullDate}
+                                className={`glass-button w-full py-4 rounded-2xl font-black text-lg shadow-xl ${!suggestedFullDate ? 'opacity-50 cursor-not-allowed' : 'shadow-orange-500/20'}`}
                             >
                                 Submit Request
                             </button>

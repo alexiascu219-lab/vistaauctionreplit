@@ -8,7 +8,7 @@ const MarkdownText = ({ text }) => {
         <span>
             {parts.map((part, i) => {
                 if (part.startsWith('**') && part.endsWith('**')) {
-                    return <strong key={i} className="font-black text-orange-200">{part.slice(2, -2)}</strong>;
+                    return <strong key={i} className="font-black text-orange-600">{part.slice(2, -2)}</strong>;
                 }
                 return part;
             })}
@@ -46,15 +46,15 @@ const CandidateChat = () => {
 
             // Intelligence Logic (Smarter Intent Mapping)
             const intents = {
-                status: (lowerText.includes('status') || lowerText.includes('check') || lowerText.includes('update')) && !lowerText.includes('reschedule'),
+                status: (lowerText.includes('status') || lowerText.includes('check') || lowerText.includes('update') || lowerText.includes('track')) && !lowerText.includes('reschedule'),
                 jobs: lowerText.includes('job') || lowerText.includes('position') || lowerText.includes('role') || lowerText.includes('openings') || lowerText.includes('hiring') || lowerText.includes('work'),
                 pay: lowerText.includes('pay') || lowerText.includes('salary') || lowerText.includes('earn') || lowerText.includes('wage') || lowerText.includes('money'),
                 location: lowerText.includes('location') || lowerText.includes('address') || lowerText.includes('where') || lowerText.includes('place') || lowerText.includes('city') || lowerText.includes('charlotte') || lowerText.includes('monroe'),
                 culture: lowerText.includes('culture') || lowerText.includes('environment') || lowerText.includes('like to work') || lowerText.includes('benefits'),
                 interview: lowerText.includes('interview') || lowerText.includes('process') || lowerText.includes('hiring') || lowerText.includes('steps'),
                 reschedule: lowerText.includes('reschedule') || lowerText.includes('different date') || lowerText.includes('change time') || lowerText.includes('another day') || lowerText.includes('cant make it') || lowerText.includes('change date'),
-                greeting: lowerText.split(' ')[0] === 'hi' || lowerText.split(' ')[0] === 'hello' || lowerText.split(' ')[0] === 'hey',
-                thanks: lowerText.includes('thank') || lowerText.includes('thx')
+                greeting: lowerText.split(' ')[0] === 'hi' || lowerText.split(' ')[0] === 'hello' || lowerText.split(' ')[0] === 'hey' || lowerText.includes('morning') || lowerText.includes('afternoon'),
+                thanks: lowerText.includes('thank') || lowerText.includes('thx') || lowerText.includes('appreciate')
             };
 
             const storedApps = localStorage.getItem('vista_applications');
@@ -63,31 +63,37 @@ const CandidateChat = () => {
 
             // Context Tracking: Find candidate name
             const findCandidateName = () => {
-                for (let msg of userMsgs) {
-                    const t = msg.text.toLowerCase();
+                const combinedMsgs = [...messages.filter(m => m.type === 'user'), newUserMsg];
+                for (let i = combinedMsgs.length - 1; i >= 0; i--) {
+                    const t = combinedMsgs[i].text.toLowerCase();
                     if (t.includes('my name is ')) return t.split('name is ')[1].split(' ')[0];
-                    if (t.includes('for ')) return t.split('for ')[1].trim();
+                    if (t.includes('check status for ')) return t.split('status for ')[1].trim();
+                    if (t.includes('status for ')) return t.split('status for ')[1].trim();
+                    if (t.includes('for ')) {
+                        const name = t.split('for ')[1].trim();
+                        if (name.length > 2 && name.split(' ').length >= 1) return name;
+                    }
                 }
                 return null;
             };
 
             const currentContextName = findCandidateName();
 
-            if (intents.greeting && userMsgs.length === 1) {
-                botText = "Hello! I'm the **Vista Concierge**. I can help you check your **status**, learn about **open roles**, or **reschedule** an interview. How can I assist you today?";
+            if (intents.greeting && userMsgs.length <= 2) {
+                botText = "Hello! I'm the **Vista Concierge**, your personal guide to building a career at Vista Auction. I can check your **status**, show you **open positions**, or help you **reschedule**. What can I do for you?";
             } else if (intents.status) {
                 const possibleName = currentContextName || lowerText.replace(/.*status for\b/i, '').trim();
                 const found = apps.find(app => (app.fullName || '').toLowerCase().includes(possibleName.toLowerCase()) && possibleName.length > 2);
 
                 if (found) {
-                    botText = `Hi **${found.fullName.split(' ')[0]}**! I found your record. Your current status for **${found.jobType}** is: **${found.status}**.`;
+                    botText = `Great news **${found.fullName.split(' ')[0]}**! I found your application. Your current status for the **${found.jobType}** role is: **${found.status}**.`;
                     if (found.interviewDate) {
-                        botText += ` You have an interview on **${new Date(found.interviewDate).toLocaleDateString()}**. Need to change it? Just type **reschedule**.`;
+                        botText += ` You're currently scheduled for an interview on **${new Date(found.interviewDate).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}**. Need a different time? Just say **reschedule**.`;
                     }
-                } else if (possibleName.length > 2) {
-                    botText = `I couldn't find an application for "**${possibleName}**". Please double check your name or ensure you've applied!`;
+                } else if (possibleName.length > 2 && possibleName !== 'status') {
+                    botText = `I searched my records for "**${possibleName}**" but didn't find an active application. Please make sure you used the correct Full Name, or head to the top of the page to apply!`;
                 } else {
-                    botText = "I'd be happy to check that! Please tell me your **Full Name** exactly as it appears on your application.";
+                    botText = "I'd love to check that for you! Could you please provide your **Full Name** exactly as it appears on your application?";
                 }
             } else if (intents.reschedule) {
                 const possibleName = currentContextName || lowerText.replace(/.*reschedule for\b/i, '').trim();
@@ -96,19 +102,24 @@ const CandidateChat = () => {
                 if (foundIndex !== -1) {
                     apps[foundIndex].rescheduleRequested = true;
                     localStorage.setItem('vista_applications', JSON.stringify(apps));
-                    botText = `No problem, **${apps[foundIndex].fullName.split(' ')[0]}**! I've flagged your interview for a **reschedule**. Our HR team will reach out shortly. You can also pick a specific new date on your **Status Page**!`;
-                } else if (possibleName.length > 2) {
-                    botText = `I couldn't find an interview to reschedule for "**${possibleName}**". Have you been invited yet?`;
+                    botText = `Understood, **${apps[foundIndex].fullName.split(' ')[0]}**. I've marked your interview for a **reschedule**. Our HR team will reach out shortly to confirm the change. You can also pick a specific new time on your **Status Page** right now!`;
+                } else if (possibleName.length > 2 && possibleName !== 'reschedule') {
+                    botText = `I couldn't find an interview on file for "**${possibleName}**". Have you been invited for an interview yet?`;
                 } else {
-                    botText = "I can help with that! What is the **Full Name** on your account?";
+                    botText = "I can definitely help with that. What is the **Full Name** associated with your application?";
                 }
             } else if (intents.pay) {
-                botText = "At Vista, warehouse roles typically start between **$16 and $19 per hour**, while leadership roles exceed **$22+**. We also offer performance based bonuses and shift differentials!";
+                botText = "At Vista, we value our team. Entry-level warehouse positions start between **$16 and $19 per hour**. Leadership and specialized roles often start at **$22+**. We also offer shift differentials for our evening crews!";
             } else if (intents.location) {
-                botText = "We have two stellar facilities: our **Sardis Rd (Charlotte, NC)** hub and our **Monroe, NC** center. Both are currently looking for great team members!";
+                botText = "We have two main facilities powering our auctions! One is located on **Sardis Rd in Charlotte, NC**, and our other facility is in **Monroe, NC**. Most candidates choose the one closest to home!";
             } else if (intents.jobs) {
-                botText = "We are currently hiring for: \n1. **Warehouse Specialists** (Sorting/Staging)\n2. **Quality Control** (Checking items)\n3. **Customer Support**\n\nWhich one sounds like a fit?";
-            } else {
+                botText = "We're always looking for talent! Current openings include:\n• **Warehouse Specialists** (Fast-paced, physical)\n• **Quality Control** (Detail-oriented inventory)\n• **Customer Experience** (Social, office-based)\n\nDo any of these catch your interest?";
+            } else if (intents.thanks) {
+                botText = "Happy to help! Is there anything else you'd like to know about Vista Auction today?";
+            } else if (intents.culture) {
+                botText = "Our culture is built on **energy and efficiency**. It's a fast-paced environment where we process thousands of items daily, but we're a close-knit crew that supports one another. Plus, there's always something interesting coming through the warehouse!";
+            }
+            else {
                 botText = "I'm still learning, but I can help you with your **status**, **rescheduling**, or info on **jobs and pay**. What else would you like to know?";
             }
             const botMessage = { id: Date.now() + 1, text: botText, type: 'bot' };

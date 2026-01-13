@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
 import CalendarView from '../components/CalendarView';
+import DateTimePicker from '../components/DateTimePicker';
 import { Check, X as XIcon, Brain, Mail, ChevronDown, ChevronUp, Search, Filter, Users, Clock, AlertCircle, LayoutGrid, List, FileText, Download, Briefcase, Calendar } from 'lucide-react';
 import emailjs from 'emailjs-com';
 
@@ -444,13 +445,11 @@ const HRPortalContent = () => {
                                         <h3 className="text-xl font-black tracking-tight text-gray-900 mb-2 font-display">Schedule Interview</h3>
                                         <p className="text-gray-500 font-medium text-sm mb-8 max-w-xs">Select a date and time to interview {selectedApp.firstName}. An email invitation will be sent automatically.</p>
 
-                                        <div className="w-full max-w-xs space-y-2 text-left">
-                                            <label className="text-[10px] font-black text-orange-800 uppercase tracking-[0.2em] ml-2">Date & Time</label>
-                                            <input
-                                                type="datetime-local"
+                                        <div className="w-full max-w-sm">
+                                            <DateTimePicker
+                                                label="Select Interview Date & Time"
                                                 value={interviewDate}
-                                                onChange={(e) => setInterviewDate(e.target.value)}
-                                                className="w-full p-4 bg-white border border-orange-100 rounded-2xl outline-none focus:ring-4 focus:ring-orange-500/10 text-gray-700 font-bold shadow-sm transition-all"
+                                                onChange={setInterviewDate}
                                             />
                                         </div>
                                     </div>
