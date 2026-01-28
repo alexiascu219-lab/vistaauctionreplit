@@ -45,7 +45,7 @@ const Navbar = () => {
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center space-x-12">
                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                            <Link to="/#positions" className="text-[10px] font-black text-gray-500 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
+                            <Link to="/#roles" className="text-[10px] font-black text-gray-500 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
                                 Open Positions
                             </Link>
                         </motion.div>
@@ -96,7 +96,7 @@ const Navbar = () => {
                     >
                         <div className="px-8 pt-6 pb-12 space-y-6">
                             <Link
-                                to="/#positions"
+                                to="/#roles"
                                 onClick={() => setIsOpen(false)}
                                 className="block text-xl font-black text-gray-900 py-4 border-b border-gray-50 tracking-tight"
                             >

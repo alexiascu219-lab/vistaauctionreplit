@@ -15,9 +15,13 @@ const Footer = () => {
                             Redefining the auction experience with technology, precision, and passion. Join us in building the future of logistics.
                         </p>
                         <div className="flex gap-4">
-                            {[Facebook, Twitter, Instagram, Linkedin].map((Icon, idx) => (
-                                <a key={idx} href="#" className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 hover:bg-orange-600 hover:text-white transition-all shadow-sm hover:shadow-xl hover:shadow-orange-600/20 hover:-translate-y-1">
-                                    <Icon size={20} />
+                            {[
+                                { Icon: Facebook, href: "https://www.facebook.com/vistaauction" },
+                                { Icon: Instagram, href: "https://www.instagram.com/vistaauction" },
+                                { Icon: Linkedin, href: "https://www.linkedin.com/company/vista-auctions-llc" },
+                            ].map((item, idx) => (
+                                <a key={idx} href={item.href} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 hover:bg-orange-600 hover:text-white transition-all shadow-sm hover:shadow-xl hover:shadow-orange-600/20 hover:-translate-y-1">
+                                    <item.Icon size={20} />
                                 </a>
                             ))}
                         </div>
@@ -27,11 +31,16 @@ const Footer = () => {
                     <div>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-8 ml-1">Quick Links</h4>
                         <ul className="space-y-5 text-sm font-bold">
-                            {['Home', 'Careers', 'About Us', 'Contact'].map((item) => (
-                                <li key={item}>
-                                    <a href="#" className="text-slate-300 hover:text-orange-500 transition-all flex items-center gap-3 group">
+                            {[
+                                { text: 'Home', path: '/' },
+                                { text: 'Careers', path: '/#roles' },
+                                { text: 'About Us', path: '/about' },
+                                { text: 'Contact', path: '/contact' }
+                            ].map((item) => (
+                                <li key={item.text}>
+                                    <a href={item.path} className="text-slate-300 hover:text-orange-500 transition-all flex items-center gap-3 group">
                                         <div className="w-1.5 h-1.5 rounded-full bg-orange-500 opacity-0 group-hover:opacity-100 transition-all scale-0 group-hover:scale-100"></div>
-                                        {item}
+                                        {item.text}
                                     </a>
                                 </li>
                             ))}
@@ -77,8 +86,8 @@ const Footer = () => {
                 <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
                     <p>&copy; {new Date().getFullYear()} Vista Auction. All rights reserved.</p>
                     <div className="flex gap-8 mt-6 md:mt-0">
-                        <a href="#" className="hover:text-orange-500 transition-colors">Privacy</a>
-                        <a href="#" className="hover:text-orange-500 transition-colors">Terms</a>
+                        <a href="/privacy" className="hover:text-orange-500 transition-colors">Privacy</a>
+                        <a href="/terms" className="hover:text-orange-500 transition-colors">Terms</a>
                     </div>
                 </div>
             </div>

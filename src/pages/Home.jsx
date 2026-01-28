@@ -97,7 +97,7 @@ const Home = () => {
 
             <main>
                 {/* Features Section */}
-                <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 relative z-20">
+                <section id="roles" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 relative z-20">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-6 font-display tracking-tight">Our Roles</h2>
                         <div className="h-1.5 w-24 bg-orange-500 mx-auto rounded-full shadow-sm shadow-orange-500/20"></div>

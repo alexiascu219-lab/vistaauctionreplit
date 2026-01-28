@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env
+.env*.local
+demo/.env
+node_modules/
+dist/
