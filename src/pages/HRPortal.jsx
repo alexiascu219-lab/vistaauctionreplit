@@ -57,8 +57,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 // Main Content
 // -----------------------------------------------------------------------------
 const HRPortalContent = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [password, setPassword] = useState('');
+    const [isAuthenticated, setIsAuthenticated] = useState(true);
     const [applications, setApplications] = useState([]);
     const [filteredApps, setFilteredApps] = useState([]);
     const [selectedApp, setSelectedApp] = useState(null);
@@ -300,12 +299,6 @@ const HRPortalContent = () => {
         return Math.min(score, 98); // Max 98% for realism
     };
 
-    const handleLogin = (e) => {
-        e.preventDefault();
-        if (password === 'vistahr') setIsAuthenticated(true);
-        else setNotification({ message: 'Incorrect Password', type: 'error' });
-    };
-
     const updateStatus = async (id, newStatus, additionalUpdates = {}) => {
         try {
             const { error } = await supabase
@@ -429,28 +422,6 @@ const HRPortalContent = () => {
         Hired: filteredApps.filter(a => a.status === 'Hired'),
         Rejected: filteredApps.filter(a => a.status === 'Rejected')
     };
-
-    if (!isAuthenticated) {
-        return (
-            <div className="min-h-screen bg-slate-950 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/assets/hero-shelves.jpg')] bg-cover bg-center opacity-10"></div>
-                <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 to-slate-950/90"></div>
-                <Navbar />
-                <div className="pt-40 flex items-center justify-center px-4 relative z-10">
-                    <form onSubmit={handleLogin} className="p-10 glass-panel rounded-[2rem] max-w-sm w-full transform transition-all hover:-translate-y-1 shadow-2xl border border-white/80">
-                        <div className="text-center mb-8">
-                            <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-orange-600 shadow-sm"><Users size={32} /></div>
-                            <h2 className="text-3xl font-black tracking-tight text-gray-900 font-display">Auth Portal</h2>
-                            <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mt-2">Internal Vista Access Only</p>
-                        </div>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-premium p-4 w-full mb-6 rounded-xl outline-none" placeholder="Enter Access Key" />
-                        <button type="submit" className="glass-button py-4 rounded-xl w-full font-black uppercase tracking-widest text-xs">Access Dashboard</button>
-                    </form>
-                </div>
-                {notification && <Toast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-gray-50/50 pb-20 font-sans text-gray-800">
