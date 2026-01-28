@@ -10,11 +10,65 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Archivo:wght@300;400;500;600;700;800;900&display=swap"
     rel="stylesheet">
+  <script src="/safe-boot.js"></script>
   <title>Careers at Vista Auction</title>
 </head>
 
 <body>
+  <!-- BOOT LOADER (Hidden by React once it mounts) -->
+  <div id="vista-boot-loader"
+    style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #ffffff; font-family: 'Inter', sans-serif; color: #1e293b; z-index: 9999;">
+    <div style="text-align: center;">
+      <div style="position: relative; width: 64px; height: 64px; margin: 0 auto 24px;">
+        <div
+          style="position: absolute; inset: 0; border: 3px solid #f1f5f9; border-top-color: #ea580c; border-radius: 50%; animation: spin 0.8s linear infinite;">
+        </div>
+      </div>
+      <h2 style="font-weight: 800; font-size: 18px; margin: 0 0 8px; letter-spacing: -0.025em;">Vista System</h2>
+      <p
+        style="font-weight: 600; font-size: 11px; margin: 0; color: #ea580c; text-transform: uppercase; letter-spacing: 0.2em; background: #fff7ed; padding: 4px 12px; border-radius: 100px; display: inline-block;">
+        Waking up components...</p>
+      <style>
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        body {
+          margin: 0;
+        }
+      </style>
+    </div>
+  </div>
+
   <div id="root"></div>
+
+  <!-- EMERGENCY RECOVERY FALLBACK UI -->
+  <div id="emergency-recovery"
+    style="display:none; position:fixed; inset:0; background:white; z-index:999999; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center; font-family:system-ui, -apple-system, sans-serif;">
+    <div
+      style="max-width:400px; padding:40px; border-radius:32px; box-shadow:0 20px 50px rgba(0,0,0,0.1); border:1px solid #fee2e2; background:#fffaf9;">
+      <div
+        style="width:64px; height:64px; background:#fef2f2; color:#ef4444; border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; font-size:32px;">
+        ⚠️</div>
+      <h1 style="font-size:24px; font-weight:900; color:#111827; margin:0 0 12px; letter-spacing:-0.5px;">Recovery
+        Required</h1>
+      <p style="font-size:14px; color:#6b7280; line-height:1.6; margin:0 0 32px; font-weight:500;">The application
+        storage is likely full or conflicting. Use the button below to purge the local cache and restart.</p>
+
+      <button id="emergency-reset-btn"
+        style="width:100%; padding:16px; background:#ea580c; color:white; border:none; border-radius:16px; font-weight:900; font-size:12px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; box-shadow:0 10px 20px rgba(234,88,12,0.2);">
+        Clear All Cache & Restart
+      </button>
+
+      <p
+        style="margin-top:24px; font-size:10px; color:#9ca3af; font-family:monospace; text-align:left; background:#f9fafb; padding:12px; border-radius:12px; border:1px solid #f3f4f6;">
+        ERROR_LOG: <span id="recovery-code">NULL_OR_PARSING</span>
+      </p>
+    </div>
+  </div>
+
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
