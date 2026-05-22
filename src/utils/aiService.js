@@ -1,29 +1,29 @@
 import { generateText, tool } from 'ai';
-import { createGroq } from '@ai-sdk/groq';
+import { createMistral } from '@ai-sdk/mistral';
 import { supabase } from '../supabaseClient';
 import { z } from 'zod';
 
 /**
- * Helper to get a configured Groq model instance.
- * Explicitly passing the API key via createGroq is required for browser compatibility.
+ * Helper to get a configured Mistral model instance.
+ * Explicitly passing the API key via createMistral is required for browser compatibility.
  */
-const getGroqModel = () => {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+const getMistralModel = () => {
+    const apiKey = import.meta.env.VITE_MISTRAL_API_KEY;
     if (!apiKey) {
-        throw new Error("VITE_GROQ_API_KEY_MISSING");
+        throw new Error("VITE_MISTRAL_API_KEY_MISSING");
     }
-    const groq = createGroq({ apiKey });
-    return groq('llama-3.3-70b-versatile');
+    const mistral = createMistral({ apiKey });
+    return mistral('mistral-large-latest');
 };
 
 /**
  * Generic AI Response Generator (Used by ResumeParser)
  * Wraps the Groq model for general purpose prompts.
  */
-export const generateGroqResponse = async (prompt) => {
+export const generateMistralResponse = async (prompt) => {
     try {
         const { text } = await generateText({
-            model: getGroqModel(),
+            model: getMistralModel(),
             prompt: prompt,
         });
         return text;
@@ -45,18 +45,18 @@ export const generateAISnapshot = async (application) => {
             Job: ${application.jobType}
             Preferred Shift: ${application.preferredShift}
             Application Notes: ${application.notes}
-            
+
             Format: Exactly 2 sentences. Professional and insightful.
         `;
 
         const { text } = await generateText({
-            model: getGroqModel(),
+            model: getMistralModel(),
             prompt,
         });
 
         return text.trim();
     } catch (error) {
-        console.error("Groq Snapshot Error:", error);
+        console.error("Mistral Snapshot Error:", error);
         return "AI analysis unavailable at this time.";
     }
 };
@@ -67,20 +67,20 @@ export const generateAISnapshot = async (application) => {
 export const analyzeSentiment = async (text) => {
     try {
         const prompt = `
-            Analyze the sentiment of the following text from a job applicant. 
+            Analyze the sentiment of the following text from a job applicant.
             Return ONLY a number between 0.0 (very negative/uninterested) and 1.0 (very positive/highly enthusiastic).
             Text: "${text}"
         `;
 
         const { text: responseText } = await generateText({
-            model: getGroqModel(),
+            model: getMistralModel(),
             prompt,
         });
 
         const score = parseFloat(responseText.trim());
         return isNaN(score) ? 0.5 : score;
     } catch (error) {
-        console.error("Groq Sentiment Error:", error);
+        console.error("Mistral Sentiment Error:", error);
         return 0.5; // Default to neutral
     }
 };
@@ -99,14 +99,14 @@ export const calculateMatchRank = async (application) => {
         `;
 
         const { text: responseText } = await generateText({
-            model: getGroqModel(),
+            model: getMistralModel(),
             prompt,
         });
 
         const rank = parseInt(responseText.trim());
         return isNaN(rank) ? 5 : rank;
     } catch (error) {
-        console.error("Groq Ranking Error:", error);
+        console.error("Mistral Ranking Error:", error);
         return 0;
     }
 };
@@ -135,7 +135,7 @@ export const scanDocumentSafety = async (text) => {
         `;
 
         const { text: responseText } = await generateText({
-            model: getGroqModel(),
+            model: getMistralModel(),
             prompt,
         });
 
@@ -143,7 +143,7 @@ export const scanDocumentSafety = async (text) => {
         return JSON.parse(cleanJson);
     } catch (error) {
         console.error("Safety Scan Error:", error);
-        // Fail open (allow upload if AI fails, but warn) or fail closed. 
+        // Fail open (allow upload if AI fails, but warn) or fail closed.
         // We'll return a neutral response to avoid blocking on AI outage.
         return { safe: true, riskLevel: "Unknown", flags: [], reason: "AI Scan Unavailable" };
     }
@@ -192,7 +192,7 @@ export const generateAssistantResponse = async (message, history, role, context 
             : '';
 
         const { text } = await generateText({
-            model: getGroqModel(),
+            model: getMistralModel(),
             system: systemPrompt,
             messages: [
                 ...messages,

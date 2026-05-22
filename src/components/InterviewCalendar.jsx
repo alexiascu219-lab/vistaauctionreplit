@@ -12,7 +12,7 @@ const InterviewCalendar = ({ label, value, onChange }) => (
       type="date"
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="bg-[#0c1226]/60 text-white px-4 py-2 rounded-xl border border-white/20 focus:outline-none"
+      className="bg-muted/60 text-text-main px-4 py-2 rounded-xl border border-muted/30 focus:outline-none"
     />
   </div>
 );

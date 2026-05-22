@@ -30,11 +30,12 @@ import Chat from './pages/Chat';
 // Helper component to handle conditional AI rendering
 const ConditionalAIAssistant = () => {
   const location = useLocation();
-  const hiddenRoutes = ['/hr', '/login'];
+  const hiddenRoutes = ['/login'];
   const isHidden = hiddenRoutes.some(route => location.pathname.startsWith(route));
+  const isHRRoute = location.pathname.startsWith('/hr');
 
   if (isHidden) return null;
-  return <AIAssistant role="applicant" />;
+  return <AIAssistant role={isHRRoute ? 'hr' : 'applicant'} />;
 };
 
 function App() {

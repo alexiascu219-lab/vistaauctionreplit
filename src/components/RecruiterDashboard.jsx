@@ -343,19 +343,19 @@ Vista Auction HR Team`;
   };
 
   return (
-    <div className="min-h-screen bg-[#070b18] text-slate-100 flex flex-col md:flex-row font-sans">
-      
+    <div className="min-h-screen bg-background text-text-main flex flex-col md:flex-row font-sans">
+
       {/* SIDEBAR */}
-      <aside className="w-full md:w-64 bg-[#0c1226] border-b md:border-b-0 md:border-r border-slate-800 flex flex-col shrink-0">
-        
+      <aside className="w-full md:w-64 bg-surface border-b md:border-b-0 md:border-r border-muted/50 flex flex-col shrink-0">
+
         {/* Logo/Branding */}
-        <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-[#070b18] font-black text-xl shadow-lg shadow-orange-500/20">
+        <div className="p-6 border-b border-muted/50 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brandOrange to-amber-400 flex items-center justify-center text-text-main font-black text-xl shadow-lg shadow-orange-500/20">
             V
           </div>
           <div>
-            <h1 className="font-extrabold tracking-tight text-white font-display text-md">Vista Recruiting</h1>
-            <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest">HR CONTROL PANEL</span>
+            <h1 className="font-extrabold tracking-tight text-text-main font-display text-md">Vista Recruiting</h1>
+            <span className="text-[9px] font-black text-brandOrangeDark uppercase tracking-widest">HR CONTROL PANEL</span>
           </div>
         </div>
 
@@ -375,7 +375,7 @@ Vista Auction HR Team`;
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 font-bold text-sm ${
                 activeTab === item.id 
                   ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/5 text-orange-400 border-l-4 border-orange-500 shadow-md' 
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-muted/40'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -392,14 +392,14 @@ Vista Auction HR Team`;
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-800 bg-[#0a0f20]">
+        <div className="p-4 border-t border-muted/50 bg-muted/20">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-sm shadow-inner">
+            <div className="w-9 h-9 rounded-full bg-muted/30 flex items-center justify-center font-bold text-text-main text-sm shadow-inner">
               HR
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-slate-200 truncate">Vista Recruiter</p>
-              <p className="text-[9px] font-bold text-slate-500 truncate">admin@vistaauction.com</p>
+              <p className="text-xs font-black text-text-muted truncate">Vista Recruiter</p>
+              <p className="text-[9px] font-bold text-text-muted truncate">admin@vistaauction.com</p>
             </div>
           </div>
         </div>
@@ -411,7 +411,7 @@ Vista Auction HR Team`;
         {/* TOP STATUS HEADER BAR */}
         <header className="flex flex-col md:flex-row md:items-center justify-between pb-8 mb-8 border-b border-slate-800 gap-4">
           <div>
-            <h2 className="text-3xl font-black tracking-tight text-white font-display">
+            <h2 className="text-3xl font-black tracking-tight text-text-main font-display">
               {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Control
             </h2>
             <p className="text-slate-400 text-xs font-semibold tracking-wide mt-1 uppercase text-slate-500">
@@ -450,13 +450,13 @@ Vista Auction HR Team`;
                   { label: 'Active Interviews', val: stats.interviewing, color: 'purple', desc: 'Scheduled calendar roadmap', icon: <CalendarIcon size={20} /> },
                   { label: 'Average Match', val: `${stats.avgScore}%`, color: 'green', desc: 'AI profile evaluation average', icon: <Brain size={20} /> }
                 ].map((m, idx) => (
-                  <div key={idx} className="bg-[#0c1226]/60 border border-slate-800 p-6 rounded-2xl flex justify-between items-start hover:border-slate-700/60 transition-all duration-300 shadow-lg">
+                  <div key={idx} className="bg-surface/60 border border-slate-800 p-6 rounded-2xl flex justify-between items-start hover:border-slate-700/60 transition-all duration-300 shadow-lg">
                     <div className="space-y-1">
                       <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{m.label}</p>
-                      <h3 className="text-3xl font-black text-white font-display">{m.val}</h3>
+                      <h3 className="text-3xl font-black text-text-main font-display">{m.val}</h3>
                       <p className="text-[10px] text-slate-400 mt-2 font-medium">{m.desc}</p>
                     </div>
-                    <div className={`p-3 rounded-xl bg-slate-800 text-slate-300`}>
+                    <div className={`p-3 rounded-xl bg-muted text-slate-300`}>
                       {m.icon}
                     </div>
                   </div>
@@ -467,30 +467,30 @@ Vista Auction HR Team`;
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
                 {/* Activity Feed */}
-                <div className="lg:col-span-2 bg-[#0c1226]/40 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
-                  <h4 className="text-lg font-black text-white font-display">Recent Activity Log</h4>
+                <div className="lg:col-span-2 bg-surface/40 border border-muted/50 rounded-3xl p-6 shadow-xl space-y-6">
+                  <h4 className="text-lg font-black text-text-main font-display">Recent Activity Log</h4>
                   
                   <div className="space-y-4">
                     {recentActivities.map((act) => (
-                      <div key={act.id} className="flex gap-4 items-start p-4 bg-[#0a0f20]/60 rounded-2xl border border-slate-800/40">
-                        <div className="p-2.5 bg-slate-800/40 rounded-xl text-slate-300 flex items-center justify-center">{act.icon}</div>
+                      <div key={act.id} className="flex gap-4 items-start p-4 bg-muted/20 rounded-2xl border border-muted/30">
+                        <div className="p-2.5 bg-muted/40 rounded-xl text-text-muted flex items-center justify-center">{act.icon}</div>
                         <div className="flex-1 min-w-0">
-                          <h5 className="text-sm font-bold text-slate-200 truncate">{act.title}</h5>
-                          <p className="text-xs text-slate-400 mt-0.5">{act.desc}</p>
+                          <h5 className="text-sm font-bold text-text-main truncate">{act.title}</h5>
+                          <p className="text-xs text-text-muted mt-0.5">{act.desc}</p>
                         </div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{act.time}</span>
+                        <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{act.time}</span>
                       </div>
                     ))}
                     {recentActivities.length === 0 && (
-                      <p className="text-center text-slate-500 py-10 font-bold text-sm">No recent activity detected.</p>
+                      <p className="text-center text-text-muted py-10 font-bold text-sm">No recent activity detected.</p>
                     )}
                   </div>
                 </div>
 
                 {/* Logistics Stats */}
-                <div className="bg-[#0c1226]/40 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+                <div className="bg-surface/40 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
                   <div className="space-y-4">
-                    <h4 className="text-lg font-black text-white font-display">Logistics Performance</h4>
+                    <h4 className="text-lg font-black text-text-main font-display">Logistics Performance</h4>
                     <p className="text-xs text-slate-400 leading-relaxed">
                       On-site efficiency audit metrics for active warehouse operations centers in Monroe and Charlotte.
                     </p>
@@ -503,9 +503,9 @@ Vista Auction HR Team`;
                         <div key={i} className="space-y-1">
                           <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-wider">
                             <span>{bar.label}</span>
-                            <span className="text-white">{bar.pct}%</span>
+                            <span className="text-text-main">{bar.pct}%</span>
                           </div>
-                          <div className="w-full h-2 bg-slate-850 rounded-full overflow-hidden">
+                          <div className="w-full h-2 bg-muted/50 rounded-full overflow-hidden">
                             <div className={`h-full bg-gradient-to-r ${bar.color}`} style={{ width: `${bar.pct}%` }}></div>
                           </div>
                         </div>
@@ -529,7 +529,7 @@ Vista Auction HR Team`;
             <div className="space-y-6 animate-fade-in">
               
               {/* Filter controls row */}
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0c1226]/40 p-4 rounded-2xl border border-slate-800/80 backdrop-blur-sm">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface/40 p-4 rounded-2xl border border-slate-800/80 backdrop-blur-sm">
                 
                 {/* Search input */}
                 <div className="flex items-center gap-2 bg-[#090e1c] px-4 py-2.5 rounded-xl border border-slate-800 w-full md:max-w-md shadow-inner">
@@ -576,13 +576,13 @@ Vista Auction HR Team`;
                   <div className="flex bg-[#090e1c] p-0.5 rounded-xl border border-slate-850">
                     <button 
                       onClick={() => setViewMode('list')}
-                      className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-orange-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                      className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-orange-600 text-text-main shadow' : 'text-slate-500 hover:text-slate-300'}`}
                     >
                       <List size={16} />
                     </button>
                     <button 
                       onClick={() => setViewMode('board')}
-                      className={`p-2 rounded-lg transition-all ${viewMode === 'board' ? 'bg-orange-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                      className={`p-2 rounded-lg transition-all ${viewMode === 'board' ? 'bg-orange-600 text-text-main shadow' : 'text-slate-500 hover:text-slate-300'}`}
                     >
                       <LayoutGrid size={16} />
                     </button>
@@ -597,7 +597,7 @@ Vista Auction HR Team`;
                   {['Pending', 'Accepted', 'Interviewing', 'Hired', 'Rejected'].map(stage => {
                     const stageCandidates = filteredCandidates.filter(c => c.status === stage);
                     return (
-                      <div key={stage} className="bg-[#0c1226]/40 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+                      <div key={stage} className="bg-surface/40 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
                         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
                           <span className="text-xs font-black uppercase text-slate-300 tracking-widest">{stage}</span>
                           <span className="text-[10px] font-black bg-slate-850 text-slate-400 px-2 py-0.5 rounded-md">{stageCandidates.length}</span>
@@ -608,7 +608,7 @@ Vista Auction HR Team`;
                             <div
                               key={c.id}
                               onClick={() => setSelectedCandidate(c)}
-                              className="bg-[#0a0f20]/80 p-4 rounded-xl border border-slate-850 hover:border-slate-700 hover:bg-[#0c1328] transition-all cursor-pointer shadow-md group"
+                              className="bg-muted/20/80 p-4 rounded-xl border border-slate-850 hover:border-slate-700 hover:bg-[#0c1328] transition-all cursor-pointer shadow-md group"
                             >
                               <h5 className="font-bold text-sm text-slate-200 group-hover:text-orange-400 transition-colors">{c.fullName}</h5>
                               <p className="text-[10px] text-slate-400 mt-1 truncate">{c.jobType || c.position}</p>
@@ -635,7 +635,7 @@ Vista Auction HR Team`;
                 </div>
               ) : (
                 /* VIEW: LIST VIEW */
-                <div className="bg-[#0c1226]/40 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+                <div className="bg-surface/40 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
@@ -650,10 +650,10 @@ Vista Auction HR Team`;
                       </thead>
                       <tbody className="divide-y divide-slate-850">
                         {filteredCandidates.map(c => (
-                          <tr key={c.id} className="hover:bg-[#0a0f20]/45 transition-colors group">
+                          <tr key={c.id} className="hover:bg-muted/20/45 transition-colors group">
                             <td className="p-5">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center font-bold text-white text-sm shadow-inner">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center font-bold text-text-main text-sm shadow-inner">
                                   {c.fullName ? c.fullName[0] : 'U'}
                                 </div>
                                 <div>
@@ -683,7 +683,7 @@ Vista Auction HR Team`;
                                 c.status === 'Hired' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                                 c.status === 'Interviewing' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
                                 c.status === 'Rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                'bg-slate-800 text-slate-400 border-slate-700'
+                                'bg-muted text-slate-400 border-slate-700'
                               }`}>
                                 {c.status}
                               </span>
@@ -694,7 +694,7 @@ Vista Auction HR Team`;
                             <td className="p-5 text-right">
                               <button
                                 onClick={() => setSelectedCandidate(c)}
-                                className="bg-[#0a0f20]/80 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 hover:text-white hover:border-orange-500 transition-all shadow-sm"
+                                className="bg-muted/20/80 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 hover:text-text-main hover:border-orange-500 transition-all shadow-sm"
                               >
                                 View File
                               </button>
@@ -719,7 +719,7 @@ Vista Auction HR Team`;
 
           {/* TAB 3: CALENDAR VIEW */}
           {activeTab === 'calendar' && (
-            <div className="bg-[#0c1226]/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl">
+            <div className="bg-surface/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl">
               <CalendarView 
                 applications={candidates} 
                 onSelectApp={(app) => {
@@ -735,10 +735,10 @@ Vista Auction HR Team`;
             <div className="space-y-8 animate-fade-in">
               
               {/* Courses Library */}
-              <div className="bg-[#0c1226]/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+              <div className="bg-surface/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
                 <div className="flex justify-between items-center border-b border-slate-800 pb-4">
                   <div>
-                    <h3 className="text-xl font-black text-white font-display">Required Employee Training</h3>
+                    <h3 className="text-xl font-black text-text-main font-display">Required Employee Training</h3>
                     <p className="text-xs text-slate-400 mt-1">Standardized onboarding & safety courses for hired staff.</p>
                   </div>
                   <button
@@ -751,7 +751,7 @@ Vista Auction HR Team`;
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {courses.map(course => (
-                    <div key={course.id} className="bg-[#0a0f20] border border-slate-850 p-6 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all shadow-lg group">
+                    <div key={course.id} className="bg-muted/20 border border-slate-850 p-6 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all shadow-lg group">
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <span className={`text-[8px] font-black px-2 py-0.5 rounded tracking-widest uppercase ${
@@ -763,7 +763,7 @@ Vista Auction HR Team`;
                             <span className="text-[8px] font-black bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded uppercase tracking-wider">Required</span>
                           )}
                         </div>
-                        <h4 className="font-extrabold text-white text-base group-hover:text-orange-400 transition-colors font-display tracking-tight leading-snug">{course.name}</h4>
+                        <h4 className="font-extrabold text-text-main text-base group-hover:text-orange-400 transition-colors font-display tracking-tight leading-snug">{course.name}</h4>
                         <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">{course.description || 'No description provided.'}</p>
                       </div>
                       
@@ -782,9 +782,9 @@ Vista Auction HR Team`;
               </div>
 
               {/* Employee list with training tracking */}
-              <div className="bg-[#0c1226]/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+              <div className="bg-surface/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
                 <div>
-                  <h3 className="text-xl font-black text-white font-display">Employee Training Logs</h3>
+                  <h3 className="text-xl font-black text-text-main font-display">Employee Training Logs</h3>
                   <p className="text-xs text-slate-400 mt-1">Audit status, completion dates, and assigned workflows for staff.</p>
                 </div>
 
@@ -802,7 +802,7 @@ Vista Auction HR Team`;
                     </thead>
                     <tbody className="divide-y divide-slate-850/60">
                       {trainingRecords.map(record => (
-                        <tr key={record.id} className="hover:bg-[#0a0f20]/20 transition-colors">
+                        <tr key={record.id} className="hover:bg-muted/20/20 transition-colors">
                           <td className="py-4 font-bold text-sm text-slate-200">{record.employee_name}</td>
                           <td className="py-4">
                             <span className="text-sm font-semibold text-slate-300">{record.course_name}</span>
@@ -812,7 +812,7 @@ Vista Auction HR Team`;
                             <span className={`inline-flex px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
                               record.status === 'Completed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
                               record.status === 'In Progress' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
-                              'bg-slate-800 text-slate-400 border border-slate-700'
+                              'bg-muted text-slate-400 border border-slate-700'
                             }`}>
                               {record.status}
                             </span>
@@ -827,7 +827,7 @@ Vista Auction HR Team`;
                             {record.status !== 'Completed' && (
                               <button
                                 onClick={() => onUpdateTrainingStatus(record.id, 'Completed')}
-                                className="text-[10px] font-black uppercase tracking-widest bg-green-600/10 text-green-400 border border-green-500/20 px-3 py-1.5 rounded-lg hover:bg-green-600 hover:text-white hover:border-green-600 transition-all"
+                                className="text-[10px] font-black uppercase tracking-widest bg-green-600/10 text-green-400 border border-green-500/20 px-3 py-1.5 rounded-lg hover:bg-green-600 hover:text-text-main hover:border-green-600 transition-all"
                               >
                                 Mark Complete
                               </button>
@@ -854,7 +854,7 @@ Vista Auction HR Team`;
           {activeTab === 'screener' && (
             <div className="space-y-6 animate-fade-in text-left">
               <div className="max-w-3xl">
-                <h3 className="text-xl font-black text-white font-display">AI Resume Screening Sandbox</h3>
+                <h3 className="text-xl font-black text-text-main font-display">AI Resume Screening Sandbox</h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                   Evaluate alignment, parse core skillsets, and construct SWOT screening profiles. Select a mock candidate to run the resume parser.
                 </p>
@@ -863,12 +863,12 @@ Vista Auction HR Team`;
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 
                 {/* Upload Section */}
-                <div className="bg-[#0c1226]/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
-                  <h4 className="text-base font-black text-white font-display uppercase tracking-widest">Mock Upload Simulator</h4>
+                <div className="bg-surface/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+                  <h4 className="text-base font-black text-text-main font-display uppercase tracking-widest">Mock Upload Simulator</h4>
                   
                   {/* Dashed Dropzone */}
-                  <div className="border-2 border-dashed border-slate-800 rounded-2xl p-10 text-center flex flex-col items-center justify-center space-y-4 bg-[#080d1c]/40 hover:border-orange-500/30 transition-all cursor-pointer">
-                    <div className="w-16 h-16 bg-[#0a0f20] rounded-2xl border border-slate-850 flex items-center justify-center text-slate-500">
+                  <div className="border-2 border-dashed border-slate-800 rounded-2xl p-10 text-center flex flex-col items-center justify-center space-y-4 bg-muted/20/40 hover:border-orange-500/30 transition-all cursor-pointer">
+                    <div className="w-16 h-16 bg-muted/20 rounded-2xl border border-slate-850 flex items-center justify-center text-slate-500">
                       <FileText size={28} />
                     </div>
                     <div>
@@ -882,7 +882,7 @@ Vista Auction HR Team`;
                     <div className="flex flex-col gap-2">
                       <button
                         onClick={() => handleSimulatedUpload(0)}
-                        className="w-full flex items-center justify-between p-4 bg-[#0a0f20] border border-slate-850 rounded-2xl hover:border-orange-500/40 hover:bg-[#0c1226]/80 text-left transition-all"
+                        className="w-full flex items-center justify-between p-4 bg-muted/20 border border-slate-850 rounded-2xl hover:border-orange-500/40 hover:bg-[#0c1226]/80 text-left transition-all"
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-xl text-slate-300 flex items-center justify-center"><Truck size={20} /></span>
@@ -896,7 +896,7 @@ Vista Auction HR Team`;
 
                       <button
                         onClick={() => handleSimulatedUpload(1)}
-                        className="w-full flex items-center justify-between p-4 bg-[#0a0f20] border border-slate-850 rounded-2xl hover:border-orange-500/40 hover:bg-[#0c1226]/80 text-left transition-all"
+                        className="w-full flex items-center justify-between p-4 bg-muted/20 border border-slate-850 rounded-2xl hover:border-orange-500/40 hover:bg-[#0c1226]/80 text-left transition-all"
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-xl text-slate-300 flex items-center justify-center"><Package size={20} /></span>
@@ -912,9 +912,9 @@ Vista Auction HR Team`;
                 </div>
 
                 {/* Diagnostics Panel */}
-                <div className="bg-[#0c1226]/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl min-h-[450px] flex flex-col justify-between">
+                <div className="bg-surface/40 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl min-h-[450px] flex flex-col justify-between">
                   <div className="space-y-6">
-                    <h4 className="text-base font-black text-white font-display uppercase tracking-widest">Screening Output Details</h4>
+                    <h4 className="text-base font-black text-text-main font-display uppercase tracking-widest">Screening Output Details</h4>
                     
                     {screenerParsing && (
                       <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
@@ -934,7 +934,7 @@ Vista Auction HR Team`;
                       <div className="space-y-6">
                         <div className="flex justify-between items-start border-b border-slate-800 pb-4">
                           <div>
-                            <h3 className="text-xl font-black text-white font-display">{screenerResult.name}</h3>
+                            <h3 className="text-xl font-black text-text-main font-display">{screenerResult.name}</h3>
                             <p className="text-xs text-slate-400 mt-1">Extract Match: <span className="text-orange-400 font-bold">{screenerResult.role}</span></p>
                           </div>
                           <span className="text-xs font-black bg-gradient-to-tr from-green-500 to-emerald-400 text-[#070b18] px-3 py-1.5 rounded-xl shadow-lg">
@@ -946,14 +946,14 @@ Vista Auction HR Team`;
                           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Parsed Skillsets:</p>
                           <div className="flex flex-wrap gap-2">
                             {screenerResult.skills.map(s => (
-                              <span key={s} className="text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-750 px-3 py-1 rounded-lg">
+                              <span key={s} className="text-[10px] font-bold bg-muted text-slate-300 border border-slate-750 px-3 py-1 rounded-lg">
                                 {s}
                               </span>
                             ))}
                           </div>
                         </div>
 
-                        <div className="bg-[#080d1c] p-5 rounded-2xl border border-slate-850 space-y-2">
+                        <div className="bg-muted/20 p-5 rounded-2xl border border-slate-850 space-y-2">
                           <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">AI Fit Summary:</p>
                           <p className="text-xs text-slate-350 leading-relaxed font-semibold">{screenerResult.aiReport.summary}</p>
                         </div>
@@ -978,7 +978,7 @@ Vista Auction HR Team`;
                     <div className="flex gap-3 pt-6 mt-6 border-t border-slate-850">
                       <button
                         onClick={() => { setScreenerResult(null); setScreenerFile(null); }}
-                        className="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                        className="flex-1 bg-transparent hover:bg-muted text-slate-400 hover:text-slate-200 border border-slate-800 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                       >
                         Reset
                       </button>
@@ -1000,23 +1000,23 @@ Vista Auction HR Team`;
           {activeTab === 'copilot' && (
             <div className="space-y-6 animate-fade-in text-left max-w-4xl">
               <div>
-                <h3 className="text-xl font-black text-white font-display">Recruiting AI Copilot</h3>
+                <h3 className="text-xl font-black text-text-main font-display">Recruiting AI Copilot</h3>
                 <p className="text-xs text-slate-400 mt-1">
                   Draft emails, find specialized skillsets, or query statuses in real-time with natural language.
                 </p>
               </div>
 
-              <div className="bg-[#0c1226]/40 border border-slate-800 rounded-3xl overflow-hidden shadow-xl flex flex-col h-[550px] justify-between">
+              <div className="bg-surface/40 border border-slate-800 rounded-3xl overflow-hidden shadow-xl flex flex-col h-[550px] justify-between">
                 
                 {/* Message Log */}
-                <div className="flex-grow p-6 overflow-y-auto space-y-4 bg-[#080d1c]/30">
+                <div className="flex-grow p-6 overflow-y-auto space-y-4 bg-muted/20/30">
                   {copilotMessages.map(msg => (
                     <div
                       key={msg.id}
                       className={`flex gap-3 max-w-[85%] ${msg.sender === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
                     >
                       <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-sm shadow-md ${
-                        msg.sender === 'user' ? 'bg-orange-600 text-white font-bold' : 'bg-slate-800 text-orange-400'
+                        msg.sender === 'user' ? 'bg-orange-600 text-text-main font-bold' : 'bg-muted text-orange-400'
                       }`}>
                         {msg.sender === 'user' ? 'HR' : <Bot size={14} />}
                       </div>
@@ -1024,7 +1024,7 @@ Vista Auction HR Team`;
                       <div className={`p-4 rounded-2xl border text-sm leading-relaxed shadow-sm ${
                         msg.sender === 'user'
                           ? 'bg-orange-600/10 border-orange-500/20 text-slate-200 rounded-tr-none'
-                          : 'bg-[#0a0f20]/90 border-slate-850 text-slate-350 rounded-tl-none whitespace-pre-wrap'
+                          : 'bg-muted/20/90 border-slate-850 text-slate-350 rounded-tl-none whitespace-pre-wrap'
                       }`}>
                         {msg.text}
                       </div>
@@ -1038,7 +1038,7 @@ Vista Auction HR Team`;
                 </div>
 
                 {/* Form Input Area */}
-                <form onSubmit={handleCopilotSend} className="bg-[#0a0f20] border-t border-slate-850 p-4 flex gap-3 items-center">
+                <form onSubmit={handleCopilotSend} className="bg-muted/20 border-t border-slate-850 p-4 flex gap-3 items-center">
                   <input
                     type="text"
                     placeholder="e.g. 'Draft email to Marcus Vance', 'Who applied for warehouse lead role?'"
@@ -1088,7 +1088,7 @@ Vista Auction HR Team`;
                 {/* Header section inside modal */}
                 <div className="flex justify-between items-start border-b border-slate-850 pb-6">
                   <div>
-                    <h3 className="text-2xl font-black text-white font-display tracking-tight leading-none">{selectedCandidate.fullName}</h3>
+                    <h3 className="text-2xl font-black text-text-main font-display tracking-tight leading-none">{selectedCandidate.fullName}</h3>
                     <p className="text-xs text-orange-400 font-black uppercase tracking-widest mt-2">{selectedCandidate.jobType || selectedCandidate.position} | {selectedCandidate.preferredShift || 'Shift Option'}</p>
                   </div>
                   <div className="text-right shrink-0">
@@ -1109,7 +1109,7 @@ Vista Auction HR Team`;
                   <div className="space-y-6 animate-fade-in">
                     <div className="bg-orange-500/5 p-6 rounded-2xl border border-orange-500/10 flex flex-col items-center text-center">
                       <Clock size={28} className="text-orange-400 mb-3" />
-                      <h4 className="font-extrabold text-sm text-white font-display">Schedule Roadmap Interview</h4>
+                      <h4 className="font-extrabold text-sm text-text-main font-display">Schedule Roadmap Interview</h4>
                       <p className="text-xs text-slate-400 mt-1 max-w-xs leading-normal">Assign a date/time slot. Confirming will automatically email applicant scheduling info.</p>
                       
                       <div className="mt-6 w-full max-w-sm">
@@ -1124,7 +1124,7 @@ Vista Auction HR Team`;
                     <div className="flex gap-3 justify-end pt-4 border-t border-slate-850">
                       <button 
                         onClick={() => setIsScheduling(false)}
-                        className="bg-transparent hover:bg-slate-800 border border-slate-800 text-slate-400 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                        className="bg-transparent hover:bg-muted border border-slate-800 text-slate-400 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                       >
                         Cancel
                       </button>
@@ -1172,7 +1172,7 @@ Vista Auction HR Team`;
                       <div className="space-y-5 text-left text-xs font-semibold text-slate-300">
                         
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="p-4 bg-[#0a0f20]/60 rounded-xl border border-slate-850">
+                          <div className="p-4 bg-muted/20/60 rounded-xl border border-slate-850">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Contact Details</span>
                             <div className="space-y-2">
                               <p className="flex items-center gap-2"><Mail size={12} className="text-orange-500" /> {selectedCandidate.email}</p>
@@ -1181,7 +1181,7 @@ Vista Auction HR Team`;
                             </div>
                           </div>
 
-                          <div className="p-4 bg-[#0a0f20]/60 rounded-xl border border-slate-850">
+                          <div className="p-4 bg-muted/20/60 rounded-xl border border-slate-850">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Work Authorization & Age</span>
                             <div className="space-y-2">
                               <p><span className="text-slate-500">Eligibility:</span> {selectedCandidate.workAuth}</p>
@@ -1192,7 +1192,7 @@ Vista Auction HR Team`;
                         </div>
 
                         {selectedCandidate.howHeard && (
-                          <div className="p-4 bg-[#0a0f20]/60 rounded-xl border border-slate-850">
+                          <div className="p-4 bg-muted/20/60 rounded-xl border border-slate-850">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Referral Information</span>
                             <p><span className="text-slate-500">Source:</span> {selectedCandidate.howHeard} {selectedCandidate.referringEmployee ? `(Referred by: ${selectedCandidate.referringEmployee})` : ''}</p>
                             <p className="mt-1"><span className="text-slate-500">Worked here before?</span> {selectedCandidate.workedAtVistaBefore || 'No'}</p>
@@ -1201,14 +1201,14 @@ Vista Auction HR Team`;
 
                         <div className="space-y-2">
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Interest Statement</span>
-                          <div className="p-4 bg-[#080d1c] border border-slate-850 rounded-xl font-medium leading-relaxed max-h-32 overflow-y-auto">
+                          <div className="p-4 bg-muted/20 border border-slate-850 rounded-xl font-medium leading-relaxed max-h-32 overflow-y-auto">
                             {selectedCandidate.interestStatement || 'No interest statement provided.'}
                           </div>
                         </div>
 
                         <div className="space-y-2">
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Previous Experience & Skills</span>
-                          <div className="p-4 bg-[#080d1c] border border-slate-850 rounded-xl font-medium leading-relaxed max-h-32 overflow-y-auto">
+                          <div className="p-4 bg-muted/20 border border-slate-850 rounded-xl font-medium leading-relaxed max-h-32 overflow-y-auto">
                             {selectedCandidate.previousExperience || 'No experience details listed.'}
                           </div>
                         </div>
@@ -1225,7 +1225,7 @@ Vista Auction HR Team`;
                             <a 
                               href={selectedCandidate.resumeData} 
                               download={selectedCandidate.resumeName || "resume.pdf"}
-                              className="bg-slate-800 text-slate-200 hover:bg-orange-600 hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 font-bold"
+                              className="bg-muted text-slate-200 hover:bg-orange-600 hover:text-text-main px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 font-bold"
                             >
                               <Download size={12} /> Download
                             </a>
@@ -1263,7 +1263,7 @@ Vista Auction HR Team`;
                     {/* TAB: AI SWOT Screening */}
                     {candidateDetailTab === 'screening' && (
                       <div className="space-y-6 text-left">
-                        <div className="bg-[#080d1c] p-5 rounded-2xl border border-slate-850 space-y-2">
+                        <div className="bg-muted/20 p-5 rounded-2xl border border-slate-850 space-y-2">
                           <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">AI Candidate Summary</p>
                           <p className="text-xs text-slate-350 leading-relaxed font-semibold">
                             {selectedCandidate.notes?.includes('Parsed via AI') 
@@ -1301,7 +1301,7 @@ Vista Auction HR Team`;
                       <div className="space-y-6 text-left">
                         
                         {/* Sliders Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#080d1c] p-6 rounded-2xl border border-slate-850">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 p-6 rounded-2xl border border-slate-850">
                           {[
                             { id: 'punctuality', label: 'Punctuality' },
                             { id: 'attitude', label: 'Attitude & Energy' },
@@ -1319,7 +1319,7 @@ Vista Auction HR Team`;
                                 max="10"
                                 value={scorecard[metric.id]}
                                 onChange={(e) => setScorecard({ ...scorecard, [metric.id]: parseInt(e.target.value) })}
-                                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-orange-500"
                               />
                             </div>
                           ))}
@@ -1348,7 +1348,7 @@ Vista Auction HR Team`;
                               }
                             }}
                             placeholder="Write candidate screening feedback notes..."
-                            className="w-full p-4 bg-[#080d1c] border border-slate-850 rounded-xl text-xs text-slate-200 font-semibold focus:outline-none focus:border-orange-500 min-h-[100px]"
+                            className="w-full p-4 bg-muted/20 border border-slate-850 rounded-xl text-xs text-slate-200 font-semibold focus:outline-none focus:border-orange-500 min-h-[100px]"
                           />
                         </div>
 
@@ -1366,7 +1366,7 @@ Vista Auction HR Team`;
                             className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                               selectedCandidate.status === stage 
                                 ? 'bg-orange-600 text-[#070b18] shadow-md shadow-orange-600/10' 
-                                : 'bg-[#0a0f20]/60 border border-slate-850 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                                : 'bg-muted/20/60 border border-slate-850 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                             }`}
                           >
                             {stage}
@@ -1381,7 +1381,7 @@ Vista Auction HR Team`;
               </div>
 
               {/* Modal Footer */}
-              <div className="bg-[#0a0f20] p-6 border-t border-slate-850 flex justify-between items-center rounded-b-[2.5rem]">
+              <div className="bg-muted/20 p-6 border-t border-slate-850 flex justify-between items-center rounded-b-[2.5rem]">
                 <div>
                   {selectedCandidate.status === 'Accepted' && (
                     <button
@@ -1397,7 +1397,7 @@ Vista Auction HR Team`;
                         await handleUpdateStatus(selectedCandidate.id, 'Hired');
                         setSelectedCandidate(null);
                       }}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg"
+                      className="bg-green-600 hover:bg-green-700 text-text-main px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg"
                     >
                       Hire Candidate
                     </button>
@@ -1419,7 +1419,7 @@ Vista Auction HR Team`;
 
                 <button
                   onClick={() => { setSelectedCandidate(null); setIsScheduling(false); }}
-                  className="bg-[#080d1c] border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-200 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                  className="bg-muted/20 border border-slate-800 hover:bg-muted text-slate-400 hover:text-slate-200 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                 >
                   Close
                 </button>
@@ -1441,7 +1441,7 @@ Vista Auction HR Team`;
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative bg-[#0c1226] border border-slate-800 rounded-[2rem] p-8 shadow-2xl max-w-md w-full space-y-5 text-left"
             >
-              <h3 className="text-lg font-black text-white font-display uppercase tracking-widest border-b border-slate-850 pb-3">Create Training Course</h3>
+              <h3 className="text-lg font-black text-text-main font-display uppercase tracking-widest border-b border-slate-850 pb-3">Create Training Course</h3>
               
               <div className="space-y-4 text-xs font-semibold text-slate-350">
                 <div className="space-y-1">
@@ -1449,7 +1449,7 @@ Vista Auction HR Team`;
                   <input
                     type="text"
                     placeholder="e.g. Monroe Cataloging Standard"
-                    className="w-full bg-[#080d1c] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-orange-500"
+                    className="w-full bg-muted/20 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-orange-500"
                     value={newCourse.name}
                     onChange={(e) => setNewCourse(prev => ({ ...prev, name: e.target.value }))}
                   />
@@ -1459,7 +1459,7 @@ Vista Auction HR Team`;
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Description</label>
                   <textarea
                     placeholder="Short course description of materials..."
-                    className="w-full bg-[#080d1c] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-orange-500 min-h-[80px]"
+                    className="w-full bg-muted/20 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-orange-500 min-h-[80px]"
                     value={newCourse.description}
                     onChange={(e) => setNewCourse(prev => ({ ...prev, description: e.target.value }))}
                   />
@@ -1471,7 +1471,7 @@ Vista Auction HR Team`;
                     <select
                       value={newCourse.type}
                       onChange={(e) => setNewCourse(prev => ({ ...prev, type: e.target.value }))}
-                      className="w-full bg-[#080d1c] border border-slate-800 rounded-xl px-3 py-2.5 text-slate-300 focus:outline-none focus:border-orange-500 font-bold"
+                      className="w-full bg-muted/20 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-300 focus:outline-none focus:border-orange-500 font-bold"
                     >
                       <option value="PDF">PDF Document</option>
                       <option value="Video">Video Guide</option>
@@ -1479,7 +1479,7 @@ Vista Auction HR Team`;
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Is Required?</label>
-                    <label className="flex items-center gap-2 bg-[#080d1c] border border-slate-800 rounded-xl px-3 py-2.5 select-none cursor-pointer">
+                    <label className="flex items-center gap-2 bg-muted/20 border border-slate-800 rounded-xl px-3 py-2.5 select-none cursor-pointer">
                       <input
                         type="checkbox"
                         checked={newCourse.required}
@@ -1495,7 +1495,7 @@ Vista Auction HR Team`;
               <div className="flex gap-3 pt-4 border-t border-slate-850">
                 <button
                   onClick={() => setShowAddCourseModal(false)}
-                  className="flex-1 bg-transparent hover:bg-slate-800 border border-slate-800 text-slate-400 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                  className="flex-1 bg-transparent hover:bg-muted border border-slate-800 text-slate-400 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                 >
                   Cancel
                 </button>
@@ -1523,7 +1523,7 @@ Vista Auction HR Team`;
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative bg-[#0c1226] border border-slate-800 rounded-[2rem] p-8 shadow-2xl max-w-md w-full space-y-5 text-left"
             >
-              <h3 className="text-lg font-black text-white font-display uppercase tracking-widest border-b border-slate-850 pb-3">Assign: {selectedEmployee.course.name}</h3>
+              <h3 className="text-lg font-black text-text-main font-display uppercase tracking-widest border-b border-slate-850 pb-3">Assign: {selectedEmployee.course.name}</h3>
               
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                 {candidates.filter(c => c.status === 'Hired').map(emp => (
@@ -1535,9 +1535,9 @@ Vista Auction HR Team`;
                       }
                       setSelectedEmployee(null);
                     }}
-                    className="w-full flex items-center gap-3 p-3 bg-[#080d1c] border border-slate-850 rounded-xl hover:border-orange-500/40 text-left transition-all"
+                    className="w-full flex items-center gap-3 p-3 bg-muted/20 border border-slate-850 rounded-xl hover:border-orange-500/40 text-left transition-all"
                   >
-                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-200 font-bold text-xs uppercase shadow-inner">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-slate-200 font-bold text-xs uppercase shadow-inner">
                       {emp.fullName[0]}
                     </div>
                     <div>
@@ -1553,7 +1553,7 @@ Vista Auction HR Team`;
 
               <button
                 onClick={() => setSelectedEmployee(null)}
-                className="w-full bg-[#080d1c] border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-slate-200 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                className="w-full bg-muted/20 border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-slate-200 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
               >
                 Cancel
               </button>
