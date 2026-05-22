@@ -120,7 +120,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 relative overflow-hidden font-sans text-gray-800">
+        <div className="min-h-screen bg-brandBlueDark relative overflow-hidden font-sans text-white">
             {/* Background Elements */}
             <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-10"></div>
             <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 to-slate-950/95"></div>

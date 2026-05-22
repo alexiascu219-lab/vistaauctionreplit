@@ -7,13 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#f97316", // Orange-500
-        "primary-dark": "#ea580c", // Orange-600
+        brandOrange: "#f97316", // Orange-500
+        brandOrangeDark: "#ea580c", // Orange-600
         background: "#F8FAFC",
         surface: "#FFFFFF",
         "text-main": "#0F172A",
         "text-muted": "#64748B",
-        "secondary-dark": "#0F1623",
+        brandBlueDark: "#0F1623", // Dark navy
+      brandBlue: "#1E293B", // Slate-800
         accent: "#f97316",
       },
       fontFamily: {

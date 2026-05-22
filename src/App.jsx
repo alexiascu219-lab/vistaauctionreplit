@@ -20,6 +20,12 @@ import Contact from './pages/Contact';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
 import EmployeePortal from './pages/EmployeePortal';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
+import Navbar from './components/Navbar';
+import NotificationCenter from './components/NotificationCenter';
+import InterviewScheduler from './pages/InterviewScheduler';
+import AccessControl from './pages/AccessControl';
+import Chat from './pages/Chat';
 
 // Helper component to handle conditional AI rendering
 const ConditionalAIAssistant = () => {
@@ -59,8 +65,14 @@ function App() {
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/training" element={<EmployeePortal />} />
+              <Route path="/analytics" element={<AnalyticsDashboard />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/admin" element={<AccessControl />} />
+              <Route path="/schedule-interview" element={<InterviewScheduler />} />
             </Routes>
             <SystemAlert />
+            <Navbar />
+            <NotificationCenter />
             <ConditionalAIAssistant />
           </Router>
         </AuthProvider>

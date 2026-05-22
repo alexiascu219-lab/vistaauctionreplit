@@ -293,7 +293,7 @@ const HRPortalContent = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#070b18]">
+        <div className="min-h-screen bg-brandBlueDark">
             <Navbar />
             <div className="pt-16">
                 <RecruiterDashboard

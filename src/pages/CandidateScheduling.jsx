@@ -129,14 +129,14 @@ const CandidateScheduling = () => {
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+        <div className="min-h-screen bg-brandBlueDark flex items-center justify-center font-sans">
             <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
         </div>
     );
 
     if (error) return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
-            <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-gray-100 shadow-xl text-center">
+        <div className="min-h-screen bg-brandBlueDark flex items-center justify-center p-4 font-sans">
+            <div className="max-w-md w-full bg-[#0c1226]/60 rounded-3xl p-8 border border-gray-100 shadow-xl text-center">
                 <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
                     <AlertCircle size={32} className="text-red-500" />
                 </div>
@@ -154,7 +154,7 @@ const CandidateScheduling = () => {
     // PREMIUM SUCCESS UI
     if (finalized) {
         return (
-            <div className="min-h-screen bg-white font-sans flex flex-col items-center justify-center p-8 relative overflow-hidden">
+            <div className="min-h-screen bg-[#0c1226]/60 font-sans flex flex-col items-center justify-center p-8 relative overflow-hidden">
                 {/* Background Decor */}
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-500 to-amber-500"></div>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
@@ -171,7 +171,7 @@ const CandidateScheduling = () => {
                         We have successfully reserved your slot. A confirmation email has been sent to <span className="text-slate-900 font-bold">{application?.email}</span>.
                     </p>
 
-                    <div className="bg-slate-50 rounded-3xl p-8 mb-12 border border-slate-100 flex items-center justify-center gap-6 shadow-sm">
+                    <div className="bg-brandBlueDark rounded-3xl p-8 mb-12 border border-slate-100 flex items-center justify-center gap-6 shadow-sm">
                         <div className="text-center">
                             <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Status</span>
                             <span className="text-lg font-bold text-slate-900">Scheduled</span>
@@ -201,9 +201,9 @@ const CandidateScheduling = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
+        <div className="min-h-screen bg-brandBlueDark font-sans text-slate-800 flex flex-col">
             {/* Header */}
-            <div className="bg-white border-b border-gray-100 sticky top-0 z-20">
+            <div className="bg-[#0c1226]/60 border-b border-gray-100 sticky top-0 z-20">
                 <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <img src={logoTag} alt="Vista Auction" className="h-8" />
@@ -215,7 +215,7 @@ const CandidateScheduling = () => {
             <div className="flex-grow flex flex-col items-center justify-center p-4 sm:p-8">
                 {scheduledEvent ? (
                     // CONFIRMATION STEP (Manual Submission)
-                    <div className="max-w-xl w-full bg-white rounded-[2.5rem] p-12 text-center shadow-xl border border-orange-100 animate-fade-in-up">
+                    <div className="max-w-xl w-full bg-[#0c1226]/60 rounded-[2.5rem] p-12 text-center shadow-xl border border-orange-100 animate-fade-in-up">
                         <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <Calendar size={40} className="text-orange-600" />
                         </div>
@@ -238,7 +238,7 @@ const CandidateScheduling = () => {
                     </div>
                 ) : (
                     // SCHEDULER WIDGET
-                    <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
+                    <div className="w-full max-w-5xl bg-[#0c1226]/60 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
                         <div className="h-[800px]">
                             <InlineWidget
                                 url={CALENDLY_URL}

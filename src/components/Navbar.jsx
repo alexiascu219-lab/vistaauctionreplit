@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Menu } from 'lucide-react';
+import { X, Menu, Bell, MessageSquare } from 'lucide-react';
+import NotificationCenter from '../components/NotificationCenter';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -24,7 +25,7 @@ const Navbar = () => {
             className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
         >
             {/* Glass Background */}
-            <div className="absolute inset-0 bg-white/70 backdrop-blur-xl border-b border-white/20 shadow-sm"></div>
+            <div className="absolute inset-0 bg-brandBlueDark/70 backdrop-blur-xl border-b border-brandBlueDark/20 shadow-sm"></div>
 
             <div className="max-w-7xl mx-auto px-6 sm:px-8 relative z-10">
                 <div className="flex justify-between items-center h-24">
@@ -36,7 +37,7 @@ const Navbar = () => {
                         <Link to="/" className="flex items-center gap-4 group">
                             <img src="/assets/logo-tag.png" alt="Vista Auction" className="h-14 w-auto transform transition-transform group-hover:scale-105" />
                             <div className="flex flex-col">
-                                <span className="font-black text-2xl text-gray-900 leading-none tracking-tight font-display">{brandText}</span>
+                                <span className="font-black text-2xl text-white leading-none tracking-tight font-display">{brandText}</span>
                                 <span className="text-[11px] uppercase tracking-[0.25em] text-orange-600 font-black mt-1 bg-orange-50 px-2 py-0.5 rounded-md self-start">Vista Auction</span>
                             </div>
                         </Link>
@@ -45,17 +46,17 @@ const Navbar = () => {
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center space-x-12">
                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                            <Link to="/#roles" className="text-[10px] font-black text-gray-500 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
+                            <Link to="/#roles" className="text-[10px] font-black text-slate-300 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
                                 Open Positions
                             </Link>
                         </motion.div>
                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                            <Link to="/status" className="text-[10px] font-black text-gray-500 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
+                            <Link to="/status" className="text-[10px] font-black text-slate-300 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
                                 Check Status
                             </Link>
                         </motion.div>
                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-                            <Link to="/training" className="text-[10px] font-black text-gray-500 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
+                            <Link to="/training" className="text-[10px] font-black text-slate-300 hover:text-orange-600 transition-all tracking-[0.2em] uppercase">
                                 Training
                             </Link>
                         </motion.div>
@@ -77,7 +78,7 @@ const Navbar = () => {
                         <motion.button
                             whileTap={{ scale: 0.9 }}
                             onClick={() => setIsOpen(!isOpen)}
-                            className="text-gray-900 hover:text-orange-600 transition-colors focus:outline-none bg-gray-100 p-2.5 rounded-xl border border-gray-200 shadow-sm"
+                            className="text-white hover:text-orange-600 transition-colors focus:outline-none bg-brandBlueDark/20 p-2.5 rounded-xl border border-brandBlueDark/20 shadow-sm"
                         >
                             {isOpen ? <X size={24} /> : <Menu size={24} />}
                         </motion.button>
@@ -98,21 +99,21 @@ const Navbar = () => {
                             <Link
                                 to="/#roles"
                                 onClick={() => setIsOpen(false)}
-                                className="block text-xl font-black text-gray-900 py-4 border-b border-gray-50 tracking-tight"
+                                className="block text-xl font-black text-white py-4 border-b border-brandBlueDark/20 tracking-tight"
                             >
                                 Open Positions
                             </Link>
                             <Link
                                 to="/status"
                                 onClick={() => setIsOpen(false)}
-                                className="block text-xl font-black text-gray-900 py-4 border-b border-gray-50 tracking-tight"
+                                className="block text-xl font-black text-white py-4 border-b border-brandBlueDark/20 tracking-tight"
                             >
                                 Check Status
                             </Link>
                             <Link
                                 to="/training"
                                 onClick={() => setIsOpen(false)}
-                                className="block text-xl font-black text-gray-900 py-4 border-b border-gray-50 tracking-tight"
+                                className="block text-xl font-black text-white py-4 border-b border-brandBlueDark/20 tracking-tight"
                             >
                                 Training
                             </Link>

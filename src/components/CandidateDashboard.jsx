@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ClipboardList, Mic, Puzzle, MessageCircle, Megaphone, Bot, ArrowRight, Search, Rocket, Clock, Trophy } from 'lucide-react';
 import { initialJobs, mockQuestions, catalogerMiniGameItems } from '../data/mockData';
 
 export default function CandidateDashboard({ candidateData, appliedJobs, onUpdateCandidate, onOpenAIChat }) {
@@ -220,21 +221,21 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
           className={`sidebar-link ${activeTab === 'applications' ? 'active' : ''}`}
           onClick={() => setActiveTab('applications')}
         >
-          <span>📋</span>
+          <span><ClipboardList size={18} /></span>
           <span className="sidebar-label">My Applications</span>
         </button>
         <button 
           className={`sidebar-link ${activeTab === 'interview-prep' ? 'active' : ''}`}
           onClick={() => setActiveTab('interview-prep')}
         >
-          <span>🎙️</span>
+          <span><Mic size={18} /></span>
           <span className="sidebar-label">AI Interview Prep</span>
         </button>
         <button 
           className={`sidebar-link ${activeTab === 'skills-assessment' ? 'active' : ''}`}
           onClick={() => setActiveTab('skills-assessment')}
         >
-          <span>🧩</span>
+          <span><Puzzle size={18} /></span>
           <span className="sidebar-label">Skills Assessment</span>
         </button>
         
@@ -248,8 +249,8 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
               Complete skills challenges to boost your match rating!
             </p>
           </div>
-          <button onClick={onOpenAIChat} className="btn btn-glass btn-sm" style={{ width: '100%' }}>
-            💬 Get Help
+          <button onClick={onOpenAIChat} className="btn btn-glass btn-sm" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <MessageCircle size={16} /> Get Help
           </button>
         </div>
       </div>
@@ -309,7 +310,7 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '10px', marginTop: '32px', border: '1px solid var(--border-color)', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1.5rem' }}>📢</span>
+                    <span style={{ display: 'flex', alignItems: 'center' }}><Megaphone size={24} /></span>
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'left' }}>
                       {activeApp.statusIndex === 0 && "Your application has been received. Boost your chances by taking the Cataloger skills challenge in the Skills Assessment tab!"}
                       {activeApp.statusIndex === 1 && "AI screening is complete! Our recruiters are coordinating your interview schedule. Warm up with our AI Interview simulator!"}
@@ -396,7 +397,7 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
                 {/* Video container */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div className="video-screen">
-                    <div className="avatar-graphic speaking">🤖</div>
+                    <div className="avatar-graphic speaking" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Bot size={48} /></div>
                     <div className="video-overlay">
                       <span className="recruiter-name-tag">Vista Recruiter AI</span>
                       <span className="live-indicator">
@@ -449,7 +450,7 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
                           className="btn btn-primary"
                           disabled={!userAnswer.trim() || isBotSpeaking}
                         >
-                          Submit Answer ➔
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Submit Answer <ArrowRight size={16} /></span>
                         </button>
                       </div>
                     </form>
@@ -490,14 +491,14 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
             </p>
 
             {gameState === 'welcome' && (
-              <div className="glass-panel" style={{ padding: '48px', textAlignment: 'center', maxWidth: '650px', margin: '0 auto' }}>
-                <span style={{ fontSize: '3rem' }}>🔍</span>
+              <div className="glass-panel" style={{ padding: '48px', textAlign: 'center', maxWidth: '650px', margin: '0 auto' }}>
+                <Search size={48} />
                 <h3 style={{ fontSize: '1.5rem', marginTop: '16px', marginBottom: '12px' }}>Grader Skills Sandbox</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '24px' }}>
                   You will inspect 3 typical customer returns. Correctly identify the condition level (Like New, Open Box, Missing Accessories, or Damaged), identify the defect, and write an accurate description within the timer.
                 </p>
-                <button onClick={startAssessment} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
-                  Start Grading Challenge 🚀
+                <button onClick={startAssessment} className="btn btn-primary btn-lg" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  Start Grading Challenge <Rocket size={18} />
                 </button>
               </div>
             )}
@@ -506,8 +507,8 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
               <div className="glass-panel game-container">
                 <div className="game-stats-row">
                   <span>Item {gameItemIdx + 1} of {catalogerMiniGameItems.length}</span>
-                  <span style={{ color: timer <= 8 ? 'var(--danger)' : 'var(--accent-gold)' }}>
-                    ⏱ Time Remaining: {timer}s
+                  <span style={{ color: timer <= 8 ? 'var(--danger)' : 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={16} /> Time Remaining: {timer}s
                   </span>
                   <span>Accuracy Score: {gameCorrectCount}/{gameItemIdx}</span>
                 </div>
@@ -593,7 +594,7 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
                       className="btn btn-primary"
                       style={{ width: '100%', marginTop: '8px' }}
                     >
-                      Log Condition Code ➔
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>Log Condition Code <ArrowRight size={16} /></span>
                     </button>
                   </div>
                 </div>
@@ -601,8 +602,8 @@ export default function CandidateDashboard({ candidateData, appliedJobs, onUpdat
             )}
 
             {gameState === 'complete' && (
-              <div className="glass-panel" style={{ padding: '48px', textAlignment: 'center', maxWidth: '650px', margin: '0 auto' }}>
-                <span style={{ fontSize: '3rem' }}>🏆</span>
+              <div className="glass-panel" style={{ padding: '48px', textAlign: 'center', maxWidth: '650px', margin: '0 auto' }}>
+                <Trophy size={48} />
                 <h3 style={{ fontSize: '1.5rem', marginTop: '16px', marginBottom: '8px' }}>Challenge Completed!</h3>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
                   You scored a verified condition cataloging accuracy of:

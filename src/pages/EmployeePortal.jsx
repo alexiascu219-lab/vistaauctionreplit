@@ -255,7 +255,7 @@ const EmployeePortal = () => {
 
     if (!isAuthenticated) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
+            <div className="min-h-screen bg-brandBlueDark">
                 <Navbar />
                 <div className="max-w-md mx-auto px-4 py-20">
                     <div className="glass-panel p-10 rounded-[2.5rem] border border-white/80 shadow-2xl">
@@ -305,7 +305,7 @@ const EmployeePortal = () => {
         const timeRemaining = Math.max(0, minimumTime - timeSpent);
 
         return (
-            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
+            <div className="min-h-screen bg-brandBlueDark">
                 <Navbar />
                 <div className="max-w-6xl mx-auto px-4 py-10">
                     <button
@@ -530,7 +530,7 @@ const EmployeePortal = () => {
     const requiredCount = courses.filter(c => c.required).length;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
+        <div className="min-h-screen bg-brandBlueDark">
             <Navbar />
             <div className="max-w-6xl mx-auto px-4 py-10">
                 {/* Header */}

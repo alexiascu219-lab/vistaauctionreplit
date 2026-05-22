@@ -26,7 +26,11 @@ import {
   Mail,
   Phone,
   MapPin,
-  ExternalLink
+  ExternalLink,
+  ArrowRight,
+  Truck,
+  Package,
+  Archive
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DateTimePicker from './DateTimePicker';
@@ -148,30 +152,30 @@ export default function RecruiterDashboard({
       .map(c => {
         let title = '';
         let desc = '';
-        let icon = '📝';
+        let icon = <FileText size={18} />;
         let color = 'blue';
         
         if (c.status === 'Hired') {
           title = `${c.fullName} was marked as Hired`;
           desc = `Assigned to ${c.jobType || 'Warehouse Associate'} at ${c.preferredLocation || 'Charlotte, NC'}.`;
-          icon = '🏆';
+          icon = <Trophy size={18} />;
           color = 'green';
         } else if (c.status === 'Interviewing') {
           title = `Interview scheduled for ${c.fullName}`;
           desc = c.interviewDate 
             ? `Set for ${new Date(c.interviewDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}.`
             : `Interview invitation sent.`;
-          icon = '📅';
+          icon = <CalendarIcon size={18} />;
           color = 'orange';
         } else if (c.status === 'Rejected') {
           title = `${c.fullName}'s application was archived`;
           desc = `Sent rejection notification email.`;
-          icon = '📁';
+          icon = <Archive size={18} />;
           color = 'red';
         } else {
           title = `New application from ${c.fullName}`;
           desc = `Applied for ${c.jobType || 'Cataloger'} (${c.preferredLocation || 'Monroe, NC'}). Match Score: ${c.skillsScore || 85}%`;
-          icon = '✉️';
+          icon = <Mail size={18} />;
           color = 'blue';
         }
         
@@ -469,7 +473,7 @@ Vista Auction HR Team`;
                   <div className="space-y-4">
                     {recentActivities.map((act) => (
                       <div key={act.id} className="flex gap-4 items-start p-4 bg-[#0a0f20]/60 rounded-2xl border border-slate-800/40">
-                        <div className="text-2xl p-2 bg-slate-800/40 rounded-xl">{act.icon}</div>
+                        <div className="p-2.5 bg-slate-800/40 rounded-xl text-slate-300 flex items-center justify-center">{act.icon}</div>
                         <div className="flex-1 min-w-0">
                           <h5 className="text-sm font-bold text-slate-200 truncate">{act.title}</h5>
                           <p className="text-xs text-slate-400 mt-0.5">{act.desc}</p>
@@ -769,7 +773,7 @@ Vista Auction HR Team`;
                           onClick={() => setSelectedEmployee({ course })}
                           className="text-[10px] font-black uppercase tracking-widest text-orange-400 hover:text-orange-300 transition-colors"
                         >
-                          Assign Course ➔
+                          <span className="inline-flex items-center gap-1">Assign Course <ArrowRight size={12} /></span>
                         </button>
                       </div>
                     </div>
@@ -881,10 +885,10 @@ Vista Auction HR Team`;
                         className="w-full flex items-center justify-between p-4 bg-[#0a0f20] border border-slate-850 rounded-2xl hover:border-orange-500/40 hover:bg-[#0c1226]/80 text-left transition-all"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="text-xl">🚜</span>
+                          <span className="text-xl text-slate-300 flex items-center justify-center"><Truck size={20} /></span>
                           <div>
                             <h5 className="font-bold text-sm text-slate-200">Marcus Vance</h5>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Forklift Specialist • Logistics</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Forklift Specialist | Logistics</p>
                           </div>
                         </div>
                         <ChevronRight size={16} className="text-slate-500" />
@@ -895,10 +899,10 @@ Vista Auction HR Team`;
                         className="w-full flex items-center justify-between p-4 bg-[#0a0f20] border border-slate-850 rounded-2xl hover:border-orange-500/40 hover:bg-[#0c1226]/80 text-left transition-all"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="text-xl">📦</span>
+                          <span className="text-xl text-slate-300 flex items-center justify-center"><Package size={20} /></span>
                           <div>
                             <h5 className="font-bold text-sm text-slate-200">Rebecca Flores</h5>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Product Cataloger • E-commerce</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Product Cataloger | E-commerce</p>
                           </div>
                         </div>
                         <ChevronRight size={16} className="text-slate-500" />
@@ -1085,7 +1089,7 @@ Vista Auction HR Team`;
                 <div className="flex justify-between items-start border-b border-slate-850 pb-6">
                   <div>
                     <h3 className="text-2xl font-black text-white font-display tracking-tight leading-none">{selectedCandidate.fullName}</h3>
-                    <p className="text-xs text-orange-400 font-black uppercase tracking-widest mt-2">{selectedCandidate.jobType || selectedCandidate.position} • {selectedCandidate.preferredShift || 'Shift Option'}</p>
+                    <p className="text-xs text-orange-400 font-black uppercase tracking-widest mt-2">{selectedCandidate.jobType || selectedCandidate.position} | {selectedCandidate.preferredShift || 'Shift Option'}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block leading-none mb-1">AI Match</span>

@@ -75,13 +75,13 @@ const StatusPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col">
+        <div className="min-h-screen bg-brandBlueDark font-sans text-white flex flex-col">
             <Navbar />
 
             {/* Reschedule Modal */}
             {showRescheduleModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-md p-10 shadow-2xl border border-gray-100 animate-scale-in">
+                    <div className="bg-[#0c1226]/60 rounded-[2.5rem] w-full max-w-md p-10 shadow-2xl border border-gray-100 animate-scale-in">
                         <div className="flex justify-between items-center mb-8">
                             <h3 className="text-2xl font-black text-gray-900 tracking-tight">Suggest New Date</h3>
                             <button onClick={() => setShowRescheduleModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">

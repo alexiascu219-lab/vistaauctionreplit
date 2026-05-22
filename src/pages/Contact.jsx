@@ -20,11 +20,11 @@ const Contact = () => {
     };
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-900 overflow-x-hidden">
+        <div className="min-h-screen bg-brandBlueDark font-sans text-white overflow-x-hidden">
             <Navbar />
 
             {/* Header */}
-            <section className="pt-40 pb-20 bg-slate-50 relative overflow-hidden">
+            <section className="pt-40 pb-20 bg-[#0c1226]/60 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-orange-500/5 rounded-full -ml-32 -mt-32 blur-3xl"></div>
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10 text-center">
                     <motion.h1
@@ -96,7 +96,7 @@ const Contact = () => {
                         </div>
 
                         {/* Contact Form */}
-                        <div className="bg-white p-10 md:p-12 rounded-[3rem] border border-slate-100 shadow-2xl relative">
+                        <div className="bg-[#0c1226]/60 p-10 md:p-12 rounded-[3rem] border border-slate-100 shadow-2xl relative">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
 
                             {sent ? (

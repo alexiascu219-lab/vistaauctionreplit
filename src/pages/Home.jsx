@@ -53,7 +53,7 @@ const Home = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-background font-sans text-text-main">
+        <div className="min-h-screen bg-brandBlueDark font-sans text-white">
             {/* Scroll Progress Bar */}
             <div className="fixed top-0 left-0 h-1.5 bg-orange-500 z-50 transition-all duration-100 ease-out shadow-[0_0_10px_rgba(249,115,22,0.5)]" style={{ width: `${scrollProgress * 100}%` }}></div>
 
@@ -118,7 +118,7 @@ const Home = () => {
 
 
                 {/* Culture Section */}
-                <section className="py-32 bg-white relative overflow-hidden">
+                <section className="py-32 bg-[#0c1226]/60 relative overflow-hidden">
                     {/* Background Decor */}
                     <div className="absolute -top-24 -left-24 w-96 h-96 bg-slate-200/40 rounded-full blur-3xl"></div>
 
@@ -146,7 +146,7 @@ const Home = () => {
                                     "Opportunities for rapid career growth",
                                     "Safety-first culture with premium training"
                                 ].map((item, idx) => (
-                                    <li key={idx} className="flex items-center text-gray-800 font-bold uppercase tracking-widest text-xs p-5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all group">
+                                    <li key={idx} className="flex items-center text-gray-800 font-bold uppercase tracking-widest text-xs p-5 bg-[#0c1226]/40 rounded-2xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all group">
                                         <div className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
                                             <div className="w-2.5 h-2.5 bg-orange-500 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.8)]"></div>
                                         </div>
@@ -159,7 +159,7 @@ const Home = () => {
                 </section>
 
                 {/* Final CTA */}
-                <section className="bg-gray-50 py-32" id="positions">
+                <section className="bg-[#0c1226]/40 py-32" id="positions">
                     <div className="max-w-5xl mx-auto px-4 text-center">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-6 block">Ready to start?</span>
                         <h2 className="text-4xl md:text-6xl font-black text-gray-900 mb-8 font-display tracking-tight text-shadow-sm">Become a Part of the Crew</h2>
