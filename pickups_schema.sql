@@ -24,6 +24,11 @@ CREATE INDEX IF NOT EXISTS idx_pickups_created ON vista_pickups_requests(created
 
 ALTER TABLE vista_pickups_requests ENABLE ROW LEVEL SECURITY;
 
+-- Table-level grants. RLS policies alone are not enough — the anon/authenticated
+-- roles also need column/table privileges. (Tables created via raw SQL don't
+-- always inherit Supabase's default grants.)
+GRANT SELECT, INSERT, UPDATE, DELETE ON vista_pickups_requests TO anon, authenticated;
+
 -- Staff (anon) can submit requests
 DROP POLICY IF EXISTS "Public can submit pickups requests" ON vista_pickups_requests;
 CREATE POLICY "Public can submit pickups requests"
