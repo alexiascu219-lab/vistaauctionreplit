@@ -175,3 +175,4 @@ ALTER TABLE pickups_2fa_codes ENABLE ROW LEVEL SECURITY;
 --   pickups_create_submanager(p_token, p_name, p_username, p_password, p_permissions, p_employee_id)
 --   pickups_list_submanagers(p_token)
 --   pickups_update_submanager(p_token, p_sub_id, p_permissions, p_active, p_new_password)
+--   pickups_roster()                                   -> [{id,name,position}] (public; staff autofill)

@@ -39,6 +39,8 @@ const Pickups = () => {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [myRequests, setMyRequests] = useState([]);
+  const [roster, setRoster] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Load saved identity
   useEffect(() => {
@@ -50,6 +52,24 @@ const Pickups = () => {
       setEditingIdentity(true);
     }
   }, []);
+
+  // Load the employee roster for name autofill
+  useEffect(() => {
+    supabase
+      .rpc('pickups_roster')
+      .then(({ data }) => {
+        if (Array.isArray(data)) setRoster(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const suggestions = (() => {
+    const q = identity.name.trim().toLowerCase();
+    const matches = q ? roster.filter((e) => e.name.toLowerCase().includes(q)) : roster;
+    // Hide the dropdown once the typed name exactly matches a roster entry.
+    if (matches.length === 1 && matches[0].name.toLowerCase() === q) return [];
+    return matches.slice(0, 6);
+  })();
 
   const fetchMyRequests = useCallback(async () => {
     if (!identity.name) return;
@@ -66,16 +86,18 @@ const Pickups = () => {
     fetchMyRequests();
   }, [fetchMyRequests]);
 
-  const saveIdentity = () => {
-    if (!identity.name.trim()) {
+  const saveIdentity = (overrideName) => {
+    const finalName = (typeof overrideName === 'string' ? overrideName : identity.name).trim();
+    if (!finalName) {
       setToast({ message: 'Please enter your name', type: 'error' });
       return;
     }
-    const clean = { name: identity.name.trim() };
+    const clean = { name: finalName };
     localStorage.setItem('pickups_identity', JSON.stringify(clean));
     setIdentity(clean);
     setEditingIdentity(false);
-    setToast({ message: `You're set, ${clean.name.split(' ')[0]}!`, type: 'success' });
+    setShowSuggestions(false);
+    setToast({ message: `You're set, ${finalName.split(' ')[0]}!`, type: 'success' });
   };
 
   const openForm = (type) => {
@@ -152,17 +174,44 @@ const Pickups = () => {
           <div className="pickups-card rounded-3xl p-5 min-w-[260px]">
             {editingIdentity ? (
               <div className="space-y-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Who are you?</p>
-                <input
-                  autoFocus
-                  value={identity.name}
-                  onChange={(e) => setIdentity((p) => ({ ...p, name: e.target.value }))}
-                  onKeyDown={(e) => e.key === 'Enter' && saveIdentity()}
-                  placeholder="Full name"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-400"
-                />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  {roster.length ? 'Start typing your name' : 'Who are you?'}
+                </p>
+                <div className="relative">
+                  <input
+                    autoFocus
+                    value={identity.name}
+                    onChange={(e) => {
+                      setIdentity({ name: e.target.value });
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
+                    onKeyDown={(e) => e.key === 'Enter' && saveIdentity()}
+                    placeholder="Full name"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-400"
+                  />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute z-30 mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                      {suggestions.map((e) => (
+                        <button
+                          key={e.id}
+                          // onMouseDown fires before the input's onBlur, so the pick registers
+                          onMouseDown={() => saveIdentity(e.name)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-orange-50 transition-colors flex items-center gap-2 border-b border-slate-50 last:border-0"
+                        >
+                          <span className="w-7 h-7 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-black shrink-0">
+                            {e.name.charAt(0).toUpperCase()}
+                          </span>
+                          <span className="font-bold text-slate-800 text-sm truncate">{e.name}</span>
+                          {e.position && <span className="text-[11px] text-slate-400 ml-auto truncate">{e.position}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
-                  onClick={saveIdentity}
+                  onClick={() => saveIdentity()}
                   className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
                 >
                   Save
