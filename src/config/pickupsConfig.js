@@ -21,16 +21,8 @@ export const REQUEST_TYPES = [
     soft: 'bg-orange-50 text-orange-600',
     ring: 'focus:ring-orange-500/40 focus:border-orange-400',
     fields: [
-      { name: 'date', label: 'Date', type: 'date', required: true },
-      {
-        name: 'slot',
-        label: 'Lunch Slot',
-        type: 'select',
-        required: true,
-        options: ['11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM'],
-      },
       { name: 'duration', label: 'Duration', type: 'select', options: ['30 min', '45 min', '1 hour'], required: true },
-      { name: 'party_size', label: 'People in Party', type: 'number', placeholder: '1', min: 1 },
+      { name: 'slot', label: 'Lunch Slot', type: 'lunch_slot', required: true },
       { name: 'notes', label: 'Notes for Manager', type: 'textarea', placeholder: 'Anything we should know?', full: true },
     ],
   },
@@ -55,10 +47,7 @@ export const REQUEST_TYPES = [
       { name: 'date', label: 'Date', type: 'date', required: true },
       { name: 'start_time', label: 'Start Time', type: 'time', required: true },
       { name: 'end_time', label: 'End Time', type: 'time' },
-      { name: 'wave_number', label: 'Wave # (if picking)', type: 'text', placeholder: 'e.g. Wave 4' },
-      { name: 'area', label: 'Area / Zone', type: 'text', placeholder: 'e.g. Aisle 12, Dock B' },
-      { name: 'units', label: 'Units Picked', type: 'number', placeholder: '0', min: 0 },
-      { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Issues, jams, short picks…', full: true },
+      { name: 'notes', label: 'What were you doing?', type: 'textarea', placeholder: 'Describe what you worked on…', full: true },
     ],
   },
   {
@@ -79,14 +68,13 @@ export const REQUEST_TYPES = [
         required: true,
         options: ['Check Out', 'Check In', 'Report Issue'],
       },
-      { name: 'device_id', label: 'Zebra ID', type: 'text', required: true, placeholder: 'e.g. Zebra #12' },
+      { name: 'device_id', label: 'Zebra #', type: 'text', required: true, placeholder: 'e.g. Zebra #12' },
       {
         name: 'condition',
         label: 'Condition',
         type: 'select',
         options: ['Good', 'Low Battery', 'Not Charging', 'Cracked Screen', 'Damaged', 'Lost'],
       },
-      { name: 'expected_return', label: 'Expected Return', type: 'time' },
       { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Describe the issue or hand-off…', full: true },
     ],
   },
@@ -109,9 +97,9 @@ export function summarizeRequest(req) {
   const d = req.details || {};
   switch (req.type) {
     case 'lunch':
-      return [d.date, d.slot, d.duration && `(${d.duration})`].filter(Boolean).join(' · ');
+      return [d.slot, d.duration && `(${d.duration})`].filter(Boolean).join(' · ');
     case 'floor_wave':
-      return [d.log_type, d.date, d.start_time && `${d.start_time}${d.end_time ? '–' + d.end_time : ''}`, d.wave_number]
+      return [d.log_type, d.date, d.start_time && `${d.start_time}${d.end_time ? '–' + d.end_time : ''}`]
         .filter(Boolean)
         .join(' · ');
     case 'zebra':
@@ -149,5 +137,9 @@ export function canViewType(session, typeId) {
 
 export function canManageEmployees(session) {
   return isAdmin(session) || !!session?.permissions?.manage_employees;
+}
+
+export function canManageLunchSlots(session) {
+  return isAdmin(session) || !!session?.permissions?.manage_lunch_slots;
 }
 

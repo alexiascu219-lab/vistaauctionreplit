@@ -176,3 +176,23 @@ ALTER TABLE pickups_2fa_codes ENABLE ROW LEVEL SECURITY;
 --   pickups_list_submanagers(p_token)
 --   pickups_update_submanager(p_token, p_sub_id, p_permissions, p_active, p_new_password)
 --   pickups_roster()                                   -> [{id,name,position}] (public; staff autofill)
+
+-- ============================================================================
+-- LUNCH SLOTS: configurable time ranges + capacity, with live availability
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS pickups_lunch_slots (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    label TEXT NOT NULL,                 -- e.g. "1:00 PM - 1:30 PM"
+    capacity INT NOT NULL DEFAULT 3,
+    sort_order INT NOT NULL DEFAULT 0,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE pickups_lunch_slots ENABLE ROW LEVEL SECURITY;
+
+-- New permission key for sub-managers: "manage_lunch_slots" (admins always allowed)
+-- RPCs (anon/authenticated EXECUTE only):
+--   pickups_lunch_slots_public()                       -> [{id,label,capacity,taken,left}] active, today's availability
+--   pickups_list_lunch_slots(p_token)                  -> all slots (manage_lunch_slots / admin)
+--   pickups_save_lunch_slot(p_token,p_id,p_label,p_capacity,p_sort_order,p_active)
+--   pickups_delete_lunch_slot(p_token,p_id)

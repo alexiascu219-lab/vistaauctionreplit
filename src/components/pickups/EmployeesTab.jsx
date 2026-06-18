@@ -31,6 +31,7 @@ const emptyPermissions = () => {
     p[t.id] = { view: false, approve: false, deny: false, respond: false };
   });
   p.manage_employees = false;
+  p.manage_lunch_slots = false;
   return p;
 };
 
@@ -82,6 +83,15 @@ const PermissionMatrix = ({ value, onChange }) => {
       <label className="flex items-center justify-between gap-3 px-3 py-3 border-t border-slate-100 cursor-pointer">
         <span className="text-xs font-black text-slate-700">Manage employees &amp; logins</span>
         <input type="checkbox" checked={!!value.manage_employees} onChange={toggleManage} className="w-5 h-5 accent-emerald-500" />
+      </label>
+      <label className="flex items-center justify-between gap-3 px-3 py-3 border-t border-slate-100 cursor-pointer">
+        <span className="text-xs font-black text-slate-700">Manage lunch slots &amp; times</span>
+        <input
+          type="checkbox"
+          checked={!!value.manage_lunch_slots}
+          onChange={() => onChange({ ...value, manage_lunch_slots: !value.manage_lunch_slots })}
+          className="w-5 h-5 accent-emerald-500"
+        />
       </label>
     </div>
   );

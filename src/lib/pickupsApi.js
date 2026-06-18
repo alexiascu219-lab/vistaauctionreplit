@@ -152,3 +152,27 @@ export function updateSubmanager(token, subId, { permissions, active, newPasswor
     p_new_password: newPassword ?? null,
   });
 }
+
+// ---- Lunch slots -----------------------------------------------------------
+export function fetchLunchSlotsPublic() {
+  return rpc('pickups_lunch_slots_public', {});
+}
+
+export function listLunchSlots(token) {
+  return rpc('pickups_list_lunch_slots', { p_token: token });
+}
+
+export function saveLunchSlot(token, { id, label, capacity, sortOrder, active }) {
+  return rpc('pickups_save_lunch_slot', {
+    p_token: token,
+    p_id: id ?? null,
+    p_label: label,
+    p_capacity: capacity,
+    p_sort_order: sortOrder ?? 0,
+    p_active: active ?? true,
+  });
+}
+
+export function deleteLunchSlot(token, id) {
+  return rpc('pickups_delete_lunch_slot', { p_token: token, p_id: id });
+}

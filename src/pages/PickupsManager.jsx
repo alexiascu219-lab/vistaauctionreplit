@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Inbox, Users, UserCog, LogOut } from 'lucide-react';
+import { Inbox, Users, UserCog, LogOut, UtensilsCrossed } from 'lucide-react';
 import PickupsHeader from '../components/PickupsHeader';
 import RequestsQueue from '../components/pickups/RequestsQueue';
 import EmployeesTab from '../components/pickups/EmployeesTab';
 import ProfileTab from '../components/pickups/ProfileTab';
+import LunchSlotsTab from '../components/pickups/LunchSlotsTab';
 import { getSession, refreshMe, mergeProfile, logout } from '../lib/pickupsApi';
-import { canManageEmployees } from '../config/pickupsConfig';
+import { canManageEmployees, canManageLunchSlots } from '../config/pickupsConfig';
 
 const PickupsManager = () => {
   const navigate = useNavigate();
@@ -56,6 +57,7 @@ const PickupsManager = () => {
   const tabs = [
     { id: 'requests', label: 'Requests', icon: Inbox, show: true },
     { id: 'employees', label: 'Employees', icon: Users, show: canManageEmployees(session) },
+    { id: 'lunch', label: 'Lunch Slots', icon: UtensilsCrossed, show: canManageLunchSlots(session) },
     { id: 'profile', label: 'Profile', icon: UserCog, show: true },
   ].filter((t) => t.show);
 
@@ -114,6 +116,7 @@ const PickupsManager = () => {
         <div>
           {activeTab === 'requests' && <RequestsQueue session={session} />}
           {activeTab === 'employees' && <EmployeesTab session={session} />}
+          {activeTab === 'lunch' && <LunchSlotsTab session={session} />}
           {activeTab === 'profile' && <ProfileTab session={session} onUpdated={setSession} />}
         </div>
       </div>
