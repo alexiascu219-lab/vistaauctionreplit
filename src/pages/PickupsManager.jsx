@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UtensilsCrossed,
@@ -14,12 +14,12 @@ import {
   Send,
   Clock,
   LayoutGrid,
+  LogOut,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
+import PickupsHeader from '../components/PickupsHeader';
 import Toast from '../components/Toast';
-import { REQUEST_TYPES, TYPE_MAP, STATUS_STYLES } from '../config/pickupsConfig';
+import { REQUEST_TYPES, TYPE_MAP, STATUS_STYLES, MANAGER_SESSION_KEY } from '../config/pickupsConfig';
 
 const ICONS = { UtensilsCrossed, ClipboardList, ScanLine };
 
@@ -31,8 +31,26 @@ const formatWhen = (iso) => {
 const STATUS_TABS = ['Pending', 'Approved', 'Denied', 'Responded', 'All'];
 
 const PickupsManager = () => {
-  const { user } = useAuth();
-  const managerName = user?.fullName || user?.email || 'Manager';
+  const navigate = useNavigate();
+
+  // Passcode-gated session (set on the dedicated Pickups manager login).
+  const session = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(MANAGER_SESSION_KEY) || 'null');
+    } catch {
+      return null;
+    }
+  })();
+  const managerName = session?.name || 'Manager';
+
+  useEffect(() => {
+    if (!session?.authed) navigate('/pickups/login', { replace: true });
+  }, [session, navigate]);
+
+  const signOut = () => {
+    localStorage.removeItem(MANAGER_SESSION_KEY);
+    navigate('/pickups/login', { replace: true });
+  };
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -120,9 +138,11 @@ const PickupsManager = () => {
     setResponseText('');
   };
 
+  if (!session?.authed) return null; // redirecting to login
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
-      <Navbar />
+      <PickupsHeader />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-32 pb-20">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
@@ -137,15 +157,24 @@ const PickupsManager = () => {
               Pickups · Manager Queue
             </h1>
             <p className="text-slate-500 font-medium mt-2">
-              Review, approve, deny and respond to your team's requests.
+              Signed in as <span className="font-black text-slate-700">{managerName}</span> · review, approve, deny
+              and respond to your team's requests.
             </p>
           </div>
-          <button
-            onClick={fetchRequests}
-            className="self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <button
+              onClick={fetchRequests}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <RefreshCw size={14} /> Refresh
+            </button>
+            <button
+              onClick={signOut}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"
+            >
+              <LogOut size={14} /> Sign out
+            </button>
+          </div>
         </div>
 
         {/* Stat tiles */}

@@ -28,16 +28,24 @@ import AccessControl from './pages/AccessControl';
 import Chat from './pages/Chat';
 import Pickups from './pages/Pickups';
 import PickupsManager from './pages/PickupsManager';
+import PickupsLogin from './pages/PickupsLogin';
 
 // Helper component to handle conditional AI rendering
 const ConditionalAIAssistant = () => {
   const location = useLocation();
-  const hiddenRoutes = ['/login'];
+  const hiddenRoutes = ['/login', '/pickups'];
   const isHidden = hiddenRoutes.some(route => location.pathname.startsWith(route));
   const isHRRoute = location.pathname.startsWith('/hr');
 
   if (isHidden) return null;
   return <AIAssistant role={isHRRoute ? 'hr' : 'applicant'} />;
+};
+
+// Pickups pages render their own minimal header, so suppress the global navbar there.
+const ConditionalNavbar = () => {
+  const location = useLocation();
+  if (location.pathname.startsWith('/pickups')) return null;
+  return <Navbar />;
 };
 
 function App() {
@@ -73,17 +81,11 @@ function App() {
               <Route path="/admin" element={<AccessControl />} />
               <Route path="/schedule-interview" element={<InterviewScheduler />} />
               <Route path="/pickups" element={<Pickups />} />
-              <Route
-                path="/pickups/manager"
-                element={
-                  <ProtectedRoute>
-                    <PickupsManager />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/pickups/login" element={<PickupsLogin />} />
+              <Route path="/pickups/manager" element={<PickupsManager />} />
             </Routes>
             <SystemAlert />
-            <Navbar />
+            <ConditionalNavbar />
             <NotificationCenter />
             <ConditionalAIAssistant />
           </Router>

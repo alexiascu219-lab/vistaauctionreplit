@@ -16,7 +16,6 @@ import {
   PackageCheck,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
 import { REQUEST_TYPES, TYPE_MAP, STATUS_STYLES, summarizeRequest } from '../config/pickupsConfig';
 
@@ -33,7 +32,7 @@ const formatTimeAgo = (iso) => {
 };
 
 const Pickups = () => {
-  const [identity, setIdentity] = useState({ name: '', email: '' });
+  const [identity, setIdentity] = useState({ name: '' });
   const [editingIdentity, setEditingIdentity] = useState(false);
   const [activeType, setActiveType] = useState(null); // request type object
   const [form, setForm] = useState({});
@@ -54,16 +53,14 @@ const Pickups = () => {
 
   const fetchMyRequests = useCallback(async () => {
     if (!identity.name) return;
-    let query = supabase
+    const { data, error } = await supabase
       .from('vista_pickups_requests')
       .select('*')
+      .eq('requester_name', identity.name)
       .order('created_at', { ascending: false })
       .limit(15);
-    if (identity.email) query = query.eq('requester_email', identity.email.toLowerCase());
-    else query = query.eq('requester_name', identity.name);
-    const { data, error } = await query;
     if (!error) setMyRequests(data || []);
-  }, [identity.name, identity.email]);
+  }, [identity.name]);
 
   useEffect(() => {
     fetchMyRequests();
@@ -74,7 +71,7 @@ const Pickups = () => {
       setToast({ message: 'Please enter your name', type: 'error' });
       return;
     }
-    const clean = { name: identity.name.trim(), email: identity.email.trim() };
+    const clean = { name: identity.name.trim() };
     localStorage.setItem('pickups_identity', JSON.stringify(clean));
     setIdentity(clean);
     setEditingIdentity(false);
@@ -112,7 +109,6 @@ const Pickups = () => {
         {
           type: activeType.id,
           requester_name: identity.name,
-          requester_email: identity.email ? identity.email.toLowerCase() : null,
           details: form,
           status: 'Pending',
         },
@@ -134,8 +130,6 @@ const Pickups = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
-      <Navbar />
-
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-32 pb-20">
         {/* Header */}
         <motion.div
@@ -152,10 +146,6 @@ const Pickups = () => {
             <h1 className="text-4xl sm:text-5xl font-black text-slate-900 font-display tracking-tight leading-none">
               Request Hub
             </h1>
-            <p className="text-slate-500 font-medium mt-3 max-w-lg">
-              Reservations, floor logs and Zebra tracking — submitted in seconds, straight to your managers. No more
-              waiting on the old spreadsheet.
-            </p>
           </div>
 
           {/* Identity card */}
@@ -169,13 +159,6 @@ const Pickups = () => {
                   onChange={(e) => setIdentity((p) => ({ ...p, name: e.target.value }))}
                   onKeyDown={(e) => e.key === 'Enter' && saveIdentity()}
                   placeholder="Full name"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-400"
-                />
-                <input
-                  value={identity.email}
-                  onChange={(e) => setIdentity((p) => ({ ...p, email: e.target.value }))}
-                  onKeyDown={(e) => e.key === 'Enter' && saveIdentity()}
-                  placeholder="Work email (optional)"
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-400"
                 />
                 <button
@@ -302,11 +285,11 @@ const Pickups = () => {
         {/* Manager link */}
         <div className="mt-12 flex justify-center">
           <Link
-            to="/pickups/manager"
+            to="/pickups/login"
             className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
           >
             <ShieldCheck size={15} />
-            Manager view
+            Manager sign-in
           </Link>
         </div>
       </div>

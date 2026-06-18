@@ -3,6 +3,11 @@
 // fields rendered in its form. Both the staff portal (Pickups.jsx) and the
 // manager dashboard (PickupsManager.jsx) read from this single source of truth.
 
+// Access code for the Pickups Manager portal. This is a lightweight gate for
+// an internal, low-sensitivity tool — change it here to rotate it.
+export const MANAGER_ACCESS_CODE = 'pickups2026';
+export const MANAGER_SESSION_KEY = 'pickups_manager_session';
+
 export const REQUEST_TYPES = [
   {
     id: 'lunch',

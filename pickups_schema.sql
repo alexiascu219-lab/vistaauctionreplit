@@ -38,17 +38,19 @@ ON vista_pickups_requests FOR SELECT
 TO public
 USING (true);
 
--- Only authenticated managers can approve / deny / respond
-DROP POLICY IF EXISTS "Managers can update pickups requests" ON vista_pickups_requests;
-CREATE POLICY "Managers can update pickups requests"
+-- The manager portal uses its own passcode gate (not Supabase auth), so
+-- approve/deny/respond run with the anon key. Updates/deletes are public,
+-- consistent with the public insert/select policies on this low-sensitivity
+-- internal table.
+DROP POLICY IF EXISTS "Public can update pickups requests" ON vista_pickups_requests;
+CREATE POLICY "Public can update pickups requests"
 ON vista_pickups_requests FOR UPDATE
-TO authenticated
+TO public
 USING (true)
 WITH CHECK (true);
 
--- Only authenticated managers can delete
-DROP POLICY IF EXISTS "Managers can delete pickups requests" ON vista_pickups_requests;
-CREATE POLICY "Managers can delete pickups requests"
+DROP POLICY IF EXISTS "Public can delete pickups requests" ON vista_pickups_requests;
+CREATE POLICY "Public can delete pickups requests"
 ON vista_pickups_requests FOR DELETE
-TO authenticated
+TO public
 USING (true);
