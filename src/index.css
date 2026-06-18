@@ -829,3 +829,9 @@
   white-space: nowrap;
   max-width: 100%;
 }
+/* ===== PICKUPS DEPARTMENT (always light, independent of the dark recruiter theme) ===== */
+.pickups-card {
+  background: #ffffff;
+  border: 1px solid rgb(226 232 240); /* slate-200 */
+  box-shadow: 0 18px 40px -20px rgba(15, 23, 42, 0.18);
+}

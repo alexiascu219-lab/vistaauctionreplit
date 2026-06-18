@@ -188,7 +188,7 @@ const PickupsManager = () => {
             <button
               key={s.key}
               onClick={() => setStatusFilter(s.key)}
-              className={`glass-panel rounded-2xl p-4 text-left transition-all ${
+              className={`pickups-card rounded-2xl p-4 text-left transition-all ${
                 statusFilter === s.key ? `ring-2 ${s.ring}` : 'hover:bg-white'
               }`}
             >
@@ -241,11 +241,11 @@ const PickupsManager = () => {
 
         {/* List */}
         {loading ? (
-          <div className="glass-panel rounded-3xl p-16 flex justify-center">
+          <div className="pickups-card rounded-3xl p-16 flex justify-center">
             <div className="animate-spin rounded-full h-9 w-9 border-2 border-slate-200 border-t-orange-500" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="glass-panel rounded-3xl p-16 text-center">
+          <div className="pickups-card rounded-3xl p-16 text-center">
             <Inbox size={40} className="text-slate-300 mx-auto mb-4" />
             <p className="text-slate-400 font-bold">Nothing here. The queue is clear.</p>
           </div>
@@ -267,7 +267,7 @@ const PickupsManager = () => {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                    className="glass-panel rounded-2xl p-5 sm:p-6"
+                    className="pickups-card rounded-2xl p-5 sm:p-6"
                   >
                     <div className="flex items-start gap-4">
                       <div

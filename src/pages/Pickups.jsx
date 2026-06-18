@@ -149,7 +149,7 @@ const Pickups = () => {
           </div>
 
           {/* Identity card */}
-          <div className="glass-panel rounded-3xl p-5 min-w-[260px]">
+          <div className="pickups-card rounded-3xl p-5 min-w-[260px]">
             {editingIdentity ? (
               <div className="space-y-3">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Who are you?</p>
@@ -202,7 +202,7 @@ const Pickups = () => {
                 whileHover={{ y: -6 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => openForm(type)}
-                className="group relative text-left glass-panel rounded-[2rem] p-7 overflow-hidden border border-white/70 hover:shadow-2xl transition-shadow"
+                className="group relative text-left pickups-card rounded-[2rem] p-7 overflow-hidden border border-white/70 hover:shadow-2xl transition-shadow"
               >
                 <div
                   className={`absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br ${type.gradient} opacity-10 group-hover:opacity-20 blur-2xl transition-opacity`}
@@ -238,7 +238,7 @@ const Pickups = () => {
         </div>
 
         {myRequests.length === 0 ? (
-          <div className="glass-panel rounded-3xl p-10 text-center">
+          <div className="pickups-card rounded-3xl p-10 text-center">
             <p className="text-slate-400 font-semibold">No requests yet. Tap a button above to get started.</p>
           </div>
         ) : (
@@ -253,7 +253,7 @@ const Pickups = () => {
                   layout
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="glass-panel rounded-2xl p-4 sm:p-5 flex items-start gap-4"
+                  className="pickups-card rounded-2xl p-4 sm:p-5 flex items-start gap-4"
                 >
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${type?.soft}`}>
                     <Icon size={20} />
