@@ -8,22 +8,30 @@ import {
   X,
   Send,
   ArrowRight,
+  ArrowRightLeft,
   Clock,
   RefreshCw,
-  PackageCheck,
   Search,
   UserRound,
   ChevronLeft,
+  Check,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import Toast from '../components/Toast';
 import { fetchLunchSlotsPublic } from '../lib/pickupsApi';
-import { REQUEST_TYPES, TYPE_MAP, STATUS_STYLES, summarizeRequest } from '../config/pickupsConfig';
+import { REQUEST_TYPES, TYPE_MAP, summarizeRequest } from '../config/pickupsConfig';
 
 const ICONS = { UtensilsCrossed, ClipboardList, ScanLine };
 
 // Shared kiosk: forget who's submitting after this much inactivity.
 const IDENTITY_TIMEOUT_MS = 90 * 1000;
+
+const STATUS_PILL = {
+  Pending: { cls: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
+  Approved: { cls: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
+  Denied: { cls: 'border-red-200 bg-red-50 text-red-700', dot: 'bg-red-500' },
+  Responded: { cls: 'border-blue-200 bg-blue-50 text-blue-700', dot: 'bg-blue-500' },
+};
 
 const formatTimeAgo = (iso) => {
   const diff = Date.now() - new Date(iso).getTime();
@@ -35,14 +43,30 @@ const formatTimeAgo = (iso) => {
   return `${Math.round(hrs / 24)}d ago`;
 };
 
+const fieldCls =
+  'w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-[15px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-500/15 transition';
+const labelCls = 'block text-[10.5px] font-semibold tracky text-slate-400 mb-1.5';
+
+const StatusPill = ({ status }) => {
+  const p = STATUS_PILL[status] || STATUS_PILL.Pending;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-wide ${p.cls}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${p.dot}`} />
+      {status}
+    </span>
+  );
+};
+
 const Pickups = () => {
-  // Identity is in-memory only — it is intentionally NOT persisted, so a reload
-  // (or inactivity timeout) clears it for the next person at the shared station.
+  // Identity is in-memory only — intentionally NOT persisted, so a reload (or
+  // inactivity timeout) clears it for the next person at the shared station.
   const [identity, setIdentity] = useState(null);
   const [chooserOpen, setChooserOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [roster, setRoster] = useState([]);
-  const [pendingType, setPendingType] = useState(null); // open this form after choosing a name
+  const [pendingType, setPendingType] = useState(null);
 
   const [activeType, setActiveType] = useState(null);
   const [form, setForm] = useState({});
@@ -108,36 +132,7 @@ const Pickups = () => {
   }, [fetchMyRequests]);
 
   // ---- Identity selection --------------------------------------------------
-  const chooseName = (name) => {
-    const finalName = (name || '').trim();
-    if (!finalName) return;
-    setIdentity({ name: finalName });
-    setChooserOpen(false);
-    setSearch('');
-    if (pendingType) {
-      const t = pendingType;
-      setPendingType(null);
-      setTimeout(() => openForm(t), 50);
-    }
-  };
-
-  const openChooser = (forType) => {
-    setPendingType(forType || null);
-    setSearch('');
-    setChooserOpen(true);
-  };
-
-  const suggestions = (() => {
-    const q = search.trim().toLowerCase();
-    return (q ? roster.filter((e) => e.name.toLowerCase().includes(q)) : roster).slice(0, 8);
-  })();
-
-  // ---- Request form --------------------------------------------------------
-  const openForm = async (type) => {
-    if (!identity) {
-      openChooser(type);
-      return;
-    }
+  const openForm = useCallback(async (type) => {
     const today = new Date().toISOString().split('T')[0];
     const initial = {};
     type.fields.forEach((f) => {
@@ -155,8 +150,41 @@ const Pickups = () => {
         setLunchSlots([]);
       }
     }
+  }, []);
+
+  const openChooser = (forType) => {
+    setPendingType(forType || null);
+    setSearch('');
+    setChooserOpen(true);
   };
 
+  const chooseName = (name) => {
+    const finalName = (name || '').trim();
+    if (!finalName) return;
+    setIdentity({ name: finalName });
+    setChooserOpen(false);
+    setSearch('');
+    if (pendingType) {
+      const t = pendingType;
+      setPendingType(null);
+      setTimeout(() => openForm(t), 50);
+    }
+  };
+
+  const requestForm = (type) => {
+    if (!identity) {
+      openChooser(type);
+      return;
+    }
+    openForm(type);
+  };
+
+  const suggestions = (() => {
+    const q = search.trim().toLowerCase();
+    return (q ? roster.filter((e) => e.name.toLowerCase().includes(q)) : roster).slice(0, 8);
+  })();
+
+  // ---- Request form --------------------------------------------------------
   const closeForm = () => {
     if (submitting) return;
     setActiveType(null);
@@ -179,15 +207,10 @@ const Pickups = () => {
     setSubmitting(true);
     try {
       const { error } = await supabase.from('vista_pickups_requests').insert([
-        {
-          type: activeType.id,
-          requester_name: identity.name,
-          details: form,
-          status: 'Pending',
-        },
+        { type: activeType.id, requester_name: identity.name, details: form, status: 'Pending' },
       ]);
       if (error) throw error;
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: ['#f97316', '#fbbf24', '#2563eb'] });
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 }, colors: ['#ea580c', '#f97316', '#fbbf24'] });
       setToast({ message: 'Request sent to your managers!', type: 'success' });
       setActiveType(null);
       setConfirming(false);
@@ -201,166 +224,234 @@ const Pickups = () => {
     }
   };
 
-  const gradientName = 'bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent';
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-32 pb-20">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10"
-        >
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-100 mb-4">
-              <PackageCheck size={14} className="text-orange-600" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-600">Pickups Department</span>
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-black text-slate-900 font-display tracking-tight leading-none">
-              Request Hub
-            </h1>
-          </div>
-        </motion.div>
+    <div className="pickups-atelier min-h-screen font-sans text-slate-900 antialiased">
+      <div className="pickups-grid-veil" />
 
-        {/* Prominent identity bar (kiosk) */}
-        <motion.button
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          onClick={() => openChooser(null)}
-          className={`w-full mb-10 rounded-3xl p-5 sm:p-6 flex items-center gap-4 text-left transition-all ${
-            identity
-              ? 'pickups-card hover:shadow-xl'
-              : 'bg-gradient-to-r from-orange-500 to-blue-600 text-white shadow-xl hover:shadow-2xl'
-          }`}
-        >
-          <div
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 font-black text-xl ${
-              identity ? 'bg-gradient-to-br from-orange-500 to-blue-600 text-white shadow-lg' : 'bg-white/20 text-white'
-            }`}
-          >
-            {identity ? identity.name.charAt(0).toUpperCase() : <UserRound size={28} />}
-          </div>
-          <div className="flex-1 min-w-0">
-            {identity ? (
-              <>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Submitting as</p>
-                <p className="text-2xl font-black text-slate-900 truncate">{identity.name}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Start here</p>
-                <p className="text-2xl font-black">Tap to choose your name</p>
-              </>
-            )}
-          </div>
-          <span
-            className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${
-              identity ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
-            }`}
-          >
-            {identity ? 'Switch' : 'Choose'}
+      <main className="relative z-10 mx-auto max-w-[1240px] px-5 sm:px-8 pt-28 pb-28">
+        {/* Hero */}
+        <section className="pt-6 sm:pt-10 pk-rise">
+          <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/80 pl-2.5 pr-3.5 py-1.5 shadow-soft">
+            <span className="grid h-4 w-4 place-items-center rounded-full bg-orange-500/10">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-600" />
+            </span>
+            <span className="text-[11.5px] font-semibold tracky text-slate-900/70">PICKUPS DEPARTMENT</span>
           </span>
-        </motion.button>
 
-        {/* The 3 main buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {REQUEST_TYPES.map((type, i) => {
-            const Icon = ICONS[type.icon];
-            return (
-              <motion.button
-                key={type.id}
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 + i * 0.1 }}
-                whileHover={{ y: -6 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => openForm(type)}
-                className="group relative text-left pickups-card rounded-[2rem] p-7 overflow-hidden hover:shadow-2xl transition-shadow"
-              >
-                <div
-                  className={`absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br ${type.gradient} opacity-10 group-hover:opacity-20 blur-2xl transition-opacity`}
-                />
-                <div
-                  className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${type.gradient} flex items-center justify-center text-white shadow-lg mb-6`}
-                >
-                  <Icon size={30} />
+          <h1 className="font-fraunces mt-7 text-[clamp(2.9rem,7vw,5rem)] font-normal leading-[0.96] tracking-[-0.03em] text-slate-900">
+            Request{' '}
+            <span className="relative inline-block">
+              Hub
+              <span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-orange-600/90" />
+            </span>
+          </h1>
+
+          <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-500">
+            Everything the floor needs, in one calm place. Reserve lunch, log floor time, and track scanners — then
+            watch requests move from <span className="font-medium text-slate-700">pending</span> to{' '}
+            <span className="font-medium text-slate-700">approved</span> in real time.
+          </p>
+        </section>
+
+        {/* Identity bar */}
+        <section className="mt-10 sm:mt-12 pk-rise" style={{ animationDelay: '.06s' }}>
+          {identity ? (
+            <div className="group relative overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-lift">
+              <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-orange-500/5 blur-2xl" />
+              <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="flex items-center gap-4 sm:gap-5">
+                  <div className="relative shrink-0">
+                    <span className="absolute -inset-1 rounded-[1.35rem] bg-gradient-to-br from-stone-200 to-stone-100" />
+                    <span className="relative grid h-16 w-16 sm:h-[68px] sm:w-[68px] place-items-center rounded-[1.25rem] bg-slate-900 text-white shadow-soft ring-1 ring-slate-900/10">
+                      <span className="font-fraunces text-[28px] font-medium leading-none">
+                        {identity.name.charAt(0).toUpperCase()}
+                      </span>
+                    </span>
+                    <span className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-white ring-2 ring-white shadow-soft">
+                      <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] font-semibold tracky text-slate-400">SUBMITTING AS</p>
+                    <p className="mt-1.5 font-fraunces text-[26px] sm:text-[30px] font-medium leading-none tracking-tight text-slate-900 truncate">
+                      {identity.name}
+                    </p>
+                    <p className="mt-2 text-[13px] text-slate-500">Submissions from this station are filed under this name.</p>
+                  </div>
                 </div>
-                <h3 className="text-xl font-black text-slate-900 mb-1.5">{type.title}</h3>
-                <p className="text-sm text-slate-500 font-medium leading-relaxed mb-6">{type.blurb}</p>
-                <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-900">
-                  New request
-                  <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
+                <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-2.5">
+                  <p className="hidden sm:block text-[11px] text-slate-400">Not you? Hand off the station.</p>
+                  <button
+                    onClick={() => openChooser(null)}
+                    className="pk-press inline-flex h-12 items-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 text-[14.5px] font-semibold text-slate-900 shadow-soft hover:border-stone-300 hover:shadow-lift"
+                  >
+                    <ArrowRightLeft size={18} className="text-orange-600" />
+                    Switch
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => openChooser(null)}
+              className="group pk-press relative w-full overflow-hidden rounded-3xl border border-stone-200 bg-white text-left shadow-lift hover:border-stone-300"
+            >
+              <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-orange-500/5 blur-2xl" />
+              <div className="relative flex items-center gap-4 p-5 sm:gap-5 sm:p-6">
+                <span className="grid h-16 w-16 place-items-center rounded-[1.25rem] border border-stone-200 bg-[#FBFBFA] text-slate-400">
+                  <UserRound size={30} />
                 </span>
-              </motion.button>
-            );
-          })}
-        </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10.5px] font-semibold tracky text-slate-400">GET STARTED</p>
+                  <p className="mt-1.5 font-fraunces text-[24px] sm:text-[28px] font-medium leading-none tracking-tight text-slate-900">
+                    Choose your name
+                  </p>
+                  <p className="mt-2 text-[13px] text-slate-500">Tap to pick who's submitting from this station.</p>
+                </div>
+                <span className="hidden sm:inline-flex h-12 items-center gap-2 rounded-2xl bg-slate-900 px-5 text-[14.5px] font-semibold text-white shadow-soft group-hover:bg-slate-800">
+                  Choose <ArrowRight size={16} className="pk-nudge" />
+                </span>
+              </div>
+            </button>
+          )}
+        </section>
+
+        {/* Request cards */}
+        <section className="mt-14 sm:mt-16">
+          <div className="flex items-end justify-between gap-4">
+            <div className="pk-rise" style={{ animationDelay: '.1s' }}>
+              <h2 className="font-fraunces text-[26px] sm:text-[30px] font-medium tracking-tight text-slate-900">
+                Start a request
+              </h2>
+              <p className="mt-1.5 text-[14.5px] text-slate-500">Three things the floor handles every day.</p>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[12.5px] font-medium text-slate-400">
+              <span className="tnum">3</span> available
+            </span>
+          </div>
+
+          <div className="mt-7 grid grid-cols-1 gap-5 md:grid-cols-3">
+            {REQUEST_TYPES.map((type, i) => {
+              const Icon = ICONS[type.icon];
+              return (
+                <button
+                  key={type.id}
+                  onClick={() => requestForm(type)}
+                  className="group pk-lift pk-rise relative flex flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white p-6 text-left shadow-soft hover:border-stone-300 hover:shadow-lift focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/30"
+                  style={{ animationDelay: `${0.14 + i * 0.06}s` }}
+                >
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-stone-200/80 to-transparent" />
+                  <div className="flex items-start justify-between">
+                    <span className="pk-icon-tile grid h-14 w-14 place-items-center rounded-2xl border border-stone-200 bg-[#FBFBFA] text-slate-900">
+                      <Icon size={28} strokeWidth={1.6} />
+                    </span>
+                    <span className="grid h-8 w-8 place-items-center rounded-full border border-stone-200 bg-white text-slate-400 transition group-hover:border-orange-200 group-hover:text-orange-600">
+                      <ArrowRight size={16} className="pk-nudge" />
+                    </span>
+                  </div>
+                  <h3 className="font-fraunces mt-6 text-[22px] font-medium tracking-tight text-slate-900">{type.title}</h3>
+                  <p className="mt-2 text-[14.5px] leading-relaxed text-slate-500">{type.blurb}</p>
+                  <div className="mt-6 flex items-center gap-2 text-[13.5px] font-semibold text-slate-900">
+                    New request <span className="pk-nudge text-orange-600">→</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
         {/* My recent requests */}
         {identity && (
-          <>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <Clock size={18} className="text-slate-400" />
-                {identity.name.split(' ')[0]}'s Recent Requests
-              </h2>
+          <section className="mt-16 sm:mt-20">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="font-fraunces text-[26px] sm:text-[30px] font-medium tracking-tight text-slate-900">
+                  {identity.name.split(' ')[0]}'s Recent Requests
+                </h2>
+                <p className="mt-1.5 text-[14.5px] text-slate-500">Submitted from this station.</p>
+              </div>
               <button
                 onClick={fetchMyRequests}
-                className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                className="pk-press group inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-900 shadow-soft hover:border-stone-300 hover:shadow-lift"
               >
-                <RefreshCw size={14} /> Refresh
+                <RefreshCw size={14} className="text-slate-400" /> Refresh
               </button>
             </div>
 
-            {myRequests.length === 0 ? (
-              <div className="pickups-card rounded-3xl p-10 text-center">
-                <p className="text-slate-400 font-semibold">No requests yet. Tap a button above to get started.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {myRequests.map((req) => {
+            <div className="mt-7 overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-soft">
+              {myRequests.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <p className="text-[14.5px] font-medium text-slate-400">
+                    No requests yet. Pick one of the three above to get started.
+                  </p>
+                </div>
+              ) : (
+                myRequests.map((req, idx) => {
                   const type = TYPE_MAP[req.type];
-                  const status = STATUS_STYLES[req.status] || STATUS_STYLES.Pending;
                   const Icon = ICONS[type?.icon] || ClipboardList;
+                  const hasNote = !!req.manager_response;
                   return (
-                    <motion.div
-                      key={req.id}
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="pickups-card rounded-2xl p-4 sm:p-5 flex items-start gap-4"
-                    >
-                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${type?.soft}`}>
-                        <Icon size={20} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-slate-900 text-sm">{type?.title}</span>
-                          <span className="text-[11px] text-slate-400 font-semibold">· {formatTimeAgo(req.created_at)}</span>
-                        </div>
-                        <p className="text-sm text-slate-500 font-medium truncate">{summarizeRequest(req)}</p>
-                        {req.manager_response && (
-                          <div className="mt-2 text-xs bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-slate-600">
-                            <span className="font-black text-slate-700">Manager:</span> {req.manager_response}
-                          </div>
-                        )}
-                      </div>
-                      <span
-                        className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${status.soft}`}
+                    <React.Fragment key={req.id}>
+                      {idx > 0 && <div className="pk-hairline mx-6" />}
+                      <div
+                        className={`group relative flex flex-col gap-4 p-5 transition-colors hover:bg-[#FBFBFA] sm:flex-row sm:gap-5 sm:p-6 ${
+                          hasNote ? 'sm:items-start' : 'sm:items-center'
+                        }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                        {status.label}
-                      </span>
-                    </motion.div>
+                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-stone-200 bg-[#FBFBFA] text-slate-900">
+                          <Icon size={22} strokeWidth={1.7} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[15.5px] font-semibold text-slate-900">{type?.title}</p>
+                          <p className="mt-1 truncate text-[13.5px] text-slate-500 tnum">{summarizeRequest(req)}</p>
+                          {hasNote && (
+                            <div className="mt-3 flex items-start gap-3 rounded-2xl border border-stone-200 bg-[#FBFBFA] px-4 py-3">
+                              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700">
+                                {(req.responded_by || 'M').charAt(0).toUpperCase()}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-semibold tracky text-slate-400">
+                                  {(req.responded_by || 'Manager').toUpperCase()}
+                                </p>
+                                <p className="mt-0.5 text-[13.5px] leading-snug text-slate-700">
+                                  &ldquo;{req.manager_response}&rdquo;
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between gap-4 sm:justify-end">
+                          <span className="whitespace-nowrap text-[12.5px] text-slate-400 tnum">
+                            {formatTimeAgo(req.created_at)}
+                          </span>
+                          <StatusPill status={req.status} />
+                        </div>
+                      </div>
+                    </React.Fragment>
                   );
-                })}
-              </div>
-            )}
-          </>
+                })
+              )}
+            </div>
+
+            {/* Legend */}
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 px-1 text-[12px] text-slate-400">
+              <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />Pending</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Approved</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-red-500" />Denied</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" />Responded</span>
+            </div>
+          </section>
         )}
-      </div>
+
+        {/* Footer */}
+        <footer className="mt-20">
+          <div className="pk-hairline" />
+          <div className="mt-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <p className="text-[13px] text-slate-500">Vista Auction · Pickups Department</p>
+            <p className="text-[12px] text-slate-400 tnum">Shared station · resets after inactivity</p>
+          </div>
+        </footer>
+      </main>
 
       {/* Name chooser overlay */}
       <AnimatePresence>
@@ -370,7 +461,7 @@ const Pickups = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setChooserOpen(false)}
-            className="fixed inset-0 z-[65] bg-slate-900/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 pt-24 sm:pt-4"
+            className="fixed inset-0 z-[65] flex items-start justify-center bg-slate-900/40 p-4 pt-24 backdrop-blur-sm sm:items-center sm:pt-4"
           >
             <motion.div
               initial={{ y: 40, opacity: 0, scale: 0.98 }}
@@ -378,12 +469,12 @@ const Pickups = () => {
               exit={{ y: 30, opacity: 0 }}
               transition={{ type: 'spring', damping: 26, stiffness: 280 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+              className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-2xl"
             >
-              <div className="p-6 pb-4 border-b border-slate-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-black text-slate-900">Who's submitting?</h2>
-                  <button onClick={() => setChooserOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+              <div className="border-b border-stone-100 p-6 pb-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="font-fraunces text-[26px] font-medium tracking-tight text-slate-900">Who's submitting?</h2>
+                  <button onClick={() => setChooserOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-stone-100">
                     <X size={20} />
                   </button>
                 </div>
@@ -395,7 +486,7 @@ const Pickups = () => {
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && search.trim() && chooseName(search)}
                     placeholder="Type your name…"
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 text-lg font-bold focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-400"
+                    className="w-full rounded-2xl border border-stone-200 bg-white py-4 pl-12 pr-4 text-[17px] font-semibold text-slate-900 placeholder:text-slate-400 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/15"
                   />
                 </div>
               </div>
@@ -406,26 +497,26 @@ const Pickups = () => {
                     <button
                       key={e.id}
                       onClick={() => chooseName(e.name)}
-                      className="w-full text-left px-4 py-3.5 rounded-2xl hover:bg-orange-50 transition-colors flex items-center gap-3"
+                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-colors hover:bg-[#FBFBFA]"
                     >
-                      <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-blue-600 text-white flex items-center justify-center font-black shrink-0">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-900 font-fraunces text-[17px] font-medium text-white">
                         {e.name.charAt(0).toUpperCase()}
                       </span>
-                      <span className="font-black text-slate-800 truncate">{e.name}</span>
-                      {e.position && <span className="text-xs text-slate-400 ml-auto truncate">{e.position}</span>}
+                      <span className="truncate font-semibold text-slate-800">{e.name}</span>
+                      {e.position && <span className="ml-auto truncate text-xs text-slate-400">{e.position}</span>}
                     </button>
                   ))
                 ) : (
-                  <p className="text-center text-slate-400 font-semibold py-6 text-sm">
+                  <p className="py-6 text-center text-[14px] font-medium text-slate-400">
                     {roster.length ? 'No matches.' : 'No roster yet — type your name to continue.'}
                   </p>
                 )}
                 {search.trim() && (
                   <button
                     onClick={() => chooseName(search)}
-                    className="w-full mt-2 px-4 py-3.5 rounded-2xl bg-slate-900 text-white font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                    className="pk-press mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-4 text-[14px] font-semibold text-white shadow-soft hover:bg-slate-800"
                   >
-                    Continue as “{search.trim()}” <ArrowRight size={16} />
+                    Continue as &ldquo;{search.trim()}&rdquo; <ArrowRight size={16} />
                   </button>
                 )}
               </div>
@@ -442,7 +533,7 @@ const Pickups = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeForm}
-            className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           >
             <motion.div
               initial={{ y: 60, opacity: 0, scale: 0.98 }}
@@ -450,42 +541,36 @@ const Pickups = () => {
               exit={{ y: 40, opacity: 0 }}
               transition={{ type: 'spring', damping: 26, stiffness: 280 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+              className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl"
             >
-              {/* Header */}
-              <div className={`relative px-6 py-6 bg-gradient-to-br ${activeType.gradient} text-white shrink-0`}>
-                <button
-                  onClick={closeForm}
-                  className="absolute top-5 right-5 p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
-                >
+              {/* Light header */}
+              <div className="flex shrink-0 items-center gap-3 border-b border-stone-200 px-6 py-5">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-stone-200 bg-[#FBFBFA] text-slate-900">
+                  {React.createElement(ICONS[activeType.icon], { size: 22, strokeWidth: 1.7 })}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-fraunces text-[20px] font-medium leading-none tracking-tight text-slate-900">
+                    {activeType.title}
+                  </h2>
+                  <p className="mt-1.5 text-[12px] font-medium text-slate-400">
+                    {confirming ? 'Confirm & submit' : 'New request'} · {identity?.name}
+                  </p>
+                </div>
+                <button onClick={closeForm} className="rounded-lg p-1.5 text-slate-400 hover:bg-stone-100">
                   <X size={18} />
                 </button>
-                <div className="flex items-center gap-3">
-                  {React.createElement(ICONS[activeType.icon], { size: 28 })}
-                  <div>
-                    <h2 className="text-xl font-black leading-none">{activeType.title}</h2>
-                    <p className="text-white/80 text-xs font-semibold mt-1">
-                      {confirming ? 'Confirm & submit' : 'New request'} · {identity?.name}
-                    </p>
-                  </div>
-                </div>
               </div>
 
               {!confirming ? (
                 <>
-                  {/* Form body */}
-                  <div className="p-6 overflow-y-auto grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 overflow-y-auto p-6">
                     {activeType.fields.map((field) => (
                       <div key={field.name} className={field.full ? 'col-span-2' : 'col-span-2 sm:col-span-1'}>
-                        <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1.5">
-                          {field.label} {field.required && <span className="text-orange-500">*</span>}
+                        <label className={labelCls}>
+                          {field.label} {field.required && <span className="text-orange-600">*</span>}
                         </label>
                         {field.type === 'lunch_slot' ? (
-                          <select
-                            value={form[field.name] || ''}
-                            onChange={(e) => setField(field.name, e.target.value)}
-                            className={`w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-4 ${activeType.ring}`}
-                          >
+                          <select value={form[field.name] || ''} onChange={(e) => setField(field.name, e.target.value)} className={fieldCls}>
                             <option value="">{lunchSlots.length ? 'Select a slot…' : 'Loading slots…'}</option>
                             {lunchSlots.map((s) => (
                               <option key={s.id} value={s.label} disabled={s.left <= 0}>
@@ -494,16 +579,10 @@ const Pickups = () => {
                             ))}
                           </select>
                         ) : field.type === 'select' ? (
-                          <select
-                            value={form[field.name] || ''}
-                            onChange={(e) => setField(field.name, e.target.value)}
-                            className={`w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-4 ${activeType.ring}`}
-                          >
+                          <select value={form[field.name] || ''} onChange={(e) => setField(field.name, e.target.value)} className={fieldCls}>
                             <option value="">Select…</option>
                             {field.options.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
+                              <option key={opt} value={opt}>{opt}</option>
                             ))}
                           </select>
                         ) : field.type === 'textarea' ? (
@@ -512,7 +591,7 @@ const Pickups = () => {
                             value={form[field.name] || ''}
                             onChange={(e) => setField(field.name, e.target.value)}
                             placeholder={field.placeholder}
-                            className={`w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-semibold resize-none focus:outline-none focus:ring-4 ${activeType.ring}`}
+                            className={`${fieldCls} resize-none`}
                           />
                         ) : (
                           <input
@@ -521,78 +600,80 @@ const Pickups = () => {
                             value={form[field.name] || ''}
                             onChange={(e) => setField(field.name, e.target.value)}
                             placeholder={field.placeholder}
-                            className={`w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 ${activeType.ring}`}
+                            className={fieldCls}
                           />
                         )}
                       </div>
                     ))}
                   </div>
-                  <div className="p-5 border-t border-slate-100 shrink-0">
+                  <div className="shrink-0 border-t border-stone-200 p-5">
                     <button
                       onClick={goToConfirm}
-                      className={`w-full py-4 rounded-xl bg-gradient-to-r ${activeType.gradient} text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 hover:shadow-lg transition-all`}
+                      className="pk-press flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 text-[14.5px] font-semibold text-white shadow-soft hover:bg-slate-800"
                     >
-                      Review <ArrowRight size={16} />
+                      Review request <ArrowRight size={16} />
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  {/* Confirmation body */}
-                  <div className="p-6 sm:p-8 overflow-y-auto text-center">
-                    <p className="text-lg font-bold text-slate-700 leading-relaxed">
+                  <div className="overflow-y-auto p-7 text-center sm:p-8">
+                    <p className="text-[16px] font-medium leading-relaxed text-slate-600">
                       Are you sure you'd like to submit this request as
                     </p>
-                    <button
-                      onClick={() => openChooser(null)}
-                      className="inline-block mt-1 mb-2"
-                      title="Click to change who this is from"
-                    >
-                      <span className={`text-3xl font-black ${gradientName} underline decoration-2 decoration-orange-300/60 underline-offset-4`}>
+                    <button onClick={() => openChooser(null)} className="mt-2 inline-block" title="Tap to change who this is from">
+                      <span className="font-fraunces relative text-[34px] font-medium leading-none text-orange-600">
                         {identity?.name}
+                        <span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-orange-500/40" />
                       </span>
                     </button>
-                    <p className="text-lg font-bold text-slate-700">?</p>
+                    <p className="mt-2 text-[16px] font-medium text-slate-600">?</p>
 
-                    {/* Hint bubble pointing at the name */}
-                    <div className="relative mx-auto mt-5 max-w-xs">
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-blue-50 border-l border-t border-blue-200 rotate-45" />
-                      <div className="relative bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
-                        <p className="text-sm font-semibold text-blue-700">
-                          If this isn't you, click on the highlighted name to change it!
+                    {/* Hint bubble */}
+                    <div className="relative mx-auto mt-6 max-w-[19rem]">
+                      <div className="absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 border-l border-t border-stone-200 bg-[#FBFBFA]" />
+                      <div className="relative rounded-2xl border border-stone-200 bg-[#FBFBFA] px-4 py-3">
+                        <p className="text-[13.5px] font-medium leading-snug text-slate-600">
+                          If this isn't you, tap the <span className="font-semibold text-orange-600">highlighted name</span> to change it.
                         </p>
                       </div>
                     </div>
 
-                    {/* Quick recap */}
-                    <div className="mt-6 text-left bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">{activeType.title}</p>
+                    {/* Recap */}
+                    <div className="mt-7 rounded-2xl border border-stone-200 bg-[#FBFBFA] p-4 text-left">
+                      <p className="mb-2 text-[10.5px] font-semibold tracky text-slate-400">{activeType.title.toUpperCase()}</p>
                       <div className="flex flex-wrap gap-2">
                         {Object.entries(form)
                           .filter(([, v]) => v !== '' && v != null)
                           .map(([k, v]) => (
-                            <span key={k} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs">
-                              <span className="font-black text-slate-400 uppercase tracking-wide text-[9px]">{k.replace(/_/g, ' ')}</span>
-                              <span className="font-bold text-slate-700">{String(v)}</span>
+                            <span key={k} className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs">
+                              <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">{k.replace(/_/g, ' ')}</span>
+                              <span className="font-semibold text-slate-700">{String(v)}</span>
                             </span>
                           ))}
                       </div>
                     </div>
                   </div>
-                  <div className="p-5 border-t border-slate-100 shrink-0 flex gap-3">
+                  <div className="flex shrink-0 gap-3 border-t border-stone-200 p-5">
                     <button
                       onClick={() => setConfirming(false)}
                       disabled={submitting}
-                      className="px-5 py-4 rounded-xl bg-slate-100 text-slate-600 font-black text-sm uppercase tracking-widest hover:bg-slate-200 transition-all inline-flex items-center gap-1.5"
+                      className="pk-press inline-flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-white px-5 py-4 text-[14px] font-semibold text-slate-700 shadow-soft hover:border-stone-300 disabled:opacity-50"
                     >
                       <ChevronLeft size={16} /> Back
                     </button>
                     <button
                       onClick={submitRequest}
                       disabled={submitting}
-                      className={`flex-1 py-4 rounded-xl bg-gradient-to-r ${activeType.gradient} text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 hover:shadow-lg transition-all disabled:opacity-60`}
+                      className="pk-press flex flex-1 items-center justify-center gap-2 rounded-2xl bg-orange-600 py-4 text-[14.5px] font-semibold text-white shadow-glow hover:bg-orange-700 disabled:opacity-60"
                     >
-                      {submitting ? 'Sending…' : <><Send size={16} /> Yes, submit</>}
+                      {submitting ? (
+                        'Sending…'
+                      ) : (
+                        <>
+                          <Check size={17} /> Yes, submit
+                        </>
+                      )}
                     </button>
                   </div>
                 </>

@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Archivo:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -834,4 +835,55 @@
   background: #ffffff;
   border: 1px solid rgb(226 232 240); /* slate-200 */
   box-shadow: 0 18px 40px -20px rgba(15, 23, 42, 0.18);
+}
+
+/* ===================== PICKUPS · ATELIER LIGHT THEME ===================== */
+/* Editorial light canvas for the Pickups staff portal (Fraunces + Inter). */
+.pickups-atelier {
+  background-color: #FBFBFA;
+  background-image:
+    radial-gradient(1100px 520px at 78% -8%, rgba(234,88,12,0.045), transparent 60%),
+    radial-gradient(900px 600px at 10% 4%, rgba(15,23,42,0.025), transparent 55%),
+    linear-gradient(to bottom, #FFFFFF 0%, #FBFBFA 38%, #FBFBFA 100%);
+  background-attachment: fixed;
+}
+.pickups-grid-veil {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(to right, rgba(15,23,42,0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15,23,42,0.022) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 80%);
+          mask-image: radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 80%);
+}
+.font-fraunces {
+  font-family: 'Fraunces', ui-serif, Georgia, serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.018em;
+}
+.tnum { font-variant-numeric: tabular-nums; }
+.tracky { letter-spacing: 0.18em; }
+.pk-hairline { height: 1px; background: linear-gradient(to right, transparent, #E7E5E4 14%, #E7E5E4 86%, transparent); }
+
+.pk-lift { transition: transform .42s cubic-bezier(.2,.7,.2,1), box-shadow .42s cubic-bezier(.2,.7,.2,1), border-color .42s ease; will-change: transform; }
+@media (hover:hover) { .pk-lift:hover { transform: translateY(-5px); } }
+.pk-lift:active { transform: translateY(-1px) scale(.997); transition-duration: .12s; }
+
+.pk-press { transition: transform .14s ease, box-shadow .25s ease, background-color .25s ease; }
+.pk-press:active { transform: translateY(1px) scale(.985); }
+
+.pk-icon-tile { transition: background-color .35s ease, border-color .35s ease, color .35s ease, transform .35s ease; }
+@media (hover:hover) { .group:hover .pk-icon-tile { background-color: #fff; border-color: #FED7AA; color: #EA580C; transform: rotate(-2deg); } }
+
+.pk-nudge { transition: transform .32s cubic-bezier(.2,.7,.2,1); }
+@media (hover:hover) { .group:hover .pk-nudge { transform: translateX(4px); } }
+
+@keyframes pkBreathe { 0%,100% { opacity:.55; transform:scale(1);} 50% { opacity:1; transform:scale(1.18);} }
+.pk-breathe { animation: pkBreathe 3.4s ease-in-out infinite; }
+
+@keyframes pkRise { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
+.pk-rise { animation: pkRise .7s cubic-bezier(.2,.7,.2,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-lift, .pk-press, .pk-icon-tile, .pk-nudge, .pk-breathe, .pk-rise { animation: none !important; transition: none !important; }
 }
