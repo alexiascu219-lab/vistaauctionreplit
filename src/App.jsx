@@ -26,6 +26,8 @@ import NotificationCenter from './components/NotificationCenter';
 import InterviewScheduler from './pages/InterviewScheduler';
 import AccessControl from './pages/AccessControl';
 import Chat from './pages/Chat';
+import Pickups from './pages/Pickups';
+import PickupsManager from './pages/PickupsManager';
 
 // Helper component to handle conditional AI rendering
 const ConditionalAIAssistant = () => {
@@ -70,6 +72,15 @@ function App() {
               <Route path="/chat" element={<Chat />} />
               <Route path="/admin" element={<AccessControl />} />
               <Route path="/schedule-interview" element={<InterviewScheduler />} />
+              <Route path="/pickups" element={<Pickups />} />
+              <Route
+                path="/pickups/manager"
+                element={
+                  <ProtectedRoute>
+                    <PickupsManager />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
             <SystemAlert />
             <Navbar />
