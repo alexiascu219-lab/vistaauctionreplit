@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vista Auction · Pickups — Request Hub · DISPATCH</title>
+<meta name="description" content="Pickups Department staff request kiosk — Vista Auction" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Expanded:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<!-- Tailwind Play CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['"Archivo Expanded"', '"Archivo"', 'system-ui', 'sans-serif'],
+          archivo: ['"Archivo"', 'system-ui', 'sans-serif'],
+          sans: ['"Inter"', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          ink: '#1A1A1A',
+          'ink-soft': '#262626',
+          concrete: {
+            50: '#FAFAF9',
+            100: '#F5F5F4',
+            200: '#E7E5E4',
+            300: '#D6D3D1',
+            400: '#A8A29E',
+            500: '#78716C',
+            600: '#57534E',
+            700: '#44403C',
+          },
+          safety: {
+            DEFAULT: '#F97316',
+            600: '#EA580C',
+            700: '#C2410C',
+          },
+        },
+        boxShadow: {
+          'hard': '6px 6px 0 0 #1A1A1A',
+          'hard-sm': '4px 4px 0 0 #1A1A1A',
+          'hard-safety': '6px 6px 0 0 #C2410C',
+          'lift': '0 1px 0 0 rgba(0,0,0,0.04), 0 12px 30px -12px rgba(26,26,26,0.28)',
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  :root {
+    --hazard: repeating-linear-gradient(
+      45deg,
+      #1A1A1A 0px,
+      #1A1A1A 12px,
+      #F97316 12px,
+      #F97316 24px
+    );
+    --hazard-soft: repeating-linear-gradient(
+      45deg,
+      #D6D3D1 0px,
+      #D6D3D1 9px,
+      transparent 9px,
+      transparent 18px
+    );
+  }
+
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background-color: #E7E5E4;
+    background-image:
+      linear-gradient(0deg, rgba(26,26,26,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,26,26,0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    background-position: -1px -1px;
+  }
+
+  /* Hazard stripe accent rules */
+  .hazard-rule { background-image: var(--hazard); background-size: 34px 34px; }
+  .hazard-soft { background-image: var(--hazard-soft); }
+
+  /* Display tracking */
+  .micro {
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .micro-wide { letter-spacing: 0.3em; }
+
+  /* Card press mechanics */
+  .press {
+    transition: transform .12s cubic-bezier(.2,.7,.3,1), box-shadow .12s cubic-bezier(.2,.7,.3,1);
+    will-change: transform;
+  }
+  .press:hover { transform: translate(-2px, -2px); }
+  .press:active { transform: translate(3px, 3px); }
+
+  /* Big request card hover choreography */
+  .req-card { transition: transform .14s cubic-bezier(.2,.7,.3,1), box-shadow .14s cubic-bezier(.2,.7,.3,1), border-color .14s ease; }
+  .req-card:hover { transform: translate(-3px, -3px); }
+  .req-card:active { transform: translate(2px, 2px); }
+  .req-card:hover .req-arrow { transform: translateX(6px); }
+  .req-card .req-arrow { transition: transform .18s cubic-bezier(.2,.7,.3,1); }
+  .req-card:hover .req-iconwrap { background-color: #1A1A1A; color: #F97316; }
+  .req-iconwrap { transition: background-color .16s ease, color .16s ease; }
+  .req-card:hover .req-index { color: #F97316; }
+  .req-index { transition: color .16s ease; }
+
+  /* Focus visibility — chunky, kiosk-friendly */
+  a:focus-visible, button:focus-visible {
+    outline: 4px solid #F97316;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  .focus-ink:focus-visible { outline-color: #1A1A1A; }
+
+  /* Live blink dot */
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .35; transform: scale(.78); }
+  }
+  .live-dot { animation: pulseDot 1.8s ease-in-out infinite; }
+
+  /* Status tag corner notch via clip */
+  .tag {
+    letter-spacing: 0.14em;
+  }
+
+  /* Subtle entrance */
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .rise { animation: riseIn .5s cubic-bezier(.2,.7,.3,1) both; }
+  @media (prefers-reduced-motion: reduce) {
+    .rise, .live-dot { animation: none; }
+    .press, .req-card, .req-arrow, .req-iconwrap, .req-index { transition: none; }
+  }
+
+  /* Marquee ticker */
+  @keyframes tick { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .ticker-track { animation: tick 32s linear infinite; }
+  @media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+
+  /* Number plate texture */
+  .plate {
+    background: #1A1A1A;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06);
+  }
+</style>
+</head>
+
+<body class="font-sans text-ink antialiased min-h-screen selection:bg-safety selection:text-white">
+
+  <!-- ===================== FIXED TOP HEADER ===================== -->
+  <header class="fixed top-0 inset-x-0 z-50">
+    <!-- thin hazard accent line -->
+    <div class="h-1.5 w-full hazard-rule"></div>
+
+    <div class="bg-concrete-50/95 backdrop-blur-md border-b-2 border-ink">
+      <div class="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-[72px] sm:h-[84px]">
+
+          <!-- Logo mark + wordmark -->
+          <a href="#top" class="group flex items-center gap-3 sm:gap-4 focus-ink rounded-md" aria-label="Vista Auction Pickups — Home">
+            <!-- Bold V monogram in rounded square -->
+            <span class="relative inline-grid place-items-center h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-ink shadow-hard-sm group-hover:shadow-hard-safety transition-shadow duration-150">
+              <svg viewBox="0 0 48 48" class="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true">
+                <path d="M11 13 L24 35 L37 13" fill="none" stroke="#F97316" stroke-width="5.5" stroke-linecap="square" stroke-linejoin="miter"/>
+                <path d="M11 13 L24 35 L37 13" fill="none" stroke="#F97316" stroke-width="5.5" stroke-linecap="square" stroke-linejoin="miter" opacity="0"/>
+              </svg>
+              <span class="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-safety ring-2 ring-concrete-50"></span>
+            </span>
+
+            <div class="flex flex-col leading-none">
+              <span class="font-display font-800 text-[22px] sm:text-[26px] tracking-tight text-ink">Pickups</span>
+              <span class="micro micro-wide text-[9px] sm:text-[10px] text-concrete-500 mt-1">Vista Auction</span>
+            </div>
+          </a>
+
+          <!-- Right cluster: station meta + clock -->
+          <div class="flex items-center gap-3 sm:gap-5">
+            <div class="hidden md:flex items-center gap-2 rounded-lg border-2 border-ink bg-white px-3 py-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 live-dot"></span>
+              <span class="font-mono text-[11px] font-600 text-ink">STATION&nbsp;PK-04</span>
+              <span class="text-concrete-300">·</span>
+              <span class="font-mono text-[11px] font-600 text-concrete-500">ONLINE</span>
+            </div>
+
+            <div class="flex flex-col items-end leading-none">
+              <span id="clock" class="font-mono font-700 text-[16px] sm:text-[19px] text-ink tabular-nums">10:42:08</span>
+              <span class="micro text-[8px] sm:text-[9px] text-concrete-500 mt-1">THU · JUN 18</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- spacer for fixed header -->
+  <div class="h-[86px] sm:h-[98px]" id="top"></div>
+
+  <!-- ===================== SCROLLING TICKER ===================== -->
+  <div class="border-b-2 border-ink bg-ink text-concrete-100 overflow-hidden">
+    <div class="relative flex">
+      <div class="ticker-track flex whitespace-nowrap font-mono text-[11px] sm:text-[12px] py-2.5">
+        <div class="flex shrink-0">
+          <span class="px-6 flex items-center gap-2"><span class="text-safety font-700">●</span> SHIFT A — FLOOR COVERAGE 94%</span>
+          <span class="px-6 text-concrete-400">|</span>
+          <span class="px-6 flex items-center gap-2"><span class="text-emerald-400 font-700">▲</span> ZEBRA SCANNERS AVAILABLE: 7 / 12</span>
+          <span class="px-6 text-concrete-400">|</span>
+          <span class="px-6 flex items-center gap-2"><span class="text-amber-400 font-700">◆</span> LUNCH SLOTS OPEN — 12:00 TO 13:30</span>
+          <span class="px-6 text-concrete-400">|</span>
+          <span class="px-6 flex items-center gap-2"><span class="text-safety font-700">●</span> WAVE PICKING ACTIVE — DOCK 2</span>
+          <span class="px-6 text-concrete-400">|</span>
+        </div>
+        <div class="flex shrink-0" aria-hidden="true">
+          <span class="px-6 flex items-center gap-2"><span class="text-safety font-700">●</span> SHIFT A — FLOOR COVERAGE 94%</span>
+          <span class="px-6 text-concrete-400">|</span>
+          <span class="px-6 flex items-center gap-2"><span class="text-emerald-400 font-700">▲</span> ZEBRA SCANNERS AVAILABLE: 7 / 12</span>
+          <span class="px-6 text-concrete-400">|</span>
+          <span class="px-6 flex items-center gap-2"><span class="text-amber-400 font-700">◆</span> LUNCH SLOTS OPEN — 12:00 TO 13:30</span>
+          <span class="px-6 text-concrete-400">|</span>
+          <span class="px-6 flex items-center gap-2"><span class="text-safety font-700">●</span> WAVE PICKING ACTIVE — DOCK 2</span>
+          <span class="px-6 text-concrete-400">|</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 pb-28">
+
+    <!-- HERO -->
+    <section class="pt-9 sm:pt-12 rise">
+      <div class="flex flex-col gap-6">
+        <!-- eyebrow chip -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="inline-flex items-center gap-2 rounded-full bg-ink text-white px-4 py-2 micro text-[10px] sm:text-[11px]">
+            <span class="h-2 w-2 rounded-full bg-safety"></span>
+            Pickups Department
+          </span>
+          <span class="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-2 micro text-[10px] sm:text-[11px] text-ink">
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>
+            Self-Service Kiosk
+          </span>
+        </div>
+
+        <!-- H1 -->
+        <div class="flex items-end justify-between gap-6 flex-wrap">
+          <div>
+            <h1 class="font-display font-900 tracking-tight text-ink leading-[0.92] text-[clamp(3rem,9vw,6.75rem)]">
+              Request<br class="hidden sm:block"/>
+              <span class="relative inline-block">
+                Hub
+                <span class="absolute left-0 -bottom-2 sm:-bottom-3 h-2 sm:h-2.5 w-full bg-safety"></span>
+              </span>
+            </h1>
+            <p class="mt-6 max-w-xl text-[15px] sm:text-[17px] text-concrete-600 leading-relaxed font-500">
+              Pick what you need from the floor station. Submit a request, log your activity, and keep coverage tight — all from one place.
+            </p>
+          </div>
+
+          <!-- Big number plate stat -->
+          <div class="hidden lg:flex flex-col gap-3">
+            <div class="plate rounded-2xl px-6 py-5 text-right">
+              <div class="micro text-[9px] text-concrete-400">Today · Dept</div>
+              <div class="font-mono font-700 text-white text-[44px] leading-none tabular-nums mt-1">18</div>
+              <div class="micro text-[9px] text-safety mt-1">Requests Logged</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== KIOSK IDENTITY BAR ===================== -->
+    <section class="mt-9 sm:mt-12 rise" style="animation-delay:.05s" aria-label="Submitting identity">
+      <div class="relative">
+        <!-- offset shadow backing -->
+        <div class="group relative rounded-2xl border-2 border-ink bg-ink text-white shadow-hard overflow-hidden">
+          <!-- hazard edge accent -->
+          <div class="absolute left-0 top-0 bottom-0 w-3 hazard-rule"></div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center gap-6 pl-7 pr-5 py-5 sm:py-6">
+            <!-- avatar -->
+            <div class="flex items-center gap-5 min-w-0 flex-1">
+              <div class="relative shrink-0">
+                <div class="grid place-items-center h-16 w-16 sm:h-[72px] sm:w-[72px] rounded-2xl bg-safety text-ink font-display font-900 text-[30px] sm:text-[34px] shadow-[inset_0_0_0_2px_rgba(0,0,0,0.18)]">
+                  A
+                </div>
+                <span class="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-emerald-500 ring-4 ring-ink grid place-items-center">
+                  <svg viewBox="0 0 24 24" class="h-3 w-3 text-ink" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>
+                </span>
+              </div>
+
+              <div class="min-w-0">
+                <div class="micro text-[10px] text-safety">Submitting As</div>
+                <div class="font-display font-800 text-[28px] sm:text-[34px] leading-tight tracking-tight truncate">Alex Iascu</div>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="font-mono text-[11px] text-concrete-400">BADGE&nbsp;#A-2194</span>
+                  <span class="text-concrete-600">·</span>
+                  <span class="font-mono text-[11px] text-concrete-400">SHIFT&nbsp;A</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Switch button -->
+            <button type="button"
+              class="press shrink-0 inline-flex items-center justify-center gap-3 rounded-xl bg-white text-ink border-2 border-white shadow-hard-sm px-6 sm:px-8 py-4 sm:py-5 min-h-[60px] font-archivo font-800 text-[16px] sm:text-[18px] uppercase tracking-wide hover:bg-safety hover:border-safety hover:text-ink"
+              aria-label="Switch the person submitting requests">
+              <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4"/><path d="M20 7H8a4 4 0 0 0-4 4v0"/><path d="M8 21l-4-4 4-4"/><path d="M4 17h12a4 4 0 0 0 4-4v0"/></svg>
+              Switch
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PRIMARY REQUEST CARDS ===================== -->
+    <section class="mt-12 sm:mt-16" aria-label="Start a new request">
+      <!-- section header -->
+      <div class="flex items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-4">
+          <span class="font-mono font-700 text-safety text-[13px]">01</span>
+          <h2 class="font-display font-800 text-[20px] sm:text-[24px] tracking-tight uppercase">Start a Request</h2>
+        </div>
+        <div class="hidden sm:flex items-center gap-3 flex-1 max-w-xs">
+          <div class="h-[2px] flex-1 bg-ink/15"></div>
+          <span class="micro text-[9px] text-concrete-500">3 Actions</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+
+        <!-- CARD 1: Lunch Reservation -->
+        <a href="#" class="req-card group relative rounded-2xl border-2 border-ink bg-white shadow-hard hover:shadow-hard-safety p-6 sm:p-7 min-h-[280px] flex flex-col rise" style="animation-delay:.08s">
+          <div class="flex items-start justify-between">
+            <span class="req-iconwrap grid place-items-center h-16 w-16 rounded-xl bg-concrete-100 text-ink border-2 border-ink">
+              <!-- fork & knife -->
+              <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 3v7a2 2 0 0 0 2 2h0a0 0 0 0 0 0 0V3"/>
+                <path d="M8 3v18"/>
+                <path d="M6 3v4"/>
+                <path d="M18 3c-1.5 0-2.5 1.5-2.5 4s1 4 2.5 4"/>
+                <path d="M18 3v18"/>
+              </svg>
+            </span>
+            <span class="req-index font-mono font-700 text-[15px] text-concrete-300">/ 01</span>
+          </div>
+
+          <div class="mt-6 flex-1">
+            <h3 class="font-display font-800 text-[23px] sm:text-[25px] tracking-tight leading-tight text-ink">Lunch Reservation</h3>
+            <p class="mt-3 text-[14.5px] leading-relaxed text-concrete-600 font-500">Reserve your lunch slot so the floor stays covered.</p>
+          </div>
+
+          <div class="mt-6 flex items-center justify-between border-t-2 border-dashed border-ink/15 pt-4">
+            <span class="font-archivo font-800 uppercase tracking-wide text-[15px] text-ink">New Request</span>
+            <span class="req-arrow grid place-items-center h-9 w-9 rounded-lg bg-safety text-ink">
+              <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </span>
+          </div>
+        </a>
+
+        <!-- CARD 2: Floor Time & Wave Picking -->
+        <a href="#" class="req-card group relative rounded-2xl border-2 border-ink bg-white shadow-hard hover:shadow-hard-safety p-6 sm:p-7 min-h-[280px] flex flex-col rise" style="animation-delay:.12s">
+          <div class="flex items-start justify-between">
+            <span class="req-iconwrap grid place-items-center h-16 w-16 rounded-xl bg-concrete-100 text-ink border-2 border-ink">
+              <!-- clipboard checklist -->
+              <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="4" width="12" height="17" rx="2"/>
+                <path d="M9 4a3 3 0 0 1 6 0"/>
+                <path d="M9 11l1.5 1.5L13 10"/>
+                <path d="M9 16l1.5 1.5L13 15"/>
+                <path d="M16 11.2h0M16 16.2h0"/>
+              </svg>
+            </span>
+            <span class="req-index font-mono font-700 text-[15px] text-concrete-300">/ 02</span>
+          </div>
+
+          <div class="mt-6 flex-1">
+            <h3 class="font-display font-800 text-[23px] sm:text-[25px] tracking-tight leading-tight text-ink">Floor Time &amp; Wave Picking</h3>
+            <p class="mt-3 text-[14.5px] leading-relaxed text-concrete-600 font-500">Log your floor time and wave picking activity.</p>
+          </div>
+
+          <div class="mt-6 flex items-center justify-between border-t-2 border-dashed border-ink/15 pt-4">
+            <span class="font-archivo font-800 uppercase tracking-wide text-[15px] text-ink">New Request</span>
+            <span class="req-arrow grid place-items-center h-9 w-9 rounded-lg bg-safety text-ink">
+              <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </span>
+          </div>
+        </a>
+
+        <!-- CARD 3: Zebra Tracking -->
+        <a href="#" class="req-card group relative rounded-2xl border-2 border-ink bg-white shadow-hard hover:shadow-hard-safety p-6 sm:p-7 min-h-[280px] flex flex-col rise" style="animation-delay:.16s">
+          <div class="flex items-start justify-between">
+            <span class="req-iconwrap grid place-items-center h-16 w-16 rounded-xl bg-concrete-100 text-ink border-2 border-ink">
+              <!-- barcode / scanner -->
+              <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+                <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+                <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                <path d="M7 8v8M10 8v8M13 8v8M17 8v8" stroke-width="2"/>
+              </svg>
+            </span>
+            <span class="req-index font-mono font-700 text-[15px] text-concrete-300">/ 03</span>
+          </div>
+
+          <div class="mt-6 flex-1">
+            <h3 class="font-display font-800 text-[23px] sm:text-[25px] tracking-tight leading-tight text-ink">Zebra Tracking</h3>
+            <p class="mt-3 text-[14.5px] leading-relaxed text-concrete-600 font-500">Check scanners in and out and flag any issues.</p>
+          </div>
+
+          <div class="mt-6 flex items-center justify-between border-t-2 border-dashed border-ink/15 pt-4">
+            <span class="font-archivo font-800 uppercase tracking-wide text-[15px] text-ink">New Request</span>
+            <span class="req-arrow grid place-items-center h-9 w-9 rounded-lg bg-safety text-ink">
+              <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </span>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- ===================== MY RECENT REQUESTS ===================== -->
+    <section class="mt-12 sm:mt-16" aria-label="My recent requests">
+      <!-- section header -->
+      <div class="flex items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-4">
+          <span class="font-mono font-700 text-safety text-[13px]">02</span>
+          <h2 class="font-display font-800 text-[20px] sm:text-[24px] tracking-tight uppercase">My Recent Requests</h2>
+        </div>
+        <a href="#" class="press hidden sm:inline-flex items-center gap-2 rounded-lg border-2 border-ink bg-white shadow-hard-sm px-4 py-2.5 micro text-[10px] text-ink hover:bg-ink hover:text-white transition-colors">
+          View Log
+          <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <!-- list -->
+      <div class="rounded-2xl border-2 border-ink bg-white shadow-hard overflow-hidden divide-y-2 divide-ink/10">
+
+        <!-- ROW 1: Lunch Reservation — PENDING -->
+        <div class="group relative flex flex-col sm:flex-row sm:items-center gap-4 px-5 sm:px-6 py-5 hover:bg-concrete-50 transition-colors">
+          <!-- icon + title block -->
+          <div class="flex items-center gap-4 sm:w-[300px] shrink-0">
+            <span class="grid place-items-center h-12 w-12 rounded-xl bg-amber-50 text-amber-600 border-2 border-amber-200 shrink-0">
+              <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a2 2 0 0 0 2 2V3"/><path d="M8 12v9"/><path d="M18 3c-1.5 0-2.5 1.5-2.5 4s1 4 2.5 4"/><path d="M18 11v10"/></svg>
+            </span>
+            <div class="min-w-0">
+              <h3 class="font-archivo font-700 text-[17px] text-ink leading-tight">Lunch Reservation</h3>
+              <span class="font-mono text-[11px] text-concrete-400">REQ-1042</span>
+            </div>
+          </div>
+
+          <!-- detail -->
+          <div class="flex-1 min-w-0">
+            <p class="font-mono text-[13px] sm:text-[13.5px] text-concrete-700 font-500 truncate">12:00 PM – 12:30 PM · 30 min</p>
+          </div>
+
+          <!-- meta + status -->
+          <div class="flex items-center justify-between sm:justify-end gap-4 sm:gap-5 shrink-0">
+            <span class="font-mono text-[12px] text-concrete-400 whitespace-nowrap">4m ago</span>
+            <span class="tag inline-flex items-center gap-2 rounded-md border-2 border-amber-300 bg-amber-100 text-amber-800 px-3 py-2 font-archivo font-800 text-[11px] uppercase">
+              <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+              Pending
+            </span>
+          </div>
+        </div>
+
+        <!-- ROW 2: Zebra Tracking — APPROVED -->
+        <div class="group relative flex flex-col sm:flex-row sm:items-center gap-4 px-5 sm:px-6 py-5 hover:bg-concrete-50 transition-colors">
+          <div class="flex items-center gap-4 sm:w-[300px] shrink-0">
+            <span class="grid place-items-center h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 border-2 border-emerald-200 shrink-0">
+              <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 8v8M11 8v8M14 8v8M16 8v8"/></svg>
+            </span>
+            <div class="min-w-0">
+              <h3 class="font-archivo font-700 text-[17px] text-ink leading-tight">Zebra Tracking</h3>
+              <span class="font-mono text-[11px] text-concrete-400">REQ-1038</span>
+            </div>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <p class="font-mono text-[13px] sm:text-[13.5px] text-concrete-700 font-500 truncate">Check Out · Zebra #12 · Good</p>
+          </div>
+
+          <div class="flex items-center justify-between sm:justify-end gap-4 sm:gap-5 shrink-0">
+            <span class="font-mono text-[12px] text-concrete-400 whitespace-nowrap">1h ago</span>
+            <span class="tag inline-flex items-center gap-2 rounded-md border-2 border-emerald-300 bg-emerald-100 text-emerald-800 px-3 py-2 font-archivo font-800 text-[11px] uppercase">
+              <svg viewBox="0 0 24 24" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>
+              Approved
+            </span>
+          </div>
+        </div>
+
+        <!-- ROW 3: Floor Time & Wave Picking — RESPONDED (with manager note) -->
+        <div class="group relative flex flex-col gap-4 px-5 sm:px-6 py-5 hover:bg-concrete-50 transition-colors">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div class="flex items-center gap-4 sm:w-[300px] shrink-0">
+              <span class="grid place-items-center h-12 w-12 rounded-xl bg-blue-50 text-blue-600 border-2 border-blue-200 shrink-0">
+                <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4a3 3 0 0 1 6 0"/><path d="M9 11l1.5 1.5L13 10"/><path d="M9 16l1.5 1.5L13 15"/></svg>
+              </span>
+              <div class="min-w-0">
+                <h3 class="font-archivo font-700 text-[17px] text-ink leading-tight">Floor Time &amp; Wave Picking</h3>
+                <span class="font-mono text-[11px] text-concrete-400">REQ-1031</span>
+              </div>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <p class="font-mono text-[13px] sm:text-[13.5px] text-concrete-700 font-500 truncate">Wave Picking · 10:30 AM–11:15 AM</p>
+            </div>
+
+            <div class="flex items-center justify-between sm:justify-end gap-4 sm:gap-5 shrink-0">
+              <span class="font-mono text-[12px] text-concrete-400 whitespace-nowrap">3h ago</span>
+              <span class="tag inline-flex items-center gap-2 rounded-md border-2 border-blue-300 bg-blue-100 text-blue-800 px-3 py-2 font-archivo font-800 text-[11px] uppercase">
+                <svg viewBox="0 0 24 24" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Responded
+              </span>
+            </div>
+          </div>
+
+          <!-- manager note -->
+          <div class="sm:ml-[316px] flex items-start gap-3 rounded-xl border-2 border-blue-200 bg-blue-50 px-4 py-3">
+            <span class="grid place-items-center h-7 w-7 rounded-lg bg-blue-600 text-white shrink-0 mt-0.5">
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <p class="text-[13.5px] leading-relaxed text-blue-900 font-500">
+              <span class="micro text-[9px] text-blue-600 block mb-0.5">Manager Note</span>
+              “Sounds good — thanks for logging it.”
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================== STATUS LEGEND / FOOTER ===================== -->
+    <section class="mt-12 sm:mt-16" aria-label="Status legend">
+      <div class="rounded-2xl border-2 border-ink bg-concrete-100 overflow-hidden">
+        <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b-2 border-ink/10">
+          <span class="micro text-[10px] text-concrete-600">Status Key</span>
+          <span class="font-mono text-[11px] text-concrete-400">VISTA · PICKUPS · v3</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-px bg-ink/10">
+          <!-- Pending -->
+          <div class="bg-concrete-100 px-5 py-5 flex items-center gap-3">
+            <span class="h-3.5 w-3.5 rounded-full bg-amber-500 ring-4 ring-amber-100"></span>
+            <div class="leading-tight">
+              <div class="font-archivo font-800 text-[14px] uppercase text-ink">Pending</div>
+              <div class="font-mono text-[10px] text-concrete-500">Awaiting review</div>
+            </div>
+          </div>
+          <!-- Approved -->
+          <div class="bg-concrete-100 px-5 py-5 flex items-center gap-3">
+            <span class="h-3.5 w-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100"></span>
+            <div class="leading-tight">
+              <div class="font-archivo font-800 text-[14px] uppercase text-ink">Approved</div>
+              <div class="font-mono text-[10px] text-concrete-500">Confirmed</div>
+            </div>
+          </div>
+          <!-- Denied -->
+          <div class="bg-concrete-100 px-5 py-5 flex items-center gap-3">
+            <span class="h-3.5 w-3.5 rounded-full bg-red-500 ring-4 ring-red-100"></span>
+            <div class="leading-tight">
+              <div class="font-archivo font-800 text-[14px] uppercase text-ink">Denied</div>
+              <div class="font-mono text-[10px] text-concrete-500">Not approved</div>
+            </div>
+          </div>
+          <!-- Responded -->
+          <div class="bg-concrete-100 px-5 py-5 flex items-center gap-3">
+            <span class="h-3.5 w-3.5 rounded-full bg-blue-500 ring-4 ring-blue-100"></span>
+            <div class="leading-tight">
+              <div class="font-archivo font-800 text-[14px] uppercase text-ink">Responded</div>
+              <div class="font-mono text-[10px] text-concrete-500">Manager replied</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- hazard footer rule -->
+      <div class="mt-8 flex items-center gap-5">
+        <div class="h-2 flex-1 hazard-rule rounded-full"></div>
+        <span class="micro text-[9px] text-concrete-500 whitespace-nowrap">End of Board</span>
+        <div class="h-2 flex-1 hazard-rule rounded-full"></div>
+      </div>
+
+      <p class="mt-6 text-center font-mono text-[11px] text-concrete-500">
+        VISTA AUCTION · PICKUPS DEPARTMENT · STATION PK-04 · FLOOR OPERATIONS
+      </p>
+    </section>
+
+  </main>
+
+  <!-- ===================== FIXED OPTION BADGE ===================== -->
+  <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 select-none">
+    <div class="flex items-center gap-2.5 rounded-xl border-2 border-ink bg-ink text-white shadow-hard-sm px-4 py-3">
+      <span class="grid place-items-center h-6 w-6 rounded-md bg-safety text-ink font-mono font-700 text-[12px]">3</span>
+      <div class="leading-none">
+        <div class="font-archivo font-800 text-[12px] uppercase tracking-wide">Option 3</div>
+        <div class="micro text-[8px] text-safety mt-0.5">Dispatch</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MICRO-INTERACTIONS ===================== -->
+  <script>
+    // Live clock — purely cosmetic, page is fully complete without it
+    (function () {
+      var el = document.getElementById('clock');
+      if (!el) return;
+      function pad(n){ return String(n).padStart(2,'0'); }
+      function tick(){
+        var d = new Date();
+        el.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+
+    // Press feedback for keyboard activation on big cards (visual parity with mouse)
+    document.querySelectorAll('.req-card, .press').forEach(function (node) {
+      node.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') node.style.transform = 'translate(2px, 2px)';
+      });
+      node.addEventListener('keyup', function () { node.style.transform = ''; });
+    });
+  </script>
+</body>
+</html>

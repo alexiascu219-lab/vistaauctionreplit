@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pickups · Request Hub — Vista Auction</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        },
+        colors: {
+          ember: {
+            400: '#FB923C',
+            500: '#F59E0B',
+          },
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --bg: #0B0D10;
+    --surface: #0E1116;
+    --surface-2: #12161C;
+    --surface-3: #161B22;
+    --hairline: rgba(255, 255, 255, 0.07);
+    --hairline-strong: rgba(255, 255, 255, 0.10);
+    --text: #E6E9EE;
+    --text-dim: #9BA3AF;
+    --text-faint: #6B7280;
+    --ember: #FB923C;
+    --ember-deep: #F59E0B;
+  }
+
+  * { -webkit-tap-highlight-color: transparent; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.011em;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Ambient atmosphere: layered radial glows + fine grain */
+  .atmosphere {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .atmosphere::before {
+    content: "";
+    position: absolute;
+    top: -22%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1100px;
+    height: 720px;
+    background: radial-gradient(ellipse at center,
+      rgba(251, 146, 60, 0.10) 0%,
+      rgba(251, 146, 60, 0.045) 32%,
+      rgba(251, 146, 60, 0) 66%);
+    filter: blur(14px);
+  }
+  .atmosphere::after {
+    content: "";
+    position: absolute;
+    bottom: -28%;
+    right: -12%;
+    width: 720px;
+    height: 720px;
+    background: radial-gradient(circle at center,
+      rgba(80, 110, 160, 0.07) 0%,
+      rgba(80, 110, 160, 0) 60%);
+    filter: blur(10px);
+  }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Hairline grid texture in the deep background */
+  .gridlines {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 30%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 30%, transparent 78%);
+  }
+
+  /* Elevated surface treatment with inner highlight */
+  .surface {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 40%),
+      var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  .surface-2 {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 45%),
+      var(--surface-2);
+    border: 1px solid var(--hairline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .hairline { border-color: var(--hairline); }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    letter-spacing: 0.16em;
+    font-weight: 500;
+  }
+
+  .display {
+    letter-spacing: -0.035em;
+    font-weight: 800;
+  }
+
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  /* Request card interactions */
+  .req-card {
+    position: relative;
+    transition:
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 220ms ease,
+      box-shadow 220ms ease,
+      background-color 220ms ease;
+    will-change: transform;
+  }
+  .req-card::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(140deg, rgba(251,146,60,0.55), rgba(251,146,60,0) 45%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 220ms ease;
+    pointer-events: none;
+  }
+  .req-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--hairline-strong);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.05),
+      0 18px 40px -18px rgba(0,0,0,0.85),
+      0 0 0 1px rgba(251,146,60,0.04),
+      0 10px 36px -20px rgba(251,146,60,0.35);
+  }
+  .req-card:hover::after { opacity: 1; }
+  .req-card:active { transform: translateY(-1px) scale(0.985); }
+
+  .req-card:hover .icon-tile {
+    border-color: rgba(251,146,60,0.35);
+    box-shadow: 0 0 0 1px rgba(251,146,60,0.10), 0 8px 24px -14px rgba(251,146,60,0.55);
+  }
+  .req-card:hover .icon-tile svg { color: var(--ember); }
+  .req-card:hover .cta { color: var(--ember); }
+  .req-card:hover .cta-arrow { transform: translateX(4px); }
+
+  .icon-tile {
+    transition: border-color 220ms ease, box-shadow 220ms ease;
+  }
+  .icon-tile svg { transition: color 220ms ease; }
+  .cta { transition: color 200ms ease; }
+  .cta-arrow { transition: transform 220ms cubic-bezier(0.22,1,0.36,1); }
+
+  /* Switch identity button */
+  .switch-btn {
+    transition: transform 160ms ease, background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  }
+  .switch-btn:hover {
+    background: var(--surface-3);
+    border-color: rgba(251,146,60,0.40);
+    box-shadow: 0 0 0 1px rgba(251,146,60,0.08), 0 8px 20px -12px rgba(251,146,60,0.45);
+  }
+  .switch-btn:active { transform: scale(0.97); }
+
+  .recent-row {
+    transition: background-color 180ms ease, border-color 180ms ease;
+  }
+  .recent-row:hover { background: rgba(255,255,255,0.018); }
+
+  /* Status pills */
+  .pill {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .pill-amber   { color: #FCD79B; background: rgba(245,158,11,0.10); border: 1px solid rgba(245,158,11,0.28); }
+  .pill-emerald { color: #86EFAC; background: rgba(16,185,129,0.10); border: 1px solid rgba(16,185,129,0.28); }
+  .pill-blue    { color: #93C5FD; background: rgba(59,130,246,0.10); border: 1px solid rgba(59,130,246,0.30); }
+  .pill-red     { color: #FCA5A5; background: rgba(239,68,68,0.10);  border: 1px solid rgba(239,68,68,0.28); }
+
+  .dot { box-shadow: 0 0 0 3px rgba(255,255,255,0.02); }
+  .dot-amber   { background: #F59E0B; box-shadow: 0 0 10px 0 rgba(245,158,11,0.6); }
+  .dot-emerald { background: #10B981; box-shadow: 0 0 10px 0 rgba(16,185,129,0.5); }
+  .dot-blue    { background: #3B82F6; box-shadow: 0 0 10px 0 rgba(59,130,246,0.5); }
+
+  .pulse { animation: pulse 2.6s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.86); }
+  }
+
+  /* Focus rings — visible, accessible, ember accent */
+  .focusable:focus-visible,
+  a:focus-visible,
+  button:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--bg),
+      0 0 0 4px rgba(251,146,60,0.85);
+    border-radius: 14px;
+  }
+
+  .live-dot { animation: live 2s ease-in-out infinite; }
+  @keyframes live {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Entrance */
+  .reveal { opacity: 0; transform: translateY(14px); animation: reveal 0.7s cubic-bezier(0.22,1,0.36,1) forwards; }
+  @keyframes reveal { to { opacity: 1; transform: translateY(0); } }
+  .d1 { animation-delay: 0.05s; }
+  .d2 { animation-delay: 0.13s; }
+  .d3 { animation-delay: 0.21s; }
+  .d4 { animation-delay: 0.29s; }
+  .d5 { animation-delay: 0.37s; }
+  .d6 { animation-delay: 0.45s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { animation: none; opacity: 1; transform: none; }
+    .pulse, .live-dot { animation: none; }
+    .req-card:hover { transform: none; }
+  }
+
+  ::selection { background: rgba(251,146,60,0.28); color: #fff; }
+</style>
+</head>
+
+<body class="font-sans antialiased">
+  <div class="atmosphere"></div>
+  <div class="gridlines"></div>
+  <div class="grain"></div>
+
+  <!-- ============ FIXED HEADER ============ -->
+  <header class="fixed top-0 inset-x-0 z-50">
+    <div class="backdrop-blur-xl" style="background: linear-gradient(180deg, rgba(11,13,16,0.92) 0%, rgba(11,13,16,0.62) 100%); border-bottom: 1px solid var(--hairline);">
+      <div class="mx-auto max-w-6xl px-5 sm:px-8">
+        <div class="flex items-center justify-between h-16">
+          <!-- Logo mark + wordmark -->
+          <a href="#" class="focusable flex items-center gap-3 rounded-2xl py-1.5 pr-3 -ml-1">
+            <span class="relative grid place-items-center h-10 w-10 rounded-xl shrink-0"
+                  style="background: linear-gradient(160deg, #1b1f27, #0d1015); border: 1px solid var(--hairline-strong); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 6px 16px -10px rgba(251,146,60,0.5);">
+              <!-- Stylized package / box mark -->
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                <path d="M3.27 6.96 12 12.01l8.73-5.05"/>
+                <path d="M12 22.08V12"/>
+              </svg>
+              <span class="absolute -bottom-1 -right-1 h-2.5 w-2.5 rounded-full" style="background:#FB923C; box-shadow:0 0 10px 1px rgba(251,146,60,0.7); border:1.5px solid var(--bg);"></span>
+            </span>
+            <span class="flex flex-col leading-none">
+              <span class="text-[17px] font-700 tracking-tight" style="font-weight:700;">Pickups</span>
+              <span class="eyebrow text-[9.5px] mt-1" style="color:var(--text-faint);">VISTA AUCTION</span>
+            </span>
+          </a>
+
+          <!-- Right header meta -->
+          <div class="flex items-center gap-3">
+            <div class="hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5 surface-2">
+              <span class="h-1.5 w-1.5 rounded-full live-dot" style="background:#10B981; box-shadow:0 0 8px rgba(16,185,129,0.7);"></span>
+              <span class="mono text-[11px]" style="color:var(--text-dim);">STATION&nbsp;PK-04</span>
+            </div>
+            <div class="hidden md:flex flex-col items-end leading-none">
+              <span class="mono text-[12px]" style="color:var(--text);" id="clock">—</span>
+              <span class="mono text-[9.5px] mt-1" style="color:var(--text-faint);">FLOOR&nbsp;·&nbsp;EST</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ MAIN ============ -->
+  <main class="relative z-10 mx-auto max-w-6xl px-5 sm:px-8 pt-28 pb-28">
+
+    <!-- Hero -->
+    <section class="reveal d1">
+      <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 surface-2">
+        <span class="h-1.5 w-1.5 rounded-full" style="background:var(--ember); box-shadow:0 0 8px rgba(251,146,60,0.8);"></span>
+        <span class="eyebrow text-[10.5px]" style="color:var(--text-dim);">PICKUPS DEPARTMENT</span>
+      </div>
+
+      <div class="mt-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+        <div>
+          <h1 class="display text-[44px] sm:text-[58px] lg:text-[68px] leading-[0.98]">
+            Request Hub
+          </h1>
+          <p class="mt-4 max-w-xl text-[15px] sm:text-[16px] leading-relaxed" style="color:var(--text-dim);">
+            One console for the floor. Reserve lunch, log floor time and wave picking,
+            and track scanners — fast, accountable, covered.
+          </p>
+        </div>
+        <div class="hidden lg:flex items-center gap-6 pb-2 mono text-[11px]" style="color:var(--text-faint);">
+          <div class="flex flex-col items-end gap-1">
+            <span class="text-[20px]" style="color:var(--text);">3</span>
+            <span>OPEN&nbsp;TODAY</span>
+          </div>
+          <div class="h-9 w-px" style="background:var(--hairline);"></div>
+          <div class="flex flex-col items-end gap-1">
+            <span class="text-[20px]" style="color:var(--text);">12</span>
+            <span>ON&nbsp;FLOOR</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ KIOSK IDENTITY BAR ============ -->
+    <section class="reveal d2 mt-9">
+      <div class="surface rounded-2xl overflow-hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 p-5 sm:p-6">
+          <div class="flex items-center gap-4 sm:gap-5">
+            <!-- Avatar -->
+            <div class="relative shrink-0">
+              <div class="grid place-items-center h-14 w-14 sm:h-16 sm:w-16 rounded-2xl"
+                   style="background: linear-gradient(150deg, #2a2118, #15171c); border:1px solid rgba(251,146,60,0.30); box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 22px -14px rgba(251,146,60,0.7);">
+                <span class="text-[26px] sm:text-[30px] font-700" style="font-weight:700; color:var(--ember); letter-spacing:-0.02em;">A</span>
+              </div>
+              <span class="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full" style="background:#10B981; border:2.5px solid var(--surface); box-shadow:0 0 10px rgba(16,185,129,0.6);"></span>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <span class="eyebrow text-[10px]" style="color:var(--text-faint);">SUBMITTING AS</span>
+              <span class="text-[22px] sm:text-[26px] font-700 leading-none" style="font-weight:700; letter-spacing:-0.02em;">Alex Iascu</span>
+              <span class="mono text-[11px] mt-0.5" style="color:var(--text-faint);">PICKER&nbsp;·&nbsp;BADGE&nbsp;#A-219</span>
+            </div>
+          </div>
+
+          <!-- Switch button -->
+          <button type="button"
+                  class="switch-btn focusable group flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 sm:py-4 min-h-[48px] surface-2 self-stretch sm:self-auto"
+                  style="font-weight:600;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-dim);">
+              <path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>
+            </svg>
+            <span class="text-[14px]" style="color:var(--text);">Switch</span>
+          </button>
+        </div>
+        <div class="h-px" style="background:var(--hairline);"></div>
+        <div class="flex items-center gap-2 px-5 sm:px-6 py-2.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-faint);">
+            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+          </svg>
+          <span class="mono text-[10.5px]" style="color:var(--text-faint);">Shared station — confirm your name before submitting any request.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ THREE PRIMARY REQUEST CARDS ============ -->
+    <section class="reveal d3 mt-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="eyebrow text-[11px]" style="color:var(--text-dim);">START A REQUEST</h2>
+        <span class="mono text-[10.5px]" style="color:var(--text-faint);">03&nbsp;ACTIONS</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+
+        <!-- Card 1: Lunch Reservation -->
+        <button type="button" class="req-card focusable surface rounded-2xl p-6 text-left flex flex-col min-h-[230px]">
+          <div class="flex items-start justify-between">
+            <span class="icon-tile grid place-items-center h-12 w-12 rounded-xl surface-2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-dim);">
+                <path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M5 2v20"/>
+                <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+              </svg>
+            </span>
+            <span class="mono text-[10px]" style="color:var(--text-faint);">01</span>
+          </div>
+          <h3 class="mt-5 text-[19px] font-700" style="font-weight:700; letter-spacing:-0.02em;">Lunch Reservation</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed flex-1" style="color:var(--text-dim);">Reserve your lunch slot so the floor stays covered.</p>
+          <span class="cta inline-flex items-center gap-1.5 mt-5 text-[13px] font-600" style="font-weight:600; color:var(--text);">
+            New request <span class="cta-arrow inline-block">→</span>
+          </span>
+        </button>
+
+        <!-- Card 2: Floor Time & Wave Picking -->
+        <button type="button" class="req-card focusable surface rounded-2xl p-6 text-left flex flex-col min-h-[230px]">
+          <div class="flex items-start justify-between">
+            <span class="icon-tile grid place-items-center h-12 w-12 rounded-xl surface-2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-dim);">
+                <rect x="8" y="2" width="8" height="4" rx="1"/>
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                <path d="m9 14 2 2 4-4"/>
+              </svg>
+            </span>
+            <span class="mono text-[10px]" style="color:var(--text-faint);">02</span>
+          </div>
+          <h3 class="mt-5 text-[19px] font-700" style="font-weight:700; letter-spacing:-0.02em;">Floor Time &amp; Wave Picking</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed flex-1" style="color:var(--text-dim);">Log your floor time and wave picking activity.</p>
+          <span class="cta inline-flex items-center gap-1.5 mt-5 text-[13px] font-600" style="font-weight:600; color:var(--text);">
+            New request <span class="cta-arrow inline-block">→</span>
+          </span>
+        </button>
+
+        <!-- Card 3: Zebra Tracking -->
+        <button type="button" class="req-card focusable surface rounded-2xl p-6 text-left flex flex-col min-h-[230px]">
+          <div class="flex items-start justify-between">
+            <span class="icon-tile grid place-items-center h-12 w-12 rounded-xl surface-2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-dim);">
+                <path d="M3 5v14"/><path d="M6 5v14"/><path d="M10 5v14"/>
+                <path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/>
+              </svg>
+            </span>
+            <span class="mono text-[10px]" style="color:var(--text-faint);">03</span>
+          </div>
+          <h3 class="mt-5 text-[19px] font-700" style="font-weight:700; letter-spacing:-0.02em;">Zebra Tracking</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed flex-1" style="color:var(--text-dim);">Check scanners in and out and flag any issues.</p>
+          <span class="cta inline-flex items-center gap-1.5 mt-5 text-[13px] font-600" style="font-weight:600; color:var(--text);">
+            New request <span class="cta-arrow inline-block">→</span>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ MY RECENT REQUESTS ============ -->
+    <section class="reveal d4 mt-12">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="eyebrow text-[11px]" style="color:var(--text-dim);">MY RECENT REQUESTS</h2>
+        <a href="#" class="focusable mono text-[10.5px] rounded px-2 py-1 transition-colors hover:text-[#FB923C]" style="color:var(--text-faint);">VIEW&nbsp;ALL&nbsp;→</a>
+      </div>
+
+      <div class="surface rounded-2xl overflow-hidden">
+
+        <!-- Row 1: Pending -->
+        <div class="recent-row flex items-center gap-4 px-5 sm:px-6 py-5">
+          <span class="grid place-items-center h-10 w-10 rounded-lg surface-2 shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-faint);">
+              <path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M5 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+            </svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-[15px] font-600 truncate" style="font-weight:600;">Lunch Reservation</span>
+            </div>
+            <p class="mono text-[11.5px] mt-1 truncate" style="color:var(--text-dim);">12:00 PM&nbsp;-&nbsp;12:30 PM&nbsp;·&nbsp;30 min</p>
+          </div>
+          <span class="mono text-[11px] hidden sm:block shrink-0" style="color:var(--text-faint);">4m&nbsp;ago</span>
+          <span class="pill pill-amber inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] shrink-0">
+            <span class="h-1.5 w-1.5 rounded-full dot dot-amber pulse"></span>PENDING
+          </span>
+        </div>
+
+        <div class="h-px mx-5 sm:mx-6" style="background:var(--hairline);"></div>
+
+        <!-- Row 2: Approved -->
+        <div class="recent-row flex items-center gap-4 px-5 sm:px-6 py-5">
+          <span class="grid place-items-center h-10 w-10 rounded-lg surface-2 shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-faint);">
+              <path d="M3 5v14"/><path d="M6 5v14"/><path d="M10 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/>
+            </svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <span class="text-[15px] font-600 truncate block" style="font-weight:600;">Zebra Tracking</span>
+            <p class="mono text-[11.5px] mt-1 truncate" style="color:var(--text-dim);">Check Out&nbsp;·&nbsp;Zebra #12&nbsp;·&nbsp;Good</p>
+          </div>
+          <span class="mono text-[11px] hidden sm:block shrink-0" style="color:var(--text-faint);">1h&nbsp;ago</span>
+          <span class="pill pill-emerald inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] shrink-0">
+            <span class="h-1.5 w-1.5 rounded-full dot dot-emerald"></span>APPROVED
+          </span>
+        </div>
+
+        <div class="h-px mx-5 sm:mx-6" style="background:var(--hairline);"></div>
+
+        <!-- Row 3: Responded (with manager note) -->
+        <div class="recent-row px-5 sm:px-6 py-5">
+          <div class="flex items-center gap-4">
+            <span class="grid place-items-center h-10 w-10 rounded-lg surface-2 shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-faint);">
+                <rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>
+              </svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <span class="text-[15px] font-600 truncate block" style="font-weight:600;">Floor Time &amp; Wave Picking</span>
+              <p class="mono text-[11.5px] mt-1 truncate" style="color:var(--text-dim);">Wave Picking&nbsp;·&nbsp;10:30 AM–11:15 AM</p>
+            </div>
+            <span class="mono text-[11px] hidden sm:block shrink-0" style="color:var(--text-faint);">3h&nbsp;ago</span>
+            <span class="pill pill-blue inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] shrink-0">
+              <span class="h-1.5 w-1.5 rounded-full dot dot-blue"></span>RESPONDED
+            </span>
+          </div>
+          <!-- Manager note -->
+          <div class="mt-3.5 ml-0 sm:ml-14 flex items-start gap-2.5 rounded-xl px-3.5 py-3" style="background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.18);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#93C5FD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+            </svg>
+            <p class="text-[12.5px] leading-snug" style="color:var(--text-dim);">
+              <span class="font-600" style="font-weight:600; color:#BFDBFE;">Manager:</span>
+              “Sounds good — thanks for logging it.”
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer line -->
+    <div class="reveal d5 mt-10 flex flex-col sm:flex-row items-center justify-between gap-3 pt-6" style="border-top:1px solid var(--hairline);">
+      <span class="mono text-[10.5px]" style="color:var(--text-faint);">VISTA AUCTION&nbsp;·&nbsp;PICKUPS&nbsp;·&nbsp;REQUEST HUB</span>
+      <span class="mono text-[10.5px]" style="color:var(--text-faint);">v2.4&nbsp;·&nbsp;STATION PK-04</span>
+    </div>
+  </main>
+
+  <!-- ============ OPTION BADGE ============ -->
+  <div class="fixed bottom-4 right-4 z-50 select-none">
+    <div class="flex items-center gap-2 rounded-full px-3.5 py-2 backdrop-blur-md"
+         style="background:rgba(14,17,22,0.85); border:1px solid var(--hairline-strong); box-shadow:0 8px 24px -12px rgba(0,0,0,0.8);">
+      <span class="h-1.5 w-1.5 rounded-full" style="background:var(--ember); box-shadow:0 0 8px rgba(251,146,60,0.8);"></span>
+      <span class="mono text-[10px]" style="color:var(--text-dim); letter-spacing:0.06em;">OPTION 1&nbsp;·&nbsp;OBSIDIAN CONSOLE</span>
+    </div>
+  </div>
+
+  <script>
+    // Live clock — purely cosmetic; page is complete without it
+    (function () {
+      var el = document.getElementById('clock');
+      if (!el) return;
+      function tick() {
+        var d = new Date();
+        var h = d.getHours(), m = d.getMinutes();
+        var ap = h >= 12 ? 'PM' : 'AM';
+        h = h % 12; if (h === 0) h = 12;
+        el.textContent = h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
+      }
+      tick();
+      setInterval(tick, 1000 * 20);
+    })();
+  </script>
+</body>
+</html>

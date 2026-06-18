@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pickups Staff Portal — Design Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg:#0c0d10; --panel:#15171c; --line:rgba(255,255,255,.09); --ink:#f4f4f5; --muted:#9499a4; --ember:#fb923c; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:radial-gradient(1200px 600px at 50% -10%, #16181e, var(--bg)); color:var(--ink); min-height:100vh; padding:48px 24px 80px; }
+  .wrap { max-width:1320px; margin:0 auto; }
+  header { text-align:center; margin-bottom:44px; }
+  .eyebrow { display:inline-flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:.22em; text-transform:uppercase; color:var(--ember); background:rgba(251,146,60,.1); border:1px solid rgba(251,146,60,.25); padding:7px 14px; border-radius:999px; margin-bottom:18px; }
+  h1 { font-size:clamp(30px,5vw,52px); font-weight:900; letter-spacing:-.03em; line-height:1; }
+  .sub { color:var(--muted); margin-top:14px; font-size:16px; font-weight:500; }
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:28px; margin-top:8px; }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:22px; overflow:hidden; transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease; }
+  .card:hover { transform:translateY(-4px); border-color:rgba(251,146,60,.4); box-shadow:0 30px 60px -30px rgba(0,0,0,.8); }
+  .thumb { position:relative; height:430px; overflow:hidden; background:#000; border-bottom:1px solid var(--line); }
+  .thumb iframe { position:absolute; top:0; left:0; width:1440px; height:1900px; border:0; transform:scale(.435); transform-origin:top left; pointer-events:none; background:#fff; }
+  .thumb a.cover { position:absolute; inset:0; z-index:2; }
+  .meta { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:18px 22px; }
+  .meta .name { font-size:18px; font-weight:800; letter-spacing:-.01em; }
+  .meta .tag { font-size:13px; color:var(--muted); font-weight:500; margin-top:3px; }
+  .open { flex-shrink:0; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#0c0d10; background:var(--ember); padding:11px 16px; border-radius:11px; text-decoration:none; transition:transform .15s ease, filter .15s ease; }
+  .open:hover { transform:translateY(-1px); filter:brightness(1.07); }
+  .num { position:absolute; top:14px; left:14px; z-index:3; font-size:12px; font-weight:900; letter-spacing:.05em; background:rgba(0,0,0,.6); backdrop-filter:blur(6px); border:1px solid var(--line); color:#fff; padding:6px 11px; border-radius:9px; }
+  footer { text-align:center; color:var(--muted); font-size:13px; margin-top:46px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">Vista Auction · Pickups</div>
+      <h1>Staff Portal — Design Options</h1>
+      <p class="sub">Four directions for the request hub. Hover to preview, click “Open full” to explore each at full size, then tell me which you like best.</p>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div class="thumb">
+          <span class="num">01</span>
+          <iframe src="option-1-obsidian.html" title="Obsidian Console" scrolling="no"></iframe>
+          <a class="cover" href="option-1-obsidian.html" target="_blank" rel="noopener" aria-label="Open Obsidian Console"></a>
+        </div>
+        <div class="meta">
+          <div><div class="name">Obsidian Console</div><div class="tag">Premium dark · Linear / Vercel energy</div></div>
+          <a class="open" href="option-1-obsidian.html" target="_blank" rel="noopener">Open full ↗</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="thumb">
+          <span class="num">02</span>
+          <iframe src="option-2-atelier.html" title="Atelier Light" scrolling="no"></iframe>
+          <a class="cover" href="option-2-atelier.html" target="_blank" rel="noopener" aria-label="Open Atelier Light"></a>
+        </div>
+        <div class="meta">
+          <div><div class="name">Atelier Light</div><div class="tag">Editorial · Stripe / Apple whitespace</div></div>
+          <a class="open" href="option-2-atelier.html" target="_blank" rel="noopener">Open full ↗</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="thumb">
+          <span class="num">03</span>
+          <iframe src="option-3-dispatch.html" title="Dispatch" scrolling="no"></iframe>
+          <a class="cover" href="option-3-dispatch.html" target="_blank" rel="noopener" aria-label="Open Dispatch"></a>
+        </div>
+        <div class="meta">
+          <div><div class="name">Dispatch</div><div class="tag">Bold industrial signage · kiosk-first</div></div>
+          <a class="open" href="option-3-dispatch.html" target="_blank" rel="noopener">Open full ↗</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="thumb">
+          <span class="num">04</span>
+          <iframe src="option-4-tactile.html" title="Warm Tactile" scrolling="no"></iframe>
+          <a class="cover" href="option-4-tactile.html" target="_blank" rel="noopener" aria-label="Open Warm Tactile"></a>
+        </div>
+        <div class="meta">
+          <div><div class="name">Warm Tactile</div><div class="tag">Boutique warmth · bone & clay</div></div>
+          <a class="open" href="option-4-tactile.html" target="_blank" rel="noopener">Open full ↗</a>
+        </div>
+      </div>
+    </div>
+
+    <footer>Keep all five files in the same folder so the previews load. Each option file also works on its own.</footer>
+  </div>
+</body>
+</html>
