@@ -57,18 +57,19 @@ USING (true);
 
 
 -- ============================================================================
--- REAL PER-MANAGER ACCOUNTS (separate from HR / Supabase auth users)
+-- PER-MANAGER ACCOUNTS (username/password; separate from HR / Supabase auth)
 -- ============================================================================
--- Passwords are bcrypt-hashed via pgcrypto and never leave the database; all
--- auth happens through SECURITY DEFINER RPCs. The table itself has RLS enabled
--- with no policies, so the anon/auth keys cannot read the hashes directly.
+-- Passwords are bcrypt-hashed via pgcrypto and never leave the database; auth
+-- happens through a SECURITY DEFINER RPC. The table has RLS enabled with no
+-- policies, so the anon/auth keys cannot read the hashes directly. Accounts
+-- are provisioned by an admin (seeded below) — there is no self-signup.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
 CREATE TABLE IF NOT EXISTS pickups_managers (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -76,59 +77,35 @@ CREATE TABLE IF NOT EXISTS pickups_managers (
 );
 
 ALTER TABLE pickups_managers ENABLE ROW LEVEL SECURITY;
--- (no policies => no direct client access; use the RPCs below)
+-- (no policies => no direct client access; use the RPC below)
 
--- Sign up requires the department invite code (default: 'vista-pickups').
-CREATE OR REPLACE FUNCTION pickups_manager_signup(
-    p_name TEXT, p_email TEXT, p_password TEXT, p_invite TEXT
-)
+CREATE OR REPLACE FUNCTION pickups_manager_login(p_username TEXT, p_password TEXT)
 RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, extensions AS $$
 DECLARE
-    v_email TEXT := lower(trim(p_email));
-    v_id UUID;
-BEGIN
-    IF p_invite IS DISTINCT FROM 'vista-pickups' THEN
-        RETURN json_build_object('error', 'Invalid invite code');
-    END IF;
-    IF coalesce(trim(p_name), '') = '' THEN
-        RETURN json_build_object('error', 'Name is required');
-    END IF;
-    IF v_email = '' OR position('@' in v_email) = 0 THEN
-        RETURN json_build_object('error', 'A valid email is required');
-    END IF;
-    IF length(coalesce(p_password, '')) < 6 THEN
-        RETURN json_build_object('error', 'Password must be at least 6 characters');
-    END IF;
-    IF EXISTS (SELECT 1 FROM pickups_managers WHERE email = v_email) THEN
-        RETURN json_build_object('error', 'An account with that email already exists');
-    END IF;
-    INSERT INTO pickups_managers (name, email, password_hash)
-    VALUES (trim(p_name), v_email, crypt(p_password, gen_salt('bf')))
-    RETURNING id INTO v_id;
-    RETURN json_build_object('id', v_id, 'name', trim(p_name), 'email', v_email);
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION pickups_manager_login(p_email TEXT, p_password TEXT)
-RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, extensions AS $$
-DECLARE
-    v_email TEXT := lower(trim(p_email));
+    v_username TEXT := lower(trim(p_username));
     rec RECORD;
 BEGIN
-    SELECT id, name, email, password_hash, active INTO rec
-    FROM pickups_managers WHERE email = v_email;
+    SELECT id, name, username, password_hash, active INTO rec
+    FROM pickups_managers WHERE username = v_username;
     IF rec.id IS NULL OR rec.active = FALSE
        OR rec.password_hash <> crypt(p_password, rec.password_hash) THEN
-        RETURN json_build_object('error', 'Invalid email or password');
+        RETURN json_build_object('error', 'Invalid username or password');
     END IF;
     UPDATE pickups_managers SET last_login = now() WHERE id = rec.id;
-    RETURN json_build_object('id', rec.id, 'name', rec.name, 'email', rec.email);
+    RETURN json_build_object('id', rec.id, 'name', rec.name, 'username', rec.username);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION pickups_manager_signup(TEXT, TEXT, TEXT, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION pickups_manager_login(TEXT, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION pickups_manager_signup(TEXT, TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION pickups_manager_login(TEXT, TEXT) TO anon, authenticated;
+
+-- Provision manager accounts (idempotent; re-running resets the password).
+INSERT INTO pickups_managers (name, username, password_hash) VALUES
+  ('Tom Bentkovsky',   'tomb',  crypt('tombentkovsky123',    gen_salt('bf'))),
+  ('Mark Borishkevich','markb', crypt('markborishkevich123', gen_salt('bf'))),
+  ('Kate Kravchenko',  'katek', crypt('katekravchenko123',   gen_salt('bf')))
+ON CONFLICT (username) DO UPDATE
+  SET password_hash = EXCLUDED.password_hash,
+      name = EXCLUDED.name,
+      active = TRUE;
