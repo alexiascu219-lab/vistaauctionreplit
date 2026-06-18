@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Lock, User, ArrowRight, ArrowLeft } from 'lucide-react';
-import { supabase } from '../supabaseClient';
 import PickupsHeader from '../components/PickupsHeader';
 import Toast from '../components/Toast';
-import { MANAGER_SESSION_KEY } from '../config/pickupsConfig';
+import { getSession, login as apiLogin } from '../lib/pickupsApi';
 
 const PickupsLogin = () => {
   const navigate = useNavigate();
@@ -14,14 +13,9 @@ const PickupsLogin = () => {
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Already signed in? Skip straight to the queue.
+  // Already signed in? Skip straight to the dashboard.
   useEffect(() => {
-    try {
-      const session = JSON.parse(localStorage.getItem(MANAGER_SESSION_KEY) || 'null');
-      if (session?.authed) navigate('/pickups/manager', { replace: true });
-    } catch {
-      /* ignore */
-    }
+    if (getSession()?.token) navigate('/pickups/manager', { replace: true });
   }, [navigate]);
 
   const handleSubmit = async (e) => {
@@ -33,23 +27,10 @@ const PickupsLogin = () => {
     }
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.rpc('pickups_manager_login', {
-        p_username: username,
-        p_password: password,
-      });
-      if (error) throw error;
-      if (data?.error) {
-        setToast({ message: data.error, type: 'error' });
-        return;
-      }
-      localStorage.setItem(
-        MANAGER_SESSION_KEY,
-        JSON.stringify({ authed: true, id: data.id, name: data.name, username: data.username, at: Date.now() }),
-      );
+      await apiLogin(username, password);
       navigate('/pickups/manager', { replace: true });
     } catch (err) {
-      console.error('Pickups manager login error:', err);
-      setToast({ message: 'Something went wrong. Please try again.', type: 'error' });
+      setToast({ message: err.message || 'Something went wrong. Please try again.', type: 'error' });
     } finally {
       setSubmitting(false);
     }

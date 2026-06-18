@@ -120,3 +120,34 @@ export function summarizeRequest(req) {
       return '';
   }
 }
+
+// ---- Permissions -----------------------------------------------------------
+// Each request type can grant these actions to a sub-manager.
+export const PERMISSION_ACTIONS = [
+  { key: 'view', label: 'View' },
+  { key: 'approve', label: 'Approve' },
+  { key: 'deny', label: 'Deny' },
+  { key: 'respond', label: 'Respond' },
+];
+
+// Admins (the seeded managers) implicitly have everything. Sub-managers are
+// gated by their stored permissions object.
+export function isAdmin(session) {
+  return session?.role === 'admin';
+}
+
+export function hasPerm(session, typeId, action) {
+  if (isAdmin(session)) return true;
+  return !!session?.permissions?.[typeId]?.[action];
+}
+
+export function canViewType(session, typeId) {
+  if (isAdmin(session)) return true;
+  const p = session?.permissions?.[typeId];
+  return !!(p && (p.view || p.approve || p.deny || p.respond));
+}
+
+export function canManageEmployees(session) {
+  return isAdmin(session) || !!session?.permissions?.manage_employees;
+}
+
