@@ -51,7 +51,7 @@ const StatusPill = ({ status }) => {
   const p = STATUS_PILL[status] || STATUS_PILL.Pending;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-wide ${p.cls}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide ${p.cls}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${p.dot}`} />
       {status}
@@ -245,12 +245,6 @@ const Pickups = () => {
               <span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-orange-600/90" />
             </span>
           </h1>
-
-          <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-500">
-            Everything the floor needs, in one calm place. Reserve lunch, log floor time, and track scanners — then
-            watch requests move from <span className="font-medium text-slate-700">pending</span> to{' '}
-            <span className="font-medium text-slate-700">approved</span> in real time.
-          </p>
         </section>
 
         {/* Identity bar */}
@@ -316,132 +310,122 @@ const Pickups = () => {
           )}
         </section>
 
-        {/* Request cards */}
-        <section className="mt-14 sm:mt-16">
-          <div className="flex items-end justify-between gap-4">
-            <div className="pk-rise" style={{ animationDelay: '.1s' }}>
-              <h2 className="font-fraunces text-[26px] sm:text-[30px] font-medium tracking-tight text-slate-900">
+        {/* Actions (stacked) + recent requests (side panel) */}
+        <section className="mt-12 grid items-start gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
+          {/* Left: stacked request actions */}
+          <div>
+            <div className="flex items-end justify-between gap-4 pk-rise" style={{ animationDelay: '.1s' }}>
+              <h2 className="font-fraunces text-[24px] sm:text-[28px] font-medium tracking-tight text-slate-900">
                 Start a request
               </h2>
-              <p className="mt-1.5 text-[14.5px] text-slate-500">Three things the floor handles every day.</p>
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[12.5px] font-medium text-slate-400">
+                <span className="tnum">3</span> available
+              </span>
             </div>
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-[12.5px] font-medium text-slate-400">
-              <span className="tnum">3</span> available
-            </span>
+
+            <div className="mt-5 flex flex-col gap-4">
+              {REQUEST_TYPES.map((type, i) => {
+                const Icon = ICONS[type.icon];
+                return (
+                  <button
+                    key={type.id}
+                    onClick={() => requestForm(type)}
+                    className="group pk-lift pk-rise relative flex items-center gap-4 overflow-hidden rounded-3xl border border-stone-200 bg-white p-5 text-left shadow-soft hover:border-stone-300 hover:shadow-lift focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/30 sm:gap-5 sm:p-6"
+                    style={{ animationDelay: `${0.14 + i * 0.06}s` }}
+                  >
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-stone-200/80 to-transparent" />
+                    <span className="pk-icon-tile grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-stone-200 bg-[#FBFBFA] text-slate-900">
+                      <Icon size={26} strokeWidth={1.6} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-fraunces text-[20px] font-medium tracking-tight text-slate-900">{type.title}</h3>
+                      <p className="mt-1 text-[13.5px] leading-relaxed text-slate-500">{type.blurb}</p>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-3">
+                      <span className="hidden text-[13px] font-semibold text-slate-900 md:inline">New request</span>
+                      <span className="grid h-9 w-9 place-items-center rounded-full border border-stone-200 bg-white text-slate-400 transition group-hover:border-orange-200 group-hover:text-orange-600">
+                        <ArrowRight size={16} className="pk-nudge" />
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="mt-7 grid grid-cols-1 gap-5 md:grid-cols-3">
-            {REQUEST_TYPES.map((type, i) => {
-              const Icon = ICONS[type.icon];
-              return (
-                <button
-                  key={type.id}
-                  onClick={() => requestForm(type)}
-                  className="group pk-lift pk-rise relative flex flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white p-6 text-left shadow-soft hover:border-stone-300 hover:shadow-lift focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/30"
-                  style={{ animationDelay: `${0.14 + i * 0.06}s` }}
-                >
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-stone-200/80 to-transparent" />
-                  <div className="flex items-start justify-between">
-                    <span className="pk-icon-tile grid h-14 w-14 place-items-center rounded-2xl border border-stone-200 bg-[#FBFBFA] text-slate-900">
-                      <Icon size={28} strokeWidth={1.6} />
-                    </span>
-                    <span className="grid h-8 w-8 place-items-center rounded-full border border-stone-200 bg-white text-slate-400 transition group-hover:border-orange-200 group-hover:text-orange-600">
-                      <ArrowRight size={16} className="pk-nudge" />
-                    </span>
-                  </div>
-                  <h3 className="font-fraunces mt-6 text-[22px] font-medium tracking-tight text-slate-900">{type.title}</h3>
-                  <p className="mt-2 text-[14.5px] leading-relaxed text-slate-500">{type.blurb}</p>
-                  <div className="mt-6 flex items-center gap-2 text-[13.5px] font-semibold text-slate-900">
-                    New request <span className="pk-nudge text-orange-600">→</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* My recent requests */}
-        {identity && (
-          <section className="mt-16 sm:mt-20">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <h2 className="font-fraunces text-[26px] sm:text-[30px] font-medium tracking-tight text-slate-900">
-                  {identity.name.split(' ')[0]}'s Recent Requests
-                </h2>
-                <p className="mt-1.5 text-[14.5px] text-slate-500">Submitted from this station.</p>
+          {/* Right: recent requests panel */}
+          <aside className="pk-rise lg:sticky lg:top-24" style={{ animationDelay: '.2s' }}>
+            <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-soft">
+              <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
+                <h2 className="font-fraunces text-[19px] font-medium tracking-tight text-slate-900">Recent Requests</h2>
+                {identity && (
+                  <button
+                    onClick={fetchMyRequests}
+                    title="Refresh"
+                    className="pk-press grid h-8 w-8 place-items-center rounded-full border border-stone-200 bg-white text-slate-400 hover:border-stone-300 hover:text-slate-700"
+                  >
+                    <RefreshCw size={14} />
+                  </button>
+                )}
               </div>
-              <button
-                onClick={fetchMyRequests}
-                className="pk-press group inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-900 shadow-soft hover:border-stone-300 hover:shadow-lift"
-              >
-                <RefreshCw size={14} className="text-slate-400" /> Refresh
-              </button>
-            </div>
 
-            <div className="mt-7 overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-soft">
-              {myRequests.length === 0 ? (
-                <div className="px-6 py-12 text-center">
-                  <p className="text-[14.5px] font-medium text-slate-400">
-                    No requests yet. Pick one of the three above to get started.
-                  </p>
+              {!identity ? (
+                <div className="px-5 py-12 text-center">
+                  <span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl border border-stone-200 bg-[#FBFBFA] text-slate-300">
+                    <Clock size={20} />
+                  </span>
+                  <p className="mt-3 text-[13.5px] font-medium text-slate-400">Choose your name to see your requests here.</p>
+                </div>
+              ) : myRequests.length === 0 ? (
+                <div className="px-5 py-12 text-center">
+                  <p className="text-[13.5px] font-medium text-slate-400">No requests yet.</p>
                 </div>
               ) : (
-                myRequests.map((req, idx) => {
-                  const type = TYPE_MAP[req.type];
-                  const Icon = ICONS[type?.icon] || ClipboardList;
-                  const hasNote = !!req.manager_response;
-                  return (
-                    <React.Fragment key={req.id}>
-                      {idx > 0 && <div className="pk-hairline mx-6" />}
-                      <div
-                        className={`group relative flex flex-col gap-4 p-5 transition-colors hover:bg-[#FBFBFA] sm:flex-row sm:gap-5 sm:p-6 ${
-                          hasNote ? 'sm:items-start' : 'sm:items-center'
-                        }`}
-                      >
-                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-stone-200 bg-[#FBFBFA] text-slate-900">
-                          <Icon size={22} strokeWidth={1.7} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[15.5px] font-semibold text-slate-900">{type?.title}</p>
-                          <p className="mt-1 truncate text-[13.5px] text-slate-500 tnum">{summarizeRequest(req)}</p>
-                          {hasNote && (
-                            <div className="mt-3 flex items-start gap-3 rounded-2xl border border-stone-200 bg-[#FBFBFA] px-4 py-3">
-                              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700">
-                                {(req.responded_by || 'M').charAt(0).toUpperCase()}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="text-[11px] font-semibold tracky text-slate-400">
+                <div className="max-h-[62vh] overflow-y-auto p-2">
+                  {myRequests.map((req) => {
+                    const type = TYPE_MAP[req.type];
+                    const Icon = ICONS[type?.icon] || ClipboardList;
+                    return (
+                      <div key={req.id} className="rounded-2xl p-3 transition-colors hover:bg-[#FBFBFA]">
+                        <div className="flex items-start gap-3">
+                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-stone-200 bg-[#FBFBFA] text-slate-900">
+                            <Icon size={18} strokeWidth={1.7} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate text-[14px] font-semibold text-slate-900">{type?.title}</p>
+                              <StatusPill status={req.status} />
+                            </div>
+                            <p className="mt-0.5 truncate text-[12.5px] text-slate-500 tnum">{summarizeRequest(req)}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-400 tnum">{formatTimeAgo(req.created_at)}</p>
+                            {req.manager_response && (
+                              <div className="mt-2 rounded-xl border border-stone-200 bg-[#FBFBFA] px-3 py-2">
+                                <p className="text-[10px] font-semibold tracky text-slate-400">
                                   {(req.responded_by || 'Manager').toUpperCase()}
                                 </p>
-                                <p className="mt-0.5 text-[13.5px] leading-snug text-slate-700">
+                                <p className="mt-0.5 text-[12.5px] leading-snug text-slate-700">
                                   &ldquo;{req.manager_response}&rdquo;
                                 </p>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between gap-4 sm:justify-end">
-                          <span className="whitespace-nowrap text-[12.5px] text-slate-400 tnum">
-                            {formatTimeAgo(req.created_at)}
-                          </span>
-                          <StatusPill status={req.status} />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </React.Fragment>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
             </div>
 
             {/* Legend */}
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 px-1 text-[12px] text-slate-400">
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-[11.5px] text-slate-400">
               <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />Pending</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Approved</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-red-500" />Denied</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" />Responded</span>
             </div>
-          </section>
-        )}
+          </aside>
+        </section>
 
         {/* Footer */}
         <footer className="mt-20">
