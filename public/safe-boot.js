@@ -1,22 +1,42 @@
-// TRACK BOOT START & ERROR HANDLING
+// Pre-mount safety net. Shows the emergency recovery UI ONLY when the app
+// genuinely fails to boot — not for benign runtime errors after it has mounted
+// (e.g. the opaque cross-origin "Script error." that browser extensions and the
+// mobile share sheet throw, or routine network/promise rejections).
 (function () {
+    function appMounted() {
+        var root = document.getElementById('root');
+        return !!(root && root.children && root.children.length > 0);
+    }
+
+    function showRecovery(codeText) {
+        // Never hijack a working app.
+        if (appMounted()) return;
+        var loader = document.getElementById('vista-boot-loader');
+        if (loader) loader.style.display = 'none';
+        var rec = document.getElementById('emergency-recovery');
+        if (rec) {
+            rec.style.display = 'flex';
+            var code = document.getElementById('recovery-code');
+            if (code) code.innerText = String(codeText == null ? '' : codeText).substring(0, 140);
+        }
+    }
+
+    // Best-effort boot breadcrumb
     try {
-        const startLog = { m: 'BOOT_CHECK_START', t: new Date().toISOString() };
-        const raw = localStorage.getItem('RESCUE_LOG');
-        const logs = raw ? JSON.parse(raw) : [];
-        logs.push(startLog);
+        var raw = localStorage.getItem('RESCUE_LOG');
+        var logs = raw ? JSON.parse(raw) : [];
+        logs.push({ m: 'BOOT_CHECK_START', t: new Date().toISOString() });
         localStorage.setItem('RESCUE_LOG', JSON.stringify(logs.slice(-3)));
     } catch (e) { }
 
-    let rescueTimeout = null;
+    var rescueTimeout = null;
     function logRescueError(errData) {
-        if (rescueTimeout) return; // Basic throttle
-        rescueTimeout = setTimeout(() => { rescueTimeout = null; }, 500);
-
+        if (rescueTimeout) return; // basic throttle
+        rescueTimeout = setTimeout(function () { rescueTimeout = null; }, 500);
         try {
-            let logs = [];
+            var logs = [];
             try {
-                const raw = localStorage.getItem('RESCUE_LOG');
+                var raw = localStorage.getItem('RESCUE_LOG');
                 logs = raw ? JSON.parse(raw) : [];
             } catch (e) { logs = []; }
             logs.push(errData);
@@ -27,60 +47,49 @@
     }
 
     window.onerror = function (msg, url, line, col, err) {
-        const data = { m: msg, u: url, l: line, c: col, s: err ? err.stack : 'N/A', t: new Date().toISOString() };
-        logRescueError(data);
-        console.error('🚀 VISTA ERROR:', data);
+        logRescueError({ m: msg, u: url, l: line, c: col, s: err ? err.stack : 'N/A', t: new Date().toISOString() });
+        console.error('Vista error:', msg, url, line);
 
-        // SHOW ON SCREEN IMMEDIATELY
-        var rec = document.getElementById('emergency-recovery');
-        if (rec) {
-            rec.style.display = 'flex';
-            var code = document.getElementById('recovery-code');
-            if (code) code.innerText = "CRASH: " + data.m + " @ " + data.u + ":" + data.l;
-        }
+        // Opaque cross-origin "Script error." (no real error object) is noise from
+        // extensions / third-party scripts — never treat it as an app crash.
+        var opaque = (msg === 'Script error.' || msg === 'Script error') && !err;
+
+        // Only take over the screen if the app never mounted in the first place.
+        if (!opaque) showRecovery('CRASH: ' + msg + ' @ ' + (url || '') + ':' + (line || 0));
+        return false;
     };
 
     window.onunhandledrejection = function (e) {
-        const data = { m: 'Promise Rejection', r: e.reason, t: new Date().toISOString() };
-        logRescueError(data);
-        console.error('🚀 VISTA PROMISE ERROR:', data);
-
-        var rec = document.getElementById('emergency-recovery');
-        if (rec) {
-            rec.style.display = 'flex';
-            var code = document.getElementById('recovery-code');
-            if (code) code.innerText = "PROMISE_CRASH: " + data.r;
-        }
+        var reason = e && e.reason;
+        logRescueError({ m: 'Promise Rejection', r: String(reason), t: new Date().toISOString() });
+        console.error('Vista promise rejection:', reason);
+        // Network/Supabase promise rejections are common and non-fatal. Only show
+        // recovery if the app hasn't booted at all (showRecovery guards on mount).
+        showRecovery('PROMISE_CRASH: ' + String(reason).substring(0, 90));
     };
 
-    // Fail-safe: If #root is still empty after 6 seconds, show recovery UI
+    // Boot-stall fail-safe: if React still hasn't rendered after 8s, offer recovery.
     setTimeout(function () {
-        var root = document.getElementById('root');
-        var loader = document.getElementById('vista-boot-loader');
-        var logs = localStorage.getItem('RESCUE_LOG');
-
-        // If root is still empty it means React hasn't rendered anything
-        if (root && root.innerHTML === "") {
-            if (loader) loader.style.display = 'none';
-            var rec = document.getElementById('emergency-recovery');
-            if (rec) rec.style.display = 'flex';
-            var code = document.getElementById('recovery-code');
-            if (code) code.innerText = logs ? logs.substring(0, 100) : 'BOOT_STALL: Supabase or JS execution is hanging.';
+        if (!appMounted()) {
+            var logs = '';
+            try { logs = localStorage.getItem('RESCUE_LOG') || ''; } catch (e) { }
+            showRecovery(logs ? logs.substring(0, 100) : 'BOOT_STALL: JS execution is hanging.');
         }
-    }, 6000);
+    }, 8000);
 
-    // Track network errors for scripts
+    // Main-bundle / script load failures (only meaningful before mount).
     window.addEventListener('error', function (e) {
         if (e.target && e.target.tagName === 'SCRIPT') {
             logRescueError({ m: 'Script Load Error', u: e.target.src, t: new Date().toISOString() });
+            showRecovery('SCRIPT_LOAD_FAIL: ' + (e.target.src || ''));
         }
     }, true);
 
-    // Attach Recovery Button Listener (safer than inline onclick)
-    window.addEventListener('DOMContentLoaded', () => {
-        const btn = document.getElementById('emergency-reset-btn');
+    // Recovery button: purge local cache + reload.
+    window.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('emergency-reset-btn');
         if (btn) {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', function () {
                 try { localStorage.clear(); } catch (e) { }
                 window.location.reload();
             });
