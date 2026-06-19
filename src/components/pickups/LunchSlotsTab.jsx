@@ -88,7 +88,8 @@ const LunchSlotsTab = ({ session }) => {
         <div>
           <h3 className="font-black text-slate-900 text-lg">Lunch slots</h3>
           <p className="text-sm text-slate-500 font-medium">
-            Edit the time ranges and how many people can reserve each one.
+            Set the start times and how many people can reserve each one. Staff pick a duration and the end time fills in
+            automatically.
           </p>
         </div>
       </div>
@@ -99,7 +100,7 @@ const LunchSlotsTab = ({ session }) => {
           value={draft.label}
           onChange={(e) => setDraft({ ...draft, label: e.target.value })}
           onKeyDown={(e) => e.key === 'Enter' && addSlot()}
-          placeholder="e.g. 1:00 PM - 1:30 PM"
+          placeholder="e.g. 1:00 PM"
           className={`${fieldCls} flex-1`}
         />
         <div className="flex items-center gap-2">

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import Toast from '../components/Toast';
+import TimePicker12 from '../components/pickups/TimePicker12';
 import { fetchLunchSlotsPublic } from '../lib/pickupsApi';
 import { REQUEST_TYPES, TYPE_MAP, summarizeRequest } from '../config/pickupsConfig';
 
@@ -41,6 +42,36 @@ const formatTimeAgo = (iso) => {
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.round(hrs / 24)}d ago`;
+};
+
+// ---- Lunch time helpers: compute the end time from a start + duration -------
+const parseTimeToMinutes = (s) => {
+  const m = String(s || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10) % 12;
+  if (/pm/i.test(m[3])) h += 12;
+  return h * 60 + parseInt(m[2], 10);
+};
+const formatMinutes = (min) => {
+  min = ((min % 1440) + 1440) % 1440;
+  let h = Math.floor(min / 60);
+  const mm = min % 60;
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h %= 12;
+  if (h === 0) h = 12;
+  return `${h}:${String(mm).padStart(2, '0')} ${ap}`;
+};
+const durationToMinutes = (d) => {
+  if (!d) return 30;
+  if (/hour/i.test(d)) return 60;
+  const m = String(d).match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : 30;
+};
+// "11:00 AM" + "45 min" -> "11:00 AM – 11:45 AM"
+const computeRange = (start, duration) => {
+  const sm = parseTimeToMinutes(start);
+  if (sm == null) return start || '';
+  return `${start} – ${formatMinutes(sm + durationToMinutes(duration))}`;
 };
 
 const fieldCls =
@@ -192,7 +223,16 @@ const Pickups = () => {
     setForm({});
   };
 
-  const setField = (name, value) => setForm((prev) => ({ ...prev, [name]: value }));
+  const setField = (name, value) =>
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      // Lunch: keep the displayed slot range in sync with start time + duration.
+      if (activeType?.id === 'lunch') {
+        if (name === 'slot_start') next.slot = computeRange(value, next.duration);
+        else if (name === 'duration' && next.slot_start) next.slot = computeRange(next.slot_start, value);
+      }
+      return next;
+    });
 
   const goToConfirm = () => {
     const missing = activeType.fields.filter((f) => f.required && !form[f.name]);
@@ -398,6 +438,11 @@ const Pickups = () => {
                             </div>
                             <p className="mt-0.5 truncate text-[12.5px] text-slate-500 tnum">{summarizeRequest(req)}</p>
                             <p className="mt-0.5 text-[11px] text-slate-400 tnum">{formatTimeAgo(req.created_at)}</p>
+                            {req.type === 'floor_wave' && req.responded_by && ['Approved', 'Denied'].includes(req.status) && (
+                              <p className="mt-1 text-[11.5px] font-medium text-slate-500">
+                                {req.status} by <span className="font-semibold text-slate-700">{req.responded_by}</span>
+                              </p>
+                            )}
                             {req.manager_response && (
                               <div className="mt-2 rounded-xl border border-stone-200 bg-[#FBFBFA] px-3 py-2">
                                 <p className="text-[10px] font-semibold tracky text-slate-400">
@@ -554,11 +599,15 @@ const Pickups = () => {
                           {field.label} {field.required && <span className="text-orange-600">*</span>}
                         </label>
                         {field.type === 'lunch_slot' ? (
-                          <select value={form[field.name] || ''} onChange={(e) => setField(field.name, e.target.value)} className={fieldCls}>
-                            <option value="">{lunchSlots.length ? 'Select a slot…' : 'Loading slots…'}</option>
+                          <select
+                            value={form.slot_start || ''}
+                            onChange={(e) => setField('slot_start', e.target.value)}
+                            className={fieldCls}
+                          >
+                            <option value="">{lunchSlots.length ? 'Select a start time…' : 'Loading slots…'}</option>
                             {lunchSlots.map((s) => (
                               <option key={s.id} value={s.label} disabled={s.left <= 0}>
-                                {s.label} — {s.left > 0 ? `${s.left} slot${s.left === 1 ? '' : 's'} left` : 'Full'}
+                                {computeRange(s.label, form.duration)} — {s.left > 0 ? `${s.left} slot${s.left === 1 ? '' : 's'} left` : 'Full'}
                               </option>
                             ))}
                           </select>
@@ -569,6 +618,8 @@ const Pickups = () => {
                               <option key={opt} value={opt}>{opt}</option>
                             ))}
                           </select>
+                        ) : field.type === 'time12' ? (
+                          <TimePicker12 value={form[field.name] || ''} onChange={(v) => setField(field.name, v)} />
                         ) : field.type === 'textarea' ? (
                           <textarea
                             rows={3}
@@ -628,7 +679,7 @@ const Pickups = () => {
                       <p className="mb-2 text-[10.5px] font-semibold tracky text-slate-400">{activeType.title.toUpperCase()}</p>
                       <div className="flex flex-wrap gap-2">
                         {Object.entries(form)
-                          .filter(([, v]) => v !== '' && v != null)
+                          .filter(([k, v]) => v !== '' && v != null && k !== 'slot_start')
                           .map(([k, v]) => (
                             <span key={k} className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs">
                               <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">{k.replace(/_/g, ' ')}</span>

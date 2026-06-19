@@ -263,7 +263,7 @@ const RequestsQueue = ({ session }) => {
 
                       <div className="flex flex-wrap gap-2 mt-3">
                         {Object.entries(details)
-                          .filter(([, v]) => v !== '' && v != null)
+                          .filter(([k, v]) => v !== '' && v != null && k !== 'slot_start')
                           .map(([k, v]) => (
                             <span
                               key={k}

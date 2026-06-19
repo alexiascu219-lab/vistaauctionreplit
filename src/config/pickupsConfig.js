@@ -37,16 +37,9 @@ export const REQUEST_TYPES = [
     soft: 'bg-indigo-50 text-indigo-600',
     ring: 'focus:ring-indigo-500/40 focus:border-indigo-400',
     fields: [
-      {
-        name: 'log_type',
-        label: 'Log Type',
-        type: 'select',
-        required: true,
-        options: ['Floor Time', 'Wave Picking'],
-      },
-      { name: 'date', label: 'Date', type: 'date', required: true },
-      { name: 'start_time', label: 'Start Time', type: 'time', required: true },
-      { name: 'end_time', label: 'End Time', type: 'time' },
+      { name: 'log_type', label: 'Log Type', type: 'select', required: true, options: ['Floor Time', 'Wave Picking'], full: true },
+      { name: 'start_time', label: 'Start Time', type: 'time12', required: true, full: true },
+      { name: 'end_time', label: 'End Time', type: 'time12', full: true },
       { name: 'notes', label: 'What were you doing?', type: 'textarea', placeholder: 'Describe what you worked on…', full: true },
     ],
   },
@@ -99,7 +92,7 @@ export function summarizeRequest(req) {
     case 'lunch':
       return [d.slot, d.duration && `(${d.duration})`].filter(Boolean).join(' · ');
     case 'floor_wave':
-      return [d.log_type, d.date, d.start_time && `${d.start_time}${d.end_time ? '–' + d.end_time : ''}`]
+      return [d.log_type, d.start_time && `${d.start_time}${d.end_time ? ' – ' + d.end_time : ''}`]
         .filter(Boolean)
         .join(' · ');
     case 'zebra':

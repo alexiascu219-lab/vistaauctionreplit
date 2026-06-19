@@ -100,10 +100,6 @@ const PickupsLogin = () => {
               {!submitting && <ArrowRight size={16} />}
             </button>
           </form>
-
-          <p className="text-center text-xs text-slate-400 font-medium mt-6">
-            Managers only. Contact a department lead if you need an account.
-          </p>
         </motion.div>
       </div>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
