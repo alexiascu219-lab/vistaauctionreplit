@@ -37,9 +37,9 @@ export const REQUEST_TYPES = [
     soft: 'bg-indigo-50 text-indigo-600',
     ring: 'focus:ring-indigo-500/40 focus:border-indigo-400',
     fields: [
-      { name: 'log_type', label: 'Log Type', type: 'select', required: true, options: ['Floor Time', 'Wave Picking'], full: true },
-      { name: 'start_time', label: 'Start Time', type: 'time12', required: true, full: true },
-      { name: 'end_time', label: 'End Time', type: 'time12', full: true },
+      { name: 'log_type', label: 'Log Type', type: 'select', required: true, options: ['Floor Time', 'Wave Picking'] },
+      { name: 'start_time', label: 'Start Time', type: 'time', required: true },
+      { name: 'end_time', label: 'End Time', type: 'time' },
       { name: 'notes', label: 'What were you doing?', type: 'textarea', placeholder: 'Describe what you worked on…', full: true },
     ],
   },

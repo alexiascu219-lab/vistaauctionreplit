@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import Toast from '../components/Toast';
-import TimePicker12 from '../components/pickups/TimePicker12';
 import { fetchLunchSlotsPublic } from '../lib/pickupsApi';
 import { REQUEST_TYPES, TYPE_MAP, summarizeRequest } from '../config/pickupsConfig';
 
@@ -72,6 +71,18 @@ const computeRange = (start, duration) => {
   const sm = parseTimeToMinutes(start);
   if (sm == null) return start || '';
   return `${start} – ${formatMinutes(sm + durationToMinutes(duration))}`;
+};
+
+// The native <input type="time"> works in 24h "HH:MM"; we store/display 12h.
+const to24Input = (v12) => {
+  const min = parseTimeToMinutes(v12);
+  if (min == null) return '';
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+};
+const fromInputTo12 = (v24) => {
+  const m = String(v24 || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return '';
+  return formatMinutes(parseInt(m[1], 10) * 60 + parseInt(m[2], 10));
 };
 
 const fieldCls =
@@ -618,8 +629,13 @@ const Pickups = () => {
                               <option key={opt} value={opt}>{opt}</option>
                             ))}
                           </select>
-                        ) : field.type === 'time12' ? (
-                          <TimePicker12 value={form[field.name] || ''} onChange={(v) => setField(field.name, v)} />
+                        ) : field.type === 'time' ? (
+                          <input
+                            type="time"
+                            value={to24Input(form[field.name])}
+                            onChange={(e) => setField(field.name, fromInputTo12(e.target.value))}
+                            className={fieldCls}
+                          />
                         ) : field.type === 'textarea' ? (
                           <textarea
                             rows={3}
