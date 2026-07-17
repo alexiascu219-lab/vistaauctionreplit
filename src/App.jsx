@@ -29,11 +29,12 @@ import Chat from './pages/Chat';
 import Pickups from './pages/Pickups';
 import PickupsManager from './pages/PickupsManager';
 import PickupsLogin from './pages/PickupsLogin';
+import Carts from './pages/Carts';
 
 // Helper component to handle conditional AI rendering
 const ConditionalAIAssistant = () => {
   const location = useLocation();
-  const hiddenRoutes = ['/login', '/pickups'];
+  const hiddenRoutes = ['/login', '/pickups', '/carts'];
   const isHidden = hiddenRoutes.some(route => location.pathname.startsWith(route));
   const isHRRoute = location.pathname.startsWith('/hr');
 
@@ -41,10 +42,10 @@ const ConditionalAIAssistant = () => {
   return <AIAssistant role={isHRRoute ? 'hr' : 'applicant'} />;
 };
 
-// Pickups pages render their own minimal header, so suppress the global navbar there.
+// Pickups and Carts pages render their own minimal header, so suppress the global navbar there.
 const ConditionalNavbar = () => {
   const location = useLocation();
-  if (location.pathname.startsWith('/pickups')) return null;
+  if (location.pathname.startsWith('/pickups') || location.pathname.startsWith('/carts')) return null;
   return <Navbar />;
 };
 
@@ -83,6 +84,7 @@ function App() {
               <Route path="/pickups" element={<Pickups />} />
               <Route path="/pickups/login" element={<PickupsLogin />} />
               <Route path="/pickups/manager" element={<PickupsManager />} />
+              <Route path="/carts" element={<Carts />} />
             </Routes>
             <SystemAlert />
             <ConditionalNavbar />

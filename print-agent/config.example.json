@@ -1,0 +1,22 @@
+{
+  "_comment": "Copy this file to config.json and fill in your values. See README.md.",
+
+  "apiBase": "https://YOUR-SITE.vercel.app",
+  "agentKey": "paste-the-same-secret-as-PRINT_AGENT_KEY-on-the-server",
+  "agentName": "front-desk-zebra",
+
+  "_printMode_help": "network = send ZPL to the printer's IP (recommended). windows = send via the installed Windows driver. folder = hand off to ZebraDesigner Automation.",
+  "printMode": "network",
+
+  "_network_mode": "Used when printMode = network.",
+  "printerHost": "192.168.1.50",
+  "printerPort": 9100,
+
+  "_windows_mode": "Used when printMode = windows. Run `Get-Printer` in PowerShell to find the exact name.",
+  "printerName": "ZDesigner GK420d",
+
+  "_folder_mode": "Used when printMode = folder. Point ZebraDesigner Automation at this same folder.",
+  "watchFolder": "C:\\VistaPrint\\incoming",
+
+  "pollSeconds": 4
+}
