@@ -11,7 +11,7 @@ import ElementInspector from '../components/labels/ElementInspector';
 import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, newElement, referencedVars } from '../config/labelsConfig';
 import { expandNumbers } from '../lib/zpl';
 import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
-import { generateLabelDesign } from '../lib/labelsAi';
+import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromRequest } from '../lib/labelsAi';
 
 const TOOL_ICONS = { Type, Barcode, Square, Minus };
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -51,6 +51,47 @@ const Labels = () => {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiProvider, setAiProvider] = useState('mistral');
   const [aiBusy, setAiBusy] = useState(false);
+  const [claudeReq, setClaudeReq] = useState(null);
+  const [claudeStatus, setClaudeStatus] = useState('idle'); // idle | pending
+
+  // Watch a queued Claude request until the Routine fills it in.
+  useEffect(() => {
+    if (!claudeReq) return undefined;
+    let stop = false;
+    let tries = 0;
+    const tick = async () => {
+      if (stop) return;
+      tries += 1;
+      try {
+        const r = await fetchAiRequest(claudeReq);
+        if (r.status === 'done' && r.result) {
+          setWork({ ...templateFromRequest(r), id: undefined });
+          setSelectedId(null);
+          setSelEl(null);
+          setDirty(true);
+          setClaudeStatus('idle');
+          setClaudeReq(null);
+          setToast({ message: 'Claude designed your label — tweak, then Save', type: 'success' });
+          return;
+        }
+        if (r.status === 'error') {
+          setClaudeStatus('idle');
+          setClaudeReq(null);
+          setToast({ message: r.error || 'Claude could not design that one', type: 'error' });
+          return;
+        }
+      } catch {
+        /* keep waiting */
+      }
+      if (tries < 300) setTimeout(tick, 5000); // keep watching (~25 min) while the page is open
+      else setClaudeStatus('idle');
+    };
+    const h = setTimeout(tick, 3000);
+    return () => {
+      stop = true;
+      clearTimeout(h);
+    };
+  }, [claudeReq]);
 
   const load = useCallback(async (keepId) => {
     try {
@@ -169,9 +210,24 @@ const Labels = () => {
 
   const generate = async () => {
     if (!aiPrompt.trim()) return;
+    const base = { width: work?.width || 609, height: work?.height || 406 };
+
+    if (aiProvider === 'claude') {
+      setClaudeStatus('pending');
+      try {
+        const req = await enqueueClaudeDesign({ prompt: aiPrompt.trim(), base, by: 'Label Studio' });
+        setClaudeReq(req.id);
+        setToast({ message: 'Sent to Claude — your Routine will draft it', type: 'info' });
+      } catch (err) {
+        setClaudeStatus('idle');
+        setToast({ message: err.message || 'Could not reach the Claude queue', type: 'error' });
+      }
+      return;
+    }
+
     setAiBusy(true);
     try {
-      const t = await generateLabelDesign({ prompt: aiPrompt.trim(), base: { width: work?.width || 609, height: work?.height || 406 }, provider: aiProvider });
+      const t = await generateLabelDesign({ prompt: aiPrompt.trim(), base, provider: aiProvider });
       setWork({ ...t, id: undefined });
       setSelectedId(null);
       setSelEl(null);
@@ -362,17 +418,15 @@ const Labels = () => {
                           <span className="text-[12.5px] font-bold text-slate-800">Generate with AI</span>
                         </div>
                         <div className="mb-2 flex gap-1.5">
-                          {[{ k: 'mistral', label: 'Mistral' }, { k: 'claude', label: 'Claude', soon: true }].map((p) => (
+                          {[{ k: 'mistral', label: 'Mistral' }, { k: 'claude', label: 'Claude' }].map((p) => (
                             <button
                               key={p.k}
-                              disabled={p.soon}
-                              onClick={() => !p.soon && setAiProvider(p.k)}
-                              title={p.soon ? 'Claude routing — being set up' : ''}
+                              onClick={() => setAiProvider(p.k)}
                               className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold transition ${
-                                aiProvider === p.k ? 'border-violet-300 bg-violet-100 text-violet-700' : 'border-stone-200 bg-white text-slate-500'
-                              } ${p.soon ? 'cursor-not-allowed opacity-50' : 'hover:border-violet-300'}`}
+                                aiProvider === p.k ? 'border-violet-300 bg-violet-100 text-violet-700' : 'border-stone-200 bg-white text-slate-500 hover:border-violet-300'
+                              }`}
                             >
-                              {p.label}{p.soon ? ' · soon' : ''}
+                              {p.label}
                             </button>
                           ))}
                         </div>
@@ -380,17 +434,27 @@ const Labels = () => {
                           value={aiPrompt}
                           onChange={(e) => setAiPrompt(e.target.value)}
                           rows={3}
+                          disabled={claudeStatus === 'pending'}
                           placeholder="e.g. A bin tag with a big cart number and a QR code"
-                          className="w-full resize-none rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                          className="w-full resize-none rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
                         />
-                        <button
-                          onClick={generate}
-                          disabled={aiBusy || !aiPrompt.trim()}
-                          className="pk-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-[13px] font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
-                        >
-                          {aiBusy ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />} Generate design
-                        </button>
-                        <p className="mt-1.5 text-[10.5px] text-slate-400">Creates a new unsaved template you can tweak.</p>
+                        {claudeStatus === 'pending' ? (
+                          <div className="mt-2 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-[12px] font-semibold text-violet-700">
+                            <Loader2 size={15} className="animate-spin" /> Claude is drafting via your Routine…
+                          </div>
+                        ) : (
+                          <button
+                            onClick={generate}
+                            disabled={aiBusy || !aiPrompt.trim()}
+                            className="pk-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-[13px] font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                          >
+                            {aiBusy ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
+                            {aiProvider === 'claude' ? 'Send to Claude' : 'Generate design'}
+                          </button>
+                        )}
+                        <p className="mt-1.5 text-[10.5px] text-slate-400">
+                          {aiProvider === 'claude' ? 'Claude drafts via your Routine, then loads here.' : 'Creates a new unsaved template you can tweak.'}
+                        </p>
                       </div>
 
                       {selectedElement ? (

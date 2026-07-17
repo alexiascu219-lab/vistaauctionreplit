@@ -1,5 +1,6 @@
 import { generateText } from 'ai';
 import { createMistral } from '@ai-sdk/mistral';
+import { supabase } from '../supabaseClient';
 
 // AI label design generation. Matches the app's existing browser-side Mistral
 // setup (src/utils/aiService.js). The model returns a label design as JSON,
@@ -97,6 +98,29 @@ export function sanitizeTemplate(raw, { width, height }) {
     variables,
     elements,
   };
+}
+
+// ---- Claude via the Routine queue -----------------------------------------
+// Drop a request; a Claude Code Routine fulfils it and writes back the design.
+export async function enqueueClaudeDesign({ prompt, base, by = null }) {
+  const { data, error } = await supabase
+    .from('vista_label_ai_requests')
+    .insert([{ prompt, base: { width: base?.width || 609, height: base?.height || 406 }, provider: 'claude', requested_by: by, status: 'pending' }])
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function fetchAiRequest(id) {
+  const { data, error } = await supabase.from('vista_label_ai_requests').select('*').eq('id', id).single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// Turn a completed request's raw result into a safe template.
+export function templateFromRequest(req) {
+  return sanitizeTemplate(req.result || {}, { width: req.base?.width || 609, height: req.base?.height || 406 });
 }
 
 export async function generateLabelDesign({ prompt, base, provider = 'mistral' }) {
