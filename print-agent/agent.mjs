@@ -159,8 +159,11 @@ async function printJob(cfg, job) {
     return;
   }
 
-  const tpl = readFileSync(templatePath(cfg, job.template), 'utf8');
-  const one = render(tpl, vars);
+  // A job from Label Studio carries finished ZPL; otherwise render the template.
+  const one =
+    job.data && typeof job.data.zpl === 'string' && job.data.zpl.trim()
+      ? job.data.zpl
+      : render(readFileSync(templatePath(cfg, job.template), 'utf8'), vars);
   const batch = Array.from({ length: qty }, () => one).join('\n');
 
   if (cfg.dryRun) {

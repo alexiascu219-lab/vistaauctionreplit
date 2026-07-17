@@ -615,6 +615,9 @@ const Carts = () => {
           <div className="mt-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <p className="text-[13px] text-slate-500">Vista Auction · Cart Tracking</p>
             <div className="flex items-center gap-4">
+              <Link to="/labels" className="text-[12.5px] font-semibold text-slate-400 hover:text-slate-700">
+                Label Studio →
+              </Link>
               <Link to="/pickups" className="text-[12.5px] font-semibold text-slate-400 hover:text-slate-700">
                 Pickups portal →
               </Link>

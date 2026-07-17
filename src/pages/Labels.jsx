@@ -1,0 +1,387 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
+  Tag, Hash, Loader2, Check, ArrowRight, Layers,
+} from 'lucide-react';
+import Toast from '../components/Toast';
+import LabelSvg from '../components/labels/LabelSvg';
+import ElementInspector from '../components/labels/ElementInspector';
+import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, newElement, referencedVars } from '../config/labelsConfig';
+import { expandNumbers } from '../lib/zpl';
+import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
+
+const TOOL_ICONS = { Type, Barcode, Square, Minus };
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+const Header = () => (
+  <header className="fixed inset-x-0 top-0 z-50">
+    <div className="border-b border-stone-200/80 bg-white/72 backdrop-blur-xl">
+      <div className="mx-auto flex h-[72px] max-w-[1240px] items-center px-5 sm:px-8">
+        <Link to="/carts" className="group flex items-center gap-3" aria-label="Vista Auction — Cart Yard">
+          <img src="/assets/logo-tag.png" alt="Vista Auction" className="h-12 w-auto transition-transform group-hover:scale-[1.03]" />
+          <span className="flex flex-col leading-none">
+            <span className="font-fraunces text-[19px] font-medium tracking-tight text-slate-900">Label Studio</span>
+            <span className="mt-1 text-[10px] font-semibold tracky text-slate-400">VISTA AUCTION</span>
+          </span>
+        </Link>
+        <Link to="/carts" className="ml-auto text-[12.5px] font-semibold text-slate-400 hover:text-slate-700">← Cart Yard</Link>
+      </div>
+    </div>
+  </header>
+);
+
+const btn = 'pk-press inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-bold transition';
+
+const Labels = () => {
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState('print');
+  const [selectedId, setSelectedId] = useState(null);
+  const [work, setWork] = useState(null); // working template copy
+  const [dirty, setDirty] = useState(false);
+  const [selEl, setSelEl] = useState(null);
+  const [values, setValues] = useState({});
+  const [batch, setBatch] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const load = useCallback(async (keepId) => {
+    try {
+      const list = await listTemplates();
+      setTemplates(list);
+      const pick = list.find((t) => t.id === keepId) || list[0] || null;
+      if (pick) selectTemplate(pick);
+    } catch (err) {
+      setToast({ message: err.message || 'Could not load templates', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  function selectTemplate(t) {
+    setSelectedId(t.id);
+    setWork(clone(t));
+    setSelEl(null);
+    setDirty(false);
+    const v = {};
+    (t.variables || []).forEach((vv) => (v[vv.key] = vv.default ?? ''));
+    setValues(v);
+    setBatch('');
+  }
+
+  const newTemplate = () => {
+    const t = { ...clone(DEFAULT_LABEL), name: 'New label', elements: [] };
+    setSelectedId(null);
+    setWork(t);
+    setSelEl(null);
+    setDirty(true);
+    setMode('design');
+    const v = {};
+    (t.variables || []).forEach((vv) => (v[vv.key] = vv.default ?? ''));
+    setValues(v);
+  };
+
+  // ---- Design editing ------------------------------------------------------
+  const patchWork = (patch) => { setWork((w) => ({ ...w, ...patch })); setDirty(true); };
+  const addEl = (type) => {
+    setWork((w) => {
+      const el = newElement(type, w);
+      setSelEl(el.id);
+      return { ...w, elements: [...(w.elements || []), el] };
+    });
+    setDirty(true);
+  };
+  const updateEl = (id, patch) => { setWork((w) => ({ ...w, elements: w.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) })); setDirty(true); };
+  const deleteEl = (id) => { setWork((w) => ({ ...w, elements: w.elements.filter((e) => e.id !== id) })); setSelEl(null); setDirty(true); };
+
+  const selectedElement = useMemo(() => (work?.elements || []).find((e) => e.id === selEl) || null, [work, selEl]);
+
+  // Variables
+  const setVar = (i, patch) => patchWork({ variables: work.variables.map((v, idx) => (idx === i ? { ...v, ...patch } : v)) });
+  const addVar = () => patchWork({ variables: [...(work.variables || []), { key: `var${(work.variables?.length || 0) + 1}`, label: 'Variable', default: '' }] });
+  const removeVar = (i) => patchWork({ variables: work.variables.filter((_, idx) => idx !== i) });
+  const missingVars = useMemo(() => {
+    if (!work) return [];
+    const have = new Set((work.variables || []).map((v) => v.key));
+    return referencedVars(work.elements).filter((k) => !have.has(k));
+  }, [work]);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const saved = await saveTemplate(work, 'Label Studio');
+      setDirty(false);
+      const list = await listTemplates();
+      setTemplates(list);
+      setSelectedId(saved.id);
+      setWork(clone(saved));
+      setToast({ message: 'Template saved', type: 'success' });
+    } catch (err) {
+      setToast({ message: err.message || 'Could not save', type: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const del = async () => {
+    if (!work?.id) return;
+    setBusy(true);
+    try {
+      await archiveTemplate(work.id);
+      setToast({ message: 'Template deleted', type: 'info' });
+      await load();
+    } catch (err) {
+      setToast({ message: err.message || 'Could not delete', type: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ---- Printing ------------------------------------------------------------
+  const primaryKey = work?.variables?.[0]?.key || 'cart_number';
+  const batchList = useMemo(() => (batch.trim() ? expandNumbers(batch) : []), [batch]);
+  const previewValues = useMemo(() => (batchList.length ? { ...values, [primaryKey]: batchList[0] } : values), [values, batchList, primaryKey]);
+
+  const doPrint = async () => {
+    if (!work) return;
+    setBusy(true);
+    try {
+      const jobs = batchList.length
+        ? batchList.map((n) => ({ values: { ...values, [primaryKey]: n }, title: `${work.name} · ${n}` }))
+        : [{ values, title: work.name }];
+      await queueLabelPrints({ template: work, jobs, quantity: Math.max(1, quantity | 0 || 1), by: 'Label Studio', source: 'web' });
+      setToast({ message: `Queued ${jobs.length * Math.max(1, quantity | 0 || 1)} label${jobs.length === 1 && quantity <= 1 ? '' : 's'}`, type: 'success' });
+    } catch (err) {
+      setToast({ message: err.message || 'Could not queue print', type: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="pickups-atelier min-h-screen font-sans text-slate-900 antialiased">
+      <div className="pickups-grid-veil" />
+      <Header />
+
+      <main className="relative z-10 mx-auto max-w-[1240px] px-5 pb-24 pt-28 sm:px-8">
+        {/* Hero */}
+        <section className="pk-rise pt-4">
+          <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/80 py-1.5 pl-2.5 pr-3.5 shadow-soft">
+            <Tag size={13} className="text-orange-600" />
+            <span className="text-[11.5px] font-semibold tracky text-slate-900/70">LABEL STUDIO</span>
+          </span>
+          <h1 className="mt-6 font-fraunces text-[clamp(2.4rem,6vw,4rem)] font-normal leading-[0.98] tracking-[-0.03em] text-slate-900">
+            Design &amp; print{' '}
+            <span className="relative inline-block">stickers<span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-orange-600/90" /></span>
+          </h1>
+          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-slate-500">
+            Type a number to print, or open the maker to design a label — every job goes to the same Zebra print queue.
+          </p>
+
+          <div className="mt-6 inline-flex items-center gap-1 rounded-2xl border border-stone-200 bg-white p-1 shadow-soft">
+            {[{ k: 'print', label: 'Print', icon: Printer }, { k: 'design', label: 'Design', icon: Pencil }].map((m) => {
+              const Icon = m.icon;
+              const active = mode === m.k;
+              return (
+                <button key={m.k} onClick={() => setMode(m.k)} className={`relative inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold transition-colors ${active ? 'text-white' : 'text-slate-500 hover:text-slate-900'}`}>
+                  {active && <motion.span layoutId="label-mode" className="absolute inset-0 rounded-xl bg-slate-900" transition={{ type: 'spring', damping: 26, stiffness: 300 }} />}
+                  <span className="relative flex items-center gap-2"><Icon size={15} /> {m.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {loading ? (
+          <div className="flex justify-center py-32"><div className="h-9 w-9 animate-spin rounded-full border-2 border-stone-200 border-t-orange-500" /></div>
+        ) : (
+          <section className="mt-8 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+            {/* Template rail */}
+            <aside className="pk-rise">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="font-fraunces text-[18px] font-medium tracking-tight text-slate-900">Templates</h2>
+                <button onClick={newTemplate} className={`${btn} border border-stone-200 bg-white text-slate-700 hover:border-stone-300`}><Plus size={14} /> New</button>
+              </div>
+              <div className="flex flex-col gap-2">
+                {templates.map((t) => (
+                  <button key={t.id} onClick={() => selectTemplate(t)} className={`rounded-2xl border p-2.5 text-left transition ${selectedId === t.id ? 'border-slate-900 bg-white shadow-lift' : 'border-stone-200 bg-white hover:border-stone-300'}`}>
+                    <div className="overflow-hidden rounded-lg border border-stone-100 bg-white">
+                      <LabelSvg template={t} values={(t.variables || []).reduce((a, v) => ((a[v.key] = v.default), a), {})} />
+                    </div>
+                    <p className="mt-2 truncate text-[13px] font-bold text-slate-900">{t.name}</p>
+                    <p className="truncate text-[11px] text-slate-400">{t.width}×{t.height} dots</p>
+                  </button>
+                ))}
+                {templates.length === 0 && <p className="rounded-xl border border-dashed border-stone-300 p-4 text-center text-[12.5px] text-slate-400">No templates yet.</p>}
+              </div>
+            </aside>
+
+            {/* Content */}
+            <div className="pk-rise" style={{ animationDelay: '.05s' }}>
+              {!work ? (
+                <p className="rounded-3xl border border-dashed border-stone-300 p-16 text-center text-slate-400">Pick a template on the left, or make a new one.</p>
+              ) : mode === 'print' ? (
+                /* ---- PRINT MODE ---- */
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white p-3 shadow-soft">
+                      <div className="rounded-lg border border-stone-100" style={{ background: '#f5f5f4' }}>
+                        <LabelSvg template={work} values={previewValues} />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-center text-[11.5px] text-slate-400">Live preview · barcode shown representative</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-soft">
+                    <h3 className="font-fraunces text-[19px] font-medium tracking-tight text-slate-900">{work.name}</h3>
+                    <div className="mt-4 space-y-3">
+                      {(work.variables || []).map((v) => (
+                        <label key={v.key} className="block">
+                          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-400">{v.label || v.key}</span>
+                          <input value={values[v.key] ?? ''} onChange={(e) => setValues((s) => ({ ...s, [v.key]: e.target.value }))} className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-[15px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/15" />
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 rounded-xl border border-stone-200 bg-[#FBFBFA] p-3.5">
+                      <label className="block">
+                        <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400"><Hash size={12} /> Batch numbers / ranges</span>
+                        <input value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="e.g. 397-432, 500, 502" className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-[14px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                      </label>
+                      <p className="mt-1.5 text-[11.5px] text-slate-400">
+                        {batchList.length ? `Prints ${batchList.length} labels, filling “${primaryKey}”.` : `One label from the fields above. Fills the first variable when set.`}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-3">
+                      <label className="flex items-center gap-2 text-[12px] font-bold text-slate-500">
+                        Copies
+                        <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="w-16 rounded-lg border border-stone-200 px-2 py-1.5 text-[14px] font-semibold" />
+                      </label>
+                      <button onClick={doPrint} disabled={busy} className={`${btn} ml-auto bg-orange-600 px-5 py-3 text-white shadow-glow hover:bg-orange-700 disabled:opacity-50`}>
+                        {busy ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+                        Print {batchList.length > 1 ? `${batchList.length}×` : ''}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ---- DESIGN MODE ---- */
+                <div>
+                  {/* Toolbar */}
+                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-stone-200 bg-white p-2.5 shadow-soft">
+                    <span className="ml-1 text-[11px] font-bold tracky text-slate-400">ADD</span>
+                    {LABEL_ELEMENT_TYPES.map((t) => {
+                      const Icon = TOOL_ICONS[t.icon] || Type;
+                      return (
+                        <button key={t.type} onClick={() => addEl(t.type)} className={`${btn} border border-stone-200 bg-[#FBFBFA] text-slate-700 hover:border-orange-200 hover:text-orange-600`}>
+                          <Icon size={14} /> {t.label}
+                        </button>
+                      );
+                    })}
+                    <div className="ml-auto flex items-center gap-2">
+                      {dirty && <span className="text-[11.5px] font-semibold text-amber-600">Unsaved</span>}
+                      {work.id && <button onClick={del} disabled={busy} className={`${btn} border border-stone-200 bg-white text-slate-400 hover:border-red-200 hover:text-red-500`}><Trash2 size={14} /></button>}
+                      <button onClick={save} disabled={busy || !dirty} className={`${btn} bg-slate-900 px-4 text-white hover:bg-slate-800 disabled:opacity-40`}>
+                        {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Save
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_290px]">
+                    {/* Canvas */}
+                    <div>
+                      <div className="rounded-2xl border border-stone-200 p-4 shadow-soft" style={{ background: 'repeating-conic-gradient(#f5f5f4 0% 25%, #fff 0% 50%) 50% / 22px 22px' }}>
+                        <div className="mx-auto overflow-hidden rounded-lg shadow-lift" style={{ maxWidth: Math.min(560, work.width) }}>
+                          <LabelSvg
+                            template={work}
+                            values={(work.variables || []).reduce((a, v) => ((a[v.key] = v.default), a), {})}
+                            interactive
+                            selectedId={selEl}
+                            onSelect={setSelEl}
+                            onLiveChange={updateEl}
+                            onCommit={() => setDirty(true)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Name + size */}
+                      <div className="mt-4 grid gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-soft sm:grid-cols-2">
+                        <label className="block sm:col-span-2">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Template name</span>
+                          <input value={work.name} onChange={(e) => patchWork({ name: e.target.value })} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[14px] font-bold" />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Width (dots)</span>
+                          <input type="number" value={work.width} onChange={(e) => patchWork({ width: Number(e.target.value) })} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[14px] font-semibold" />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Height (dots)</span>
+                          <input type="number" value={work.height} onChange={(e) => patchWork({ height: Number(e.target.value) })} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[14px] font-semibold" />
+                        </label>
+                        <div className="flex flex-wrap gap-1.5 sm:col-span-2">
+                          {PRESET_SIZES.map((s) => (
+                            <button key={s.label} onClick={() => patchWork({ width: s.w, height: s.h })} className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold transition ${work.width === s.w && work.height === s.h ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-stone-200 bg-white text-slate-500 hover:border-stone-300'}`}>{s.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: inspector + variables */}
+                    <div className="space-y-4">
+                      {selectedElement ? (
+                        <ElementInspector element={selectedElement} onChange={updateEl} onDelete={deleteEl} />
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-[12.5px] text-slate-400">Tap an element to edit it, or add one above.</div>
+                      )}
+
+                      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
+                        <div className="mb-2.5 flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-slate-700"><Layers size={14} /> Variables</span>
+                          <button onClick={addVar} className="text-[12px] font-bold text-orange-600 hover:text-orange-700">+ Add</button>
+                        </div>
+                        {missingVars.length > 0 && (
+                          <button onClick={() => patchWork({ variables: [...(work.variables || []), ...missingVars.map((k) => ({ key: k, label: k, default: '' }))] })} className="mb-2 w-full rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-[11.5px] font-semibold text-orange-700">
+                            Declare {missingVars.map((v) => `\${${v}}`).join(', ')}
+                          </button>
+                        )}
+                        <div className="space-y-2">
+                          {(work.variables || []).map((v, i) => (
+                            <div key={i} className="flex items-center gap-1.5">
+                              <input value={v.key} onChange={(e) => setVar(i, { key: e.target.value })} placeholder="key" className="w-[38%] rounded-lg border border-stone-200 px-2 py-1.5 text-[12px] font-bold text-slate-900" />
+                              <input value={v.default ?? ''} onChange={(e) => setVar(i, { default: e.target.value })} placeholder="default" className="flex-1 rounded-lg border border-stone-200 px-2 py-1.5 text-[12px] font-semibold text-slate-600" />
+                              <button onClick={() => removeVar(i)} className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>
+                            </div>
+                          ))}
+                          {(work.variables || []).length === 0 && <p className="text-[11.5px] text-slate-400">No variables. Use <code className="text-orange-600">{'${name}'}</code> in text/barcode values, then declare them here.</p>}
+                        </div>
+                      </div>
+
+                      <button onClick={() => setMode('print')} className={`${btn} w-full justify-center border border-stone-200 bg-white text-slate-700 hover:border-stone-300`}>
+                        Go to Print <ArrowRight size={15} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        <footer className="mt-16">
+          <div className="pk-hairline" />
+          <p className="mt-6 text-[13px] text-slate-500">Vista Auction · Label Studio · prints to the Zebra queue</p>
+        </footer>
+      </main>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
+};
+
+export default Labels;

@@ -88,8 +88,11 @@ async function printJob(config, job) {
     return { rendered: null };
   }
 
-  const tpl = config.zplTemplate || DEFAULT_ZPL;
-  const one = renderTemplate(tpl, vars);
+  // A job from Label Studio carries finished ZPL; otherwise render the template.
+  const one =
+    job.data && typeof job.data.zpl === 'string' && job.data.zpl.trim()
+      ? job.data.zpl
+      : renderTemplate(config.zplTemplate || DEFAULT_ZPL, vars);
   const batch = Array.from({ length: qty }, () => one).join('\n');
 
   if (config.mode === 'windows') await printWindows(batch, config);
