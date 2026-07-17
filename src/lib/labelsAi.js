@@ -100,6 +100,32 @@ export function sanitizeTemplate(raw, { width, height }) {
   };
 }
 
+// ---- AI data mapping (Mistral) --------------------------------------------
+// "Tell the AI to do it": given the data columns + the label's variables + a
+// plain-English instruction, return a column→variable mapping, optional row
+// filter, and copies.
+export async function mapDataWithAI({ instruction, columns, variables }) {
+  const sys = `You configure a label mail-merge. Given spreadsheet COLUMNS and the label's VARIABLES, map each variable to the best-matching column, optionally set a row filter, and set copies per row.
+Return ONLY JSON, no prose:
+{"mapping":{"<variableKey>":"<columnName>"},"filter":{"column":"<columnName>","op":"equals|not_equals|contains|not_empty|gt|lt","value":"<value>"}|null,"quantity":int}
+Use only column names from COLUMNS and variable keys from VARIABLES. Use null for filter when none is needed.`;
+  const prompt = `COLUMNS: ${JSON.stringify(columns)}\nVARIABLES: ${JSON.stringify(variables.map((v) => ({ key: v.key, label: v.label })))}\nINSTRUCTION: ${instruction}`;
+  const { text } = await generateText({ model: mistralModel(), system: sys, prompt, temperature: 0.2 });
+  const raw = extractJson(text);
+
+  const mapping = {};
+  if (raw.mapping && typeof raw.mapping === 'object') {
+    for (const v of variables) if (columns.includes(raw.mapping[v.key])) mapping[v.key] = raw.mapping[v.key];
+  }
+  let filter = null;
+  const OPS = ['equals', 'not_equals', 'contains', 'not_empty', 'gt', 'lt'];
+  if (raw.filter && columns.includes(raw.filter.column)) {
+    filter = { column: raw.filter.column, op: OPS.includes(raw.filter.op) ? raw.filter.op : 'not_empty', value: String(raw.filter.value ?? '') };
+  }
+  const quantity = Math.max(1, Math.min(50, parseInt(raw.quantity, 10) || 1));
+  return { mapping, filter, quantity };
+}
+
 // ---- Claude via the Routine queue -----------------------------------------
 // Drop a request; a Claude Code Routine fulfils it and writes back the design.
 export async function enqueueClaudeDesign({ prompt, base, by = null }) {

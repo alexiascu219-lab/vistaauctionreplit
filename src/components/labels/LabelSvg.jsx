@@ -43,13 +43,19 @@ function barPattern(value, w, h) {
   return rects.map((r, i) => <rect key={i} x={r.x} y={0} width={r.w} height={h} fill="#111" />);
 }
 
+const ROT = { N: 0, R: 90, I: 180, B: 270 };
+
 function ElementVisual({ el, values }) {
+  const deg = ROT[el.rotation] || 0;
+  const rot = deg ? ` rotate(${deg})` : '';
   if (el.type === 'text') {
     const v = resolveVars(el.value, values);
     return (
-      <text x={el.x} y={el.y + (el.size || 30) * 0.8} fontSize={el.size || 30} fontWeight="600" fill="#0f172a" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
-        {v}
-      </text>
+      <g transform={deg ? `rotate(${deg} ${el.x} ${el.y})` : undefined}>
+        <text x={el.x} y={el.y + (el.size || 30) * 0.8} fontSize={el.size || 30} fontWeight="600" fill="#0f172a" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+          {v}
+        </text>
+      </g>
     );
   }
   if (el.type === 'barcode') {
@@ -68,10 +74,10 @@ function ElementVisual({ el, values }) {
           if (finder ? (xx % 6 === 0 || yy % 6 === 0 || (xx > 1 && xx < 5 && yy > 1 && yy < 5)) : (s >> 17) & 1)
             dots.push(<rect key={`${xx}-${yy}`} x={xx * cell} y={yy * cell} width={cell} height={cell} fill="#111" />);
         }
-      return <g transform={`translate(${el.x},${el.y})`}>{dots}</g>;
+      return <g transform={`translate(${el.x},${el.y})${rot}`}>{dots}</g>;
     }
     return (
-      <g transform={`translate(${el.x},${el.y})`}>
+      <g transform={`translate(${el.x},${el.y})${rot}`}>
         {barPattern(v, b.w, el.height || 100)}
         {el.showText && (
           <text x={b.w / 2} y={(el.height || 100) + 20} fontSize={22} textAnchor="middle" fill="#0f172a" style={{ fontFamily: 'Arial, sans-serif' }}>

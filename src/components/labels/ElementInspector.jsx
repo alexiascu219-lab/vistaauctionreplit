@@ -1,9 +1,11 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import { SYMBOLOGIES } from '../../config/labelsConfig';
 
 const FIELD = 'w-full rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-[13px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 const LAB = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
+const ICONBTN = 'rounded-lg border border-stone-200 bg-white p-1.5 text-slate-400 transition hover:border-stone-300 hover:text-slate-700';
+const ROTATIONS = [{ v: 'N', d: '0°' }, { v: 'R', d: '90°' }, { v: 'I', d: '180°' }, { v: 'B', d: '270°' }];
 
 const Num = ({ label, value, onChange, step = 1 }) => (
   <label className="block">
@@ -12,17 +14,29 @@ const Num = ({ label, value, onChange, step = 1 }) => (
   </label>
 );
 
-const ElementInspector = ({ element: el, onChange, onDelete }) => {
+const Rotation = ({ value, onChange }) => (
+  <label className="block">
+    <span className={LAB}>Rotation</span>
+    <select value={value || 'N'} onChange={(e) => onChange(e.target.value)} className={FIELD}>
+      {ROTATIONS.map((r) => <option key={r.v} value={r.v}>{r.d}</option>)}
+    </select>
+  </label>
+);
+
+const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReorder }) => {
   if (!el) return null;
   const set = (patch) => onChange(el.id, patch);
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <span className="rounded-lg bg-[#FBFBFA] px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-slate-500">{el.type}</span>
-        <button onClick={() => onDelete(el.id)} className="pk-press inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-2.5 py-1 text-[12px] font-bold text-slate-400 hover:border-red-200 hover:text-red-500">
-          <Trash2 size={13} /> Delete
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => onReorder(el.id, 'up')} title="Bring forward" className={ICONBTN}><ChevronUp size={14} /></button>
+          <button onClick={() => onReorder(el.id, 'down')} title="Send back" className={ICONBTN}><ChevronDown size={14} /></button>
+          <button onClick={() => onDuplicate(el.id)} title="Duplicate (Ctrl/Cmd+D)" className={ICONBTN}><Copy size={14} /></button>
+          <button onClick={() => onDelete(el.id)} title="Delete (Del)" className={`${ICONBTN} hover:border-red-200 hover:text-red-500`}><Trash2 size={14} /></button>
+        </div>
       </div>
 
       {(el.type === 'text' || el.type === 'barcode') && (
@@ -37,20 +51,24 @@ const ElementInspector = ({ element: el, onChange, onDelete }) => {
         <Num label="X (dots)" value={el.x} onChange={(v) => set({ x: v })} />
         <Num label="Y (dots)" value={el.y} onChange={(v) => set({ y: v })} />
 
-        {el.type === 'text' && <Num label="Font size" value={el.size} onChange={(v) => set({ size: v })} />}
+        {el.type === 'text' && (
+          <>
+            <Num label="Font size" value={el.size} onChange={(v) => set({ size: v })} />
+            <Rotation value={el.rotation} onChange={(v) => set({ rotation: v })} />
+          </>
+        )}
 
         {el.type === 'barcode' && (
           <>
             <label className="block">
               <span className={LAB}>Symbology</span>
               <select value={el.symbology || 'code128'} onChange={(e) => set({ symbology: e.target.value })} className={FIELD}>
-                {SYMBOLOGIES.map((s) => (
-                  <option key={s.key} value={s.key}>{s.label}</option>
-                ))}
+                {SYMBOLOGIES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
               </select>
             </label>
             <Num label="Height" value={el.height} onChange={(v) => set({ height: v })} />
             <Num label="Module" value={el.module} onChange={(v) => set({ module: v })} />
+            <Rotation value={el.rotation} onChange={(v) => set({ rotation: v })} />
             <label className="col-span-2 flex items-center gap-2 pt-1">
               <input type="checkbox" checked={!!el.showText} onChange={(e) => set({ showText: e.target.checked })} />
               <span className="text-[12px] font-semibold text-slate-600">Show number under barcode</span>

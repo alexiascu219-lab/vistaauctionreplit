@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
-  Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2,
+  Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database,
 } from 'lucide-react';
 import Toast from '../components/Toast';
 import LabelSvg from '../components/labels/LabelSvg';
 import ElementInspector from '../components/labels/ElementInspector';
+import DataPanel from '../components/labels/DataPanel';
 import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, newElement, referencedVars } from '../config/labelsConfig';
 import { expandNumbers } from '../lib/zpl';
 import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
@@ -143,6 +144,49 @@ const Labels = () => {
   };
   const updateEl = (id, patch) => { setWork((w) => ({ ...w, elements: w.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) })); setDirty(true); };
   const deleteEl = (id) => { setWork((w) => ({ ...w, elements: w.elements.filter((e) => e.id !== id) })); setSelEl(null); setDirty(true); };
+  const duplicateEl = (id) => {
+    setWork((w) => {
+      const el = w.elements.find((e) => e.id === id);
+      if (!el) return w;
+      const copy = { ...el, id: `e${Math.random().toString(36).slice(2, 7)}`, x: Math.min((w.width || 609) - 4, (el.x || 0) + 16), y: Math.min((w.height || 406) - 4, (el.y || 0) + 16) };
+      setSelEl(copy.id);
+      return { ...w, elements: [...w.elements, copy] };
+    });
+    setDirty(true);
+  };
+  const reorderEl = (id, dir) => {
+    setWork((w) => {
+      const i = w.elements.findIndex((e) => e.id === id);
+      if (i === -1) return w;
+      const j = dir === 'up' ? i + 1 : i - 1;
+      if (j < 0 || j >= w.elements.length) return w;
+      const arr = [...w.elements];
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      return { ...w, elements: arr };
+    });
+    setDirty(true);
+  };
+
+  // Keyboard: nudge / delete / duplicate the selected element in Design mode.
+  useEffect(() => {
+    if (mode !== 'design' || !selEl) return undefined;
+    const onKey = (e) => {
+      const t = (e.target.tagName || '').toLowerCase();
+      if (t === 'input' || t === 'textarea' || t === 'select' || e.target.isContentEditable) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteEl(selEl); return; }
+      if ((e.key === 'd' || e.key === 'D') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); duplicateEl(selEl); return; }
+      const step = e.shiftKey ? 10 : 1;
+      const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+      if (moves[e.key]) {
+        e.preventDefault();
+        const [dx, dy] = moves[e.key];
+        setWork((w) => ({ ...w, elements: w.elements.map((el) => (el.id === selEl ? { ...el, x: Math.max(0, (el.x || 0) + dx), y: Math.max(0, (el.y || 0) + dy) } : el)) }));
+        setDirty(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mode, selEl]);
 
   const selectedElement = useMemo(() => (work?.elements || []).find((e) => e.id === selEl) || null, [work, selEl]);
 
@@ -261,7 +305,7 @@ const Labels = () => {
           </p>
 
           <div className="mt-6 inline-flex items-center gap-1 rounded-2xl border border-stone-200 bg-white p-1 shadow-soft">
-            {[{ k: 'print', label: 'Print', icon: Printer }, { k: 'design', label: 'Design', icon: Pencil }].map((m) => {
+            {[{ k: 'print', label: 'Print', icon: Printer }, { k: 'design', label: 'Design', icon: Pencil }, { k: 'data', label: 'Data', icon: Database }].map((m) => {
               const Icon = m.icon;
               const active = mode === m.k;
               return (
@@ -302,6 +346,9 @@ const Labels = () => {
             <div className="pk-rise" style={{ animationDelay: '.05s' }}>
               {!work ? (
                 <p className="rounded-3xl border border-dashed border-stone-300 p-16 text-center text-slate-400">Pick a template on the left, or make a new one.</p>
+              ) : mode === 'data' ? (
+                /* ---- DATA MODE ---- */
+                <DataPanel template={work} onToast={(m, t) => setToast({ message: m, type: t })} />
               ) : mode === 'print' ? (
                 /* ---- PRINT MODE ---- */
                 <div className="grid gap-6 md:grid-cols-2">
@@ -458,7 +505,7 @@ const Labels = () => {
                       </div>
 
                       {selectedElement ? (
-                        <ElementInspector element={selectedElement} onChange={updateEl} onDelete={deleteEl} />
+                        <ElementInspector element={selectedElement} onChange={updateEl} onDelete={deleteEl} onDuplicate={duplicateEl} onReorder={reorderEl} />
                       ) : (
                         <div className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-[12.5px] text-slate-400">Tap an element to edit it, or add one above.</div>
                       )}
