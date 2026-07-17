@@ -40,6 +40,25 @@ export function removeCart({ id, by = null }) {
   return rpc('carts_remove', { p_id: id, p_by: by });
 }
 
+// ---- Floor-plan layout -----------------------------------------------------
+export async function fetchLayout(zone) {
+  const { data, error } = await supabase
+    .from('vista_cart_layout')
+    .select('elements')
+    .eq('zone', zone)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return Array.isArray(data?.elements) ? data.elements : [];
+}
+
+export function saveLayout(zone, elements, by = null) {
+  return rpc('carts_save_layout', { p_zone: zone, p_elements: elements, p_by: by });
+}
+
+export function setCartPosition({ id, x, y, spot = null, by = null }) {
+  return rpc('carts_set_position', { p_id: id, p_x: x, p_y: y, p_spot: spot, p_by: by });
+}
+
 // ---- Activity feed ---------------------------------------------------------
 export async function listEvents(limit = 30) {
   const { data, error } = await supabase

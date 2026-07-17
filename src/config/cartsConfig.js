@@ -61,6 +61,29 @@ export const STATUS_OPTIONS = [
   { key: 'out_of_service', label: 'Out of service' },
 ];
 
+// ---- Floor-plan editor -----------------------------------------------------
+// Element types you can drop onto an area's plan. Sizes are % of the canvas.
+export const ELEMENT_TYPES = [
+  { type: 'rack', label: 'Rack', icon: 'Rows3', defaults: { w: 24, h: 10 } },
+  { type: 'area', label: 'Area', icon: 'SquareDashedBottom', defaults: { w: 30, h: 24 } },
+  { type: 'label', label: 'Label', icon: 'Type', defaults: { w: 22, h: 7 } },
+  { type: 'door', label: 'Door', icon: 'DoorOpen', defaults: { w: 12, h: 5 } },
+];
+
+// Colour tokens for plan elements (light fills that sit on the paper canvas).
+export const ELEMENT_COLORS = {
+  slate: { name: 'Slate', fill: '#f1f5f9', border: '#cbd5e1', text: '#334155', accent: '#64748b' },
+  orange: { name: 'Orange', fill: '#fff7ed', border: '#fed7aa', text: '#9a3412', accent: '#ea580c' },
+  sky: { name: 'Sky', fill: '#f0f9ff', border: '#bae6fd', text: '#075985', accent: '#0ea5e9' },
+  emerald: { name: 'Emerald', fill: '#ecfdf5', border: '#a7f3d0', text: '#065f46', accent: '#10b981' },
+  amber: { name: 'Amber', fill: '#fffbeb', border: '#fde68a', text: '#92400e', accent: '#f59e0b' },
+  violet: { name: 'Violet', fill: '#f5f3ff', border: '#ddd6fe', text: '#5b21b6', accent: '#8b5cf6' },
+};
+export const ELEMENT_COLOR_KEYS = Object.keys(ELEMENT_COLORS);
+
+// Minimum element size (%) so nothing collapses to nothing while resizing.
+export const MIN_ELEMENT_SIZE = 5;
+
 // ---- Print templates -------------------------------------------------------
 // Which label design the Zebra print agent should use, and the variables each
 // one expects. The agent maps `template` -> a .zpl file in print-agent/templates.

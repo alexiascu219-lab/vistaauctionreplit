@@ -13,6 +13,8 @@ import {
   Check,
   Radio,
   PackageSearch,
+  List,
+  Map as MapIcon,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import Toast from '../components/Toast';
@@ -21,6 +23,7 @@ import MoveSheet from '../components/carts/MoveSheet';
 import AddCartSheet from '../components/carts/AddCartSheet';
 import IdentityChooser from '../components/carts/IdentityChooser';
 import PrintQueueDrawer from '../components/carts/PrintQueueDrawer';
+import FloorPlanView from '../components/carts/floorplan/FloorPlanView';
 import { ZoneIcon } from '../components/carts/cartsUi';
 import {
   ZONES,
@@ -38,6 +41,7 @@ import {
   moveCart,
   setCartStatus,
   removeCart,
+  setCartPosition,
   queuePrint,
   listPrintJobs,
   cancelPrintJob,
@@ -168,6 +172,7 @@ const Carts = () => {
   });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [view, setView] = useState('board'); // 'board' | 'map'
 
   const [activeCart, setActiveCart] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -379,6 +384,25 @@ const Carts = () => {
     setAddOpen(true);
   }, []);
 
+  // Place / move a cart on the floor plan. Optimistic so dragging stays smooth;
+  // realtime + the poll interval reconcile with the server.
+  const reposition = useCallback(
+    async (cart, { x, y, spot }) => {
+      setCarts((prev) =>
+        prev.map((c) =>
+          c.id === cart.id ? { ...c, pos_x: x, pos_y: y, spot: spot ?? c.spot, updated_at: new Date().toISOString() } : c,
+        ),
+      );
+      try {
+        await setCartPosition({ id: cart.id, x, y, spot: spot ?? null, by: operator || null });
+      } catch (err) {
+        setToast({ message: err.message || 'Could not place cart', type: 'error' });
+        load();
+      }
+    },
+    [operator, load],
+  );
+
   return (
     <div className="pickups-atelier min-h-screen font-sans text-slate-900 antialiased">
       <div className="pickups-grid-veil" />
@@ -434,20 +458,51 @@ const Carts = () => {
 
         {/* Control bar */}
         <section className="pk-rise mt-8 flex flex-col gap-3 sm:flex-row sm:items-center" style={{ animationDelay: '.06s' }}>
-          <div className="relative flex-1">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search cart number or spot…"
-              className="w-full rounded-2xl border border-stone-200 bg-white py-3.5 pl-12 pr-4 text-[15px] font-medium text-slate-900 placeholder:text-slate-400 shadow-soft focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/15"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-stone-100">
-                <X size={16} />
-              </button>
-            )}
+          {/* Board / Map toggle */}
+          <div className="inline-flex shrink-0 items-center gap-1 rounded-2xl border border-stone-200 bg-white p-1 shadow-soft">
+            {[
+              { key: 'board', label: 'Board', icon: List },
+              { key: 'map', label: 'Map', icon: MapIcon },
+            ].map((item) => {
+              const Icon = item.icon;
+              const active = view === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setView(item.key)}
+                  className={`relative inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold transition-colors ${
+                    active ? 'text-white' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {active && (
+                    <motion.span layoutId="cart-view" className="absolute inset-0 rounded-xl bg-slate-900" transition={{ type: 'spring', damping: 26, stiffness: 300 }} />
+                  )}
+                  <span className="relative flex items-center gap-2">
+                    <Icon size={15} /> {item.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+
+          {view === 'board' ? (
+            <div className="relative flex-1">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search cart number or spot…"
+                className="w-full rounded-2xl border border-stone-200 bg-white py-3.5 pl-12 pr-4 text-[15px] font-medium text-slate-900 placeholder:text-slate-400 shadow-soft focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/15"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-stone-100">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="hidden flex-1 sm:block" />
+          )}
 
           <div className="flex items-center gap-2.5">
             {/* Operator chip */}
@@ -487,12 +542,12 @@ const Carts = () => {
           </div>
         </section>
 
-        {/* Board */}
+        {/* Board / Map */}
         {loading ? (
           <div className="flex justify-center py-32">
             <div className="h-9 w-9 animate-spin rounded-full border-2 border-stone-200 border-t-orange-500" />
           </div>
-        ) : (
+        ) : view === 'board' ? (
           <section className="mt-8 grid items-start gap-6 lg:grid-cols-2">
             {ZONES.map((z, i) => (
               <ZoneColumn
@@ -506,6 +561,16 @@ const Carts = () => {
                 delay={`${0.1 + i * 0.06}s`}
               />
             ))}
+          </section>
+        ) : (
+          <section className="mt-8">
+            <FloorPlanView
+              carts={carts}
+              operatorName={operator}
+              onOpenCart={setActiveCart}
+              onReposition={reposition}
+              onToast={(message, type) => setToast({ message, type })}
+            />
           </section>
         )}
 
