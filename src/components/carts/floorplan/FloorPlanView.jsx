@@ -8,6 +8,7 @@ import {
   SquareDashedBottom,
   Type,
   DoorOpen,
+  BrickWall,
   Trash2,
   Move,
   Cloud,
@@ -26,14 +27,14 @@ import { fetchLayout, saveLayout } from '../../../lib/cartsApi';
 import PlanElement from './PlanElement';
 import PlanCart from './PlanCart';
 
-const TYPE_ICONS = { Rows3, SquareDashedBottom, Type, DoorOpen };
+const TYPE_ICONS = { Rows3, SquareDashedBottom, Type, DoorOpen, BrickWall };
 
 const uid = () => `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const defaultsFor = (type) => {
   const t = ELEMENT_TYPES.find((x) => x.type === type);
-  const color = { rack: 'slate', area: 'sky', label: 'slate', door: 'emerald' }[type] || 'slate';
-  const label = { rack: 'Rack', area: 'Area', label: 'Label', door: 'Door' }[type] || 'Element';
+  const color = { rack: 'slate', area: 'sky', wall: 'slate', label: 'slate', door: 'emerald' }[type] || 'slate';
+  const label = { rack: 'Rack', area: 'Zone', wall: '', label: 'Label', door: 'Door' }[type] || 'Element';
   return { ...t.defaults, color, label };
 };
 

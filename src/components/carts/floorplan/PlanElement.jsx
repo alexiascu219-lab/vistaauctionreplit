@@ -59,11 +59,11 @@ const PlanElement = ({ el, editMode, selected, onSelect, getRect, onLiveChange, 
   if (el.type === 'area') {
     body = (
       <div
-        className={`h-full w-full rounded-2xl ${ring}`}
-        style={{ background: `${color.accent}14`, border: `2px dashed ${color.accent}80` }}
+        className={`h-full w-full rounded-xl ${ring}`}
+        style={{ background: `${color.accent}24`, border: `2px solid ${color.accent}` }}
       >
         <span
-          className="absolute left-2 top-2 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+          className="absolute left-2 top-2 rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow-soft"
           style={{ background: color.accent, color: '#fff' }}
         >
           {el.label}
@@ -77,6 +77,14 @@ const PlanElement = ({ el, editMode, selected, onSelect, getRect, onLiveChange, 
           {el.label}
         </span>
       </div>
+    );
+  } else if (el.type === 'wall') {
+    body = (
+      <div
+        className={`h-full w-full rounded-[3px] ${ring}`}
+        style={{ background: color.accent }}
+        title={el.label || 'Wall'}
+      />
     );
   } else if (el.type === 'door') {
     body = (

@@ -116,10 +116,17 @@ INSERT INTO vista_cart_layout (zone, elements) VALUES
   {"id":"i-door","type":"door","x":46,"y":86,"w":14,"h":5,"label":"Dock door","color":"emerald"}
 ]'::jsonb),
 ('outside', '[
-  {"id":"o-ramp","type":"area","x":6,"y":8,"w":36,"h":30,"label":"By the ramp","color":"sky"},
-  {"id":"o-dock","type":"area","x":54,"y":8,"w":38,"h":30,"label":"Loading dock","color":"sky"},
-  {"id":"o-corral","type":"area","x":16,"y":52,"w":64,"h":34,"label":"Return corral","color":"emerald"},
-  {"id":"o-door","type":"door","x":44,"y":40,"w":12,"h":5,"label":"Main door","color":"emerald"}
+  {"id":"o-store","type":"label","x":3,"y":2.5,"w":21,"h":6,"label":"Storefront","color":"slate"},
+  {"id":"o-wall1","type":"wall","x":28.6,"y":2,"w":1.6,"h":58,"label":"","color":"slate"},
+  {"id":"o-wall2","type":"wall","x":67.6,"y":2,"w":1.6,"h":26,"label":"","color":"slate"},
+  {"id":"o-door","type":"door","x":26.4,"y":25,"w":3.4,"h":9,"label":"Main door","color":"emerald"},
+  {"id":"o-552","type":"area","x":4,"y":34,"w":13,"h":25,"label":"552-563","color":"violet"},
+  {"id":"o-510","type":"area","x":31,"y":3,"w":13,"h":56,"label":"510-551","color":"amber"},
+  {"id":"o-433","type":"area","x":44.5,"y":3,"w":12,"h":56,"label":"433-473","color":"lime"},
+  {"id":"o-397","type":"area","x":70,"y":3,"w":20,"h":60,"label":"397-432","color":"sky"},
+  {"id":"o-492","type":"area","x":33,"y":72,"w":12,"h":25,"label":"492-509","color":"rose"},
+  {"id":"o-474","type":"area","x":46,"y":72,"w":12,"h":25,"label":"474-491","color":"orange"},
+  {"id":"o-booth","type":"rack","x":80,"y":66,"w":8,"h":7,"label":"Booth","color":"slate"}
 ]'::jsonb)
 ON CONFLICT (zone) DO NOTHING;
 
