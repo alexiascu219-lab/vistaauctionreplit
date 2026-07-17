@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
-  Tag, Hash, Loader2, Check, ArrowRight, Layers,
+  Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2,
 } from 'lucide-react';
 import Toast from '../components/Toast';
 import LabelSvg from '../components/labels/LabelSvg';
@@ -11,6 +11,7 @@ import ElementInspector from '../components/labels/ElementInspector';
 import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, newElement, referencedVars } from '../config/labelsConfig';
 import { expandNumbers } from '../lib/zpl';
 import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
+import { generateLabelDesign } from '../lib/labelsAi';
 
 const TOOL_ICONS = { Type, Barcode, Square, Minus };
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -47,6 +48,9 @@ const Labels = () => {
   const [quantity, setQuantity] = useState(1);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiProvider, setAiProvider] = useState('mistral');
+  const [aiBusy, setAiBusy] = useState(false);
 
   const load = useCallback(async (keepId) => {
     try {
@@ -160,6 +164,23 @@ const Labels = () => {
       setToast({ message: err.message || 'Could not queue print', type: 'error' });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const generate = async () => {
+    if (!aiPrompt.trim()) return;
+    setAiBusy(true);
+    try {
+      const t = await generateLabelDesign({ prompt: aiPrompt.trim(), base: { width: work?.width || 609, height: work?.height || 406 }, provider: aiProvider });
+      setWork({ ...t, id: undefined });
+      setSelectedId(null);
+      setSelEl(null);
+      setDirty(true);
+      setToast({ message: 'Design generated — tweak, then Save', type: 'success' });
+    } catch (err) {
+      setToast({ message: err.message || 'AI generation failed', type: 'error' });
+    } finally {
+      setAiBusy(false);
     }
   };
 
@@ -332,8 +353,46 @@ const Labels = () => {
                       </div>
                     </div>
 
-                    {/* Right: inspector + variables */}
+                    {/* Right: AI + inspector + variables */}
                     <div className="space-y-4">
+                      {/* AI generator */}
+                      <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-4 shadow-soft">
+                        <div className="mb-2.5 flex items-center gap-2">
+                          <Sparkles size={15} className="text-violet-600" />
+                          <span className="text-[12.5px] font-bold text-slate-800">Generate with AI</span>
+                        </div>
+                        <div className="mb-2 flex gap-1.5">
+                          {[{ k: 'mistral', label: 'Mistral' }, { k: 'claude', label: 'Claude', soon: true }].map((p) => (
+                            <button
+                              key={p.k}
+                              disabled={p.soon}
+                              onClick={() => !p.soon && setAiProvider(p.k)}
+                              title={p.soon ? 'Claude routing — being set up' : ''}
+                              className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold transition ${
+                                aiProvider === p.k ? 'border-violet-300 bg-violet-100 text-violet-700' : 'border-stone-200 bg-white text-slate-500'
+                              } ${p.soon ? 'cursor-not-allowed opacity-50' : 'hover:border-violet-300'}`}
+                            >
+                              {p.label}{p.soon ? ' · soon' : ''}
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                          rows={3}
+                          placeholder="e.g. A bin tag with a big cart number and a QR code"
+                          className="w-full resize-none rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                        />
+                        <button
+                          onClick={generate}
+                          disabled={aiBusy || !aiPrompt.trim()}
+                          className="pk-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-[13px] font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                        >
+                          {aiBusy ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />} Generate design
+                        </button>
+                        <p className="mt-1.5 text-[10.5px] text-slate-400">Creates a new unsaved template you can tweak.</p>
+                      </div>
+
                       {selectedElement ? (
                         <ElementInspector element={selectedElement} onChange={updateEl} onDelete={deleteEl} />
                       ) : (
