@@ -244,6 +244,14 @@ ipcMain.handle('dialog:pickFolder', async () => {
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('shell:open', (_e, p) => (p ? shell.openPath(p) : null));
+ipcMain.handle('win:minimize', () => win && win.minimize());
+ipcMain.handle('win:maximizeToggle', () => {
+  if (!win) return false;
+  if (win.isMaximized()) win.unmaximize(); else win.maximize();
+  return win.isMaximized();
+});
+ipcMain.handle('win:close', () => win && win.close());
+ipcMain.handle('win:isMaximized', () => !!(win && win.isMaximized()));
 ipcMain.handle('queue:fetch', async () => {
   await refreshQueue();
   return true;
@@ -259,11 +267,14 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 680,
+    frame: false, // custom in-app title bar (see /station)
     backgroundColor: '#14181f',
     title: 'Vista Print Station',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.setMenuBarVisibility(false);
+  win.on('maximize', () => send('win:state', { maximized: true }));
+  win.on('unmaximize', () => send('win:state', { maximized: false }));
   win.loadURL(STATION_URL);
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http')) shell.openExternal(url);
@@ -330,6 +341,15 @@ if (!gotLock) {
   app.on('second-instance', () => win && (win.show(), win.focus()));
   app.whenReady().then(() => {
     loadConfig();
+    // A hidden menu keeps recovery accelerators alive on the frameless window
+    // (Reload / DevTools / Quit) so it can never get stuck.
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      { label: 'App', submenu: [
+        { role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' },
+        { type: 'separator' }, { role: 'quit', accelerator: 'CmdOrCtrl+Q' },
+      ] },
+      { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
+    ]));
     createWindow();
     createTray();
     pushStatus();

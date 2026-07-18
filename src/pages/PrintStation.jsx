@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PenTool, ListChecks, SlidersHorizontal, Tag, CircleDot } from 'lucide-react';
+import { PenTool, ListChecks, SlidersHorizontal, Tag, CircleDot, Minus, Square, X } from 'lucide-react';
 import Labels from './Labels';
 import StationQueue from '../components/station/StationQueue';
 import StationPrinters from '../components/station/StationPrinters';
@@ -30,20 +30,40 @@ const SCOPED_CSS = `
 export default function PrintStation() {
   const [view, setView] = useState('design');
   const [engine, setEngine] = useState(null); // null=web, {running}
+  const [maxed, setMaxed] = useState(false);
   const bridge = typeof window !== 'undefined' && !!window.api;
+  const desktop = bridge && window.api.isDesktop;
 
   useEffect(() => {
     if (!bridge) return;
     window.api.getConfig?.().then((c) => setEngine({ running: !!c.running }));
     window.api.onStatus?.((s) => setEngine({ running: !!s.running }));
+    window.api.winIsMaximized?.().then(setMaxed);
+    window.api.onWinState?.((s) => setMaxed(!!s.maximized));
   }, [bridge]);
 
   const current = NAV.find((n) => n.k === view) || NAV[0];
 
   return (
-    <div className="vps flex h-screen w-full overflow-hidden bg-[#f4f2ee] font-sans text-slate-900 antialiased">
+    <div className="vps flex h-screen w-full flex-col overflow-hidden bg-[#f4f2ee] font-sans text-slate-900 antialiased">
       <style>{SCOPED_CSS}</style>
 
+      {/* Custom title bar (desktop app only) */}
+      {desktop && (
+        <div className="flex h-9 shrink-0 items-center justify-between bg-[var(--rail)] pl-3 text-white/85" style={{ WebkitAppRegion: 'drag' }}>
+          <div className="flex items-center gap-2">
+            <span className="grid h-4 w-4 place-items-center rounded bg-[var(--accent)] text-white"><Tag size={10} /></span>
+            <span className="font-display text-[10.5px] font-bold uppercase tracking-[0.18em]">Vista Print Station</span>
+          </div>
+          <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' }}>
+            <button onClick={() => window.api.winMinimize()} title="Minimize" className="grid h-9 w-11 place-items-center text-white/70 transition hover:bg-white/10 hover:text-white"><Minus size={14} /></button>
+            <button onClick={() => window.api.winMaximizeToggle()} title={maxed ? 'Restore' : 'Maximize'} className="grid h-9 w-11 place-items-center text-white/70 transition hover:bg-white/10 hover:text-white"><Square size={11} /></button>
+            <button onClick={() => window.api.winClose()} title="Close" className="grid h-9 w-11 place-items-center text-white/70 transition hover:bg-red-500 hover:text-white"><X size={15} /></button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1">
       {/* Tool rail */}
       <nav className="flex w-[76px] shrink-0 flex-col items-center bg-[var(--rail)] py-4 text-white/70">
         <div className="mb-6 grid h-11 w-11 place-items-center rounded-2xl bg-[var(--accent)] text-white shadow-[0_6px_20px_-6px_rgba(234,88,12,0.8)]">
@@ -101,6 +121,7 @@ export default function PrintStation() {
           {view === 'queue' && <div className="h-full bg-white"><StationQueue /></div>}
           {view === 'printers' && <div className="h-full bg-[#faf9f7]"><StationPrinters /></div>}
         </main>
+      </div>
       </div>
     </div>
   );

@@ -131,6 +131,23 @@ const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReor
           </>
         )}
 
+        {el.type === 'arrow' && (
+          <>
+            <label className="block">
+              <span className={LAB}>Direction</span>
+              <select value={el.dir || 'up'} onChange={(e) => set({ dir: e.target.value })} className={FIELD}>
+                <option value="up">Up ↑</option>
+                <option value="down">Down ↓</option>
+                <option value="left">Left ←</option>
+                <option value="right">Right →</option>
+              </select>
+            </label>
+            <Num label="Thickness" value={el.thickness} onChange={(v) => set({ thickness: v })} />
+            <Num label="Width" value={el.w} onChange={(v) => set({ w: v })} />
+            <Num label="Height" value={el.h} onChange={(v) => set({ h: v })} />
+          </>
+        )}
+
         {el.type === 'line' && (
           <>
             <label className="block">

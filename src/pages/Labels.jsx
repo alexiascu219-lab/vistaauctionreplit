@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import {
   Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
   Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database, ImagePlus, X, RotateCw,
-  Circle, Undo2, Redo2, Grid3x3, Image as ImageIcon,
+  Circle, Undo2, Redo2, Grid3x3, Image as ImageIcon, ArrowUp, Copy,
+  AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
 } from 'lucide-react';
 import Toast from '../components/Toast';
 import LabelSvg from '../components/labels/LabelSvg';
@@ -14,9 +15,9 @@ import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, newElement, reference
 import { expandNumbers } from '../lib/zpl';
 import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
 import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromRequest } from '../lib/labelsAi';
-import { rasterizeToGF } from '../lib/raster';
+import { rasterizeToGF, rasterizeArrowGF } from '../lib/raster';
 
-const TOOL_ICONS = { Type, Barcode, Square, Minus, Circle, Image: ImageIcon };
+const TOOL_ICONS = { Type, Barcode, Square, Minus, Circle, Image: ImageIcon, ArrowUp };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // Decode a picked file to something drawable. createImageBitmap handles
@@ -89,7 +90,12 @@ const Labels = ({ embedded = false }) => {
   const [selectedId, setSelectedId] = useState(null);
   const [work, setWork] = useState(null); // working template copy
   const [dirty, setDirty] = useState(false);
-  const [selEl, setSelEl] = useState(null);
+  const [selIds, setSelIds] = useState([]);
+  const selEl = selIds.length === 1 ? selIds[0] : null;
+  const selectEl = (id, additive) => {
+    if (!id) return setSelIds([]);
+    setSelIds((cur) => (additive ? (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]) : [id]));
+  };
   const [values, setValues] = useState({});
   const [batch, setBatch] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -125,7 +131,7 @@ const Labels = ({ embedded = false }) => {
         if (r.status === 'done' && r.result) {
           setWork({ ...templateFromRequest(r), id: undefined });
           setSelectedId(null);
-          setSelEl(null);
+          setSelIds([]);
           setDirty(true);
           setClaudeStatus('idle');
           setClaudeReq(null);
@@ -170,7 +176,7 @@ const Labels = ({ embedded = false }) => {
     resetHistory();
     setSelectedId(t.id);
     setWork(clone(t));
-    setSelEl(null);
+    setSelIds([]);
     setDirty(false);
     const v = {};
     (t.variables || []).forEach((vv) => (v[vv.key] = vv.default ?? ''));
@@ -183,7 +189,7 @@ const Labels = ({ embedded = false }) => {
     const t = { ...clone(DEFAULT_LABEL), name: 'New label', elements: [] };
     setSelectedId(null);
     setWork(t);
-    setSelEl(null);
+    setSelIds([]);
     setDirty(true);
     setMode('design');
     const v = {};
@@ -196,19 +202,19 @@ const Labels = ({ embedded = false }) => {
   const addEl = (type) => {
     setWork((w) => {
       const el = newElement(type, w);
-      setSelEl(el.id);
+      setSelIds([el.id]);
       return { ...w, elements: [...(w.elements || []), el] };
     });
     setDirty(true);
   };
   const updateEl = (id, patch) => { setWork((w) => ({ ...w, elements: w.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) })); setDirty(true); };
-  const deleteEl = (id) => { setWork((w) => ({ ...w, elements: w.elements.filter((e) => e.id !== id) })); setSelEl(null); setDirty(true); };
+  const deleteEl = (id) => { setWork((w) => ({ ...w, elements: w.elements.filter((e) => e.id !== id) })); setSelIds([]); setDirty(true); };
   const duplicateEl = (id) => {
     setWork((w) => {
       const el = w.elements.find((e) => e.id === id);
       if (!el) return w;
       const copy = { ...el, id: `e${Math.random().toString(36).slice(2, 7)}`, x: Math.min((w.width || 609) - 4, (el.x || 0) + 16), y: Math.min((w.height || 406) - 4, (el.y || 0) + 16) };
-      setSelEl(copy.id);
+      setSelIds([copy.id]);
       return { ...w, elements: [...w.elements, copy] };
     });
     setDirty(true);
@@ -248,7 +254,7 @@ const Labels = ({ embedded = false }) => {
     const prev = pastRef.current.pop();
     histLock.current = true;
     lastRef.current = clone(prev);
-    setWork(prev); setSelEl(null); setDirty(true);
+    setWork(prev); setSelIds([]); setDirty(true);
   };
   const redo = () => {
     if (!futureRef.current.length) return;
@@ -256,22 +262,22 @@ const Labels = ({ embedded = false }) => {
     const next = futureRef.current.pop();
     histLock.current = true;
     lastRef.current = clone(next);
-    setWork(next); setSelEl(null); setDirty(true);
+    setWork(next); setSelIds([]); setDirty(true);
   };
-  // Re-rasterize image elements to a 1-bit ^GF whenever their src or size
-  // changes, so the printed label matches the preview and ZPL stays sync.
+  // Re-rasterize image + arrow elements to a 1-bit ^GF whenever their inputs
+  // change, so the printed label matches the preview and ZPL stays sync.
   useEffect(() => {
     if (!work) return undefined;
-    const stale = (work.elements || []).filter((e) => e.type === 'image' && e.src && (!e.gfHex || e.gfW !== e.w || e.gfH !== e.h));
-    if (!stale.length) return undefined;
+    const imgs = (work.elements || []).filter((e) => e.type === 'image' && e.src && (!e.gfHex || e.gfW !== e.w || e.gfH !== e.h));
+    const arrows = (work.elements || []).filter((e) => e.type === 'arrow' && (!e.gfHex || e.gfW !== e.w || e.gfH !== e.h || e.gfDir !== e.dir || e.gfT !== e.thickness));
+    if (!imgs.length && !arrows.length) return undefined;
     let cancelled = false;
     (async () => {
-      for (const el of stale) {
-        try {
-          const gf = await rasterizeToGF(el.src, el.w, el.h);
-          if (cancelled) return;
-          updateEl(el.id, { ...gf, gfW: el.w, gfH: el.h });
-        } catch { /* ignore a bad image */ }
+      for (const el of imgs) {
+        try { const gf = await rasterizeToGF(el.src, el.w, el.h); if (cancelled) return; updateEl(el.id, { ...gf, gfW: el.w, gfH: el.h }); } catch { /* ignore */ }
+      }
+      for (const el of arrows) {
+        try { const gf = rasterizeArrowGF(el.dir || 'up', el.w, el.h, el.thickness); if (cancelled) return; updateEl(el.id, { ...gf, gfW: el.w, gfH: el.h, gfDir: el.dir || 'up', gfT: el.thickness }); } catch { /* ignore */ }
       }
     })();
     return () => { cancelled = true; };
@@ -307,13 +313,57 @@ const Labels = ({ embedded = false }) => {
     setDirty(true);
   };
 
-  const copyEl = () => { const el = (work?.elements || []).find((e) => e.id === selEl); if (el) clipRef.current = clone(el); };
+  const copyEl = () => {
+    const els = (work?.elements || []).filter((e) => selIds.includes(e.id));
+    if (els.length) clipRef.current = els.map(clone);
+  };
   const pasteEl = () => {
-    if (!clipRef.current) return;
+    if (!clipRef.current?.length) return;
+    const ids = [];
     setWork((w) => {
-      const copy = { ...clone(clipRef.current), id: `e${Math.random().toString(36).slice(2, 7)}`, x: Math.min((w.width || 609) - 4, (clipRef.current.x || 0) + 16), y: Math.min((w.height || 406) - 4, (clipRef.current.y || 0) + 16) };
-      setSelEl(copy.id);
-      return { ...w, elements: [...w.elements, copy] };
+      const copies = clipRef.current.map((c) => {
+        const id = `e${Math.random().toString(36).slice(2, 7)}`;
+        ids.push(id);
+        return { ...clone(c), id, x: Math.min((w.width || 609) - 4, (c.x || 0) + 16), y: Math.min((w.height || 406) - 4, (c.y || 0) + 16) };
+      });
+      return { ...w, elements: [...w.elements, ...copies] };
+    });
+    setSelIds(ids);
+    setDirty(true);
+  };
+
+  // Group operations over the current selection.
+  const deleteSelection = () => { const s = new Set(selIds); setWork((w) => ({ ...w, elements: w.elements.filter((e) => !s.has(e.id)) })); setSelIds([]); setDirty(true); };
+  const duplicateSelection = () => {
+    const s = new Set(selIds);
+    const ids = [];
+    setWork((w) => {
+      const copies = w.elements.filter((e) => s.has(e.id)).map((el) => {
+        const id = `e${Math.random().toString(36).slice(2, 7)}`;
+        ids.push(id);
+        return { ...clone(el), id, x: Math.min((w.width || 609) - 4, (el.x || 0) + 16), y: Math.min((w.height || 406) - 4, (el.y || 0) + 16) };
+      });
+      return { ...w, elements: [...w.elements, ...copies] };
+    });
+    setSelIds(ids);
+    setDirty(true);
+  };
+  const nudgeSelection = (dx, dy) => {
+    const s = new Set(selIds);
+    setWork((w) => ({ ...w, elements: w.elements.map((e) => (s.has(e.id) ? { ...e, x: Math.max(0, (e.x || 0) + dx), y: Math.max(0, (e.y || 0) + dy) } : e)) }));
+    setDirty(true);
+  };
+  const alignSel = (how) => selIds.forEach((id) => alignEl(id, how));
+  // Distribute selected elements evenly along an axis (edge-to-edge spacing).
+  const distributeSel = (axis) => {
+    if (selIds.length < 3) return;
+    setWork((w) => {
+      const items = w.elements.filter((e) => selIds.includes(e.id)).map((e) => ({ e, pos: axis === 'h' ? (e.x || 0) : (e.y || 0) })).sort((a, b) => a.pos - b.pos);
+      const first = items[0].pos;
+      const last = items[items.length - 1].pos;
+      const gap = (last - first) / (items.length - 1);
+      const set = new Map(items.map((it, i) => [it.e.id, Math.round(first + gap * i)]));
+      return { ...w, elements: w.elements.map((e) => (set.has(e.id) ? { ...e, [axis === 'h' ? 'x' : 'y']: set.get(e.id) } : e)) };
     });
     setDirty(true);
   };
@@ -329,22 +379,22 @@ const Labels = ({ embedded = false }) => {
       if (cmd && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return; }
       if (cmd && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); copyEl(); return; }
       if (cmd && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); pasteEl(); return; }
-      if (!selEl) return;
-      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteEl(selEl); return; }
-      if ((e.key === 'd' || e.key === 'D') && cmd) { e.preventDefault(); duplicateEl(selEl); return; }
+      if (cmd && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); setSelIds((work?.elements || []).map((el) => el.id)); return; }
+      if (!selIds.length) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelection(); return; }
+      if ((e.key === 'd' || e.key === 'D') && cmd) { e.preventDefault(); duplicateSelection(); return; }
       const base = e.shiftKey ? 10 : 1;
       const step = snap ? snap : base;
       const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
       if (moves[e.key]) {
         e.preventDefault();
         const [dx, dy] = moves[e.key];
-        setWork((w) => ({ ...w, elements: w.elements.map((el) => (el.id === selEl ? { ...el, x: Math.max(0, (el.x || 0) + dx), y: Math.max(0, (el.y || 0) + dy) } : el)) }));
-        setDirty(true);
+        nudgeSelection(dx, dy);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [mode, selEl, snap, work]);
+  }, [mode, selIds, snap, work]);
 
   const selectedElement = useMemo(() => (work?.elements || []).find((e) => e.id === selEl) || null, [work, selEl]);
 
@@ -443,7 +493,7 @@ const Labels = ({ embedded = false }) => {
       const t = await generateLabelDesign({ prompt: aiPrompt.trim(), base, provider: aiProvider, image: aiImage });
       setWork({ ...t, id: undefined });
       setSelectedId(null);
-      setSelEl(null);
+      setSelIds([]);
       setDirty(true);
       setToast({ message: 'Mistral designed your label — tweak, then Save', type: 'success' });
     } catch (err) {
@@ -612,7 +662,8 @@ const Labels = ({ embedded = false }) => {
                             interactive
                             snap={snap}
                             selectedId={selEl}
-                            onSelect={setSelEl}
+                            selectedIds={selIds}
+                            onSelect={selectEl}
                             onLiveChange={updateEl}
                             onCommit={() => setDirty(true)}
                           />
@@ -713,10 +764,32 @@ const Labels = ({ embedded = false }) => {
                         </p>
                       </div>
 
-                      {selectedElement ? (
+                      {selIds.length > 1 ? (
+                        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
+                          <div className="mb-3 flex items-center justify-between">
+                            <span className="rounded-lg bg-orange-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-orange-700">{selIds.length} selected</span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={duplicateSelection} title="Duplicate" className="rounded-lg border border-stone-200 bg-white p-1.5 text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
+                              <button onClick={deleteSelection} title="Delete" className="rounded-lg border border-stone-200 bg-white p-1.5 text-slate-400 hover:border-red-200 hover:text-red-500"><Trash2 size={14} /></button>
+                            </div>
+                          </div>
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Align on label</span>
+                          <div className="mb-3 flex gap-1">
+                            {[['left', AlignStartVertical], ['hcenter', AlignCenterVertical], ['right', AlignEndVertical], ['top', AlignStartHorizontal], ['vcenter', AlignCenterHorizontal], ['bottom', AlignEndHorizontal]].map(([k, Ic]) => (
+                              <button key={k} onClick={() => alignSel(k)} title={k} className="flex-1 rounded-lg border border-stone-200 bg-white p-1.5 text-slate-500 hover:border-orange-200 hover:text-orange-600"><Ic size={14} className="mx-auto" /></button>
+                            ))}
+                          </div>
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Distribute (3+)</span>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => distributeSel('h')} className="flex-1 rounded-lg border border-stone-200 bg-white py-1.5 text-[11.5px] font-bold text-slate-600 hover:border-orange-200 hover:text-orange-600">Horizontally</button>
+                            <button onClick={() => distributeSel('v')} className="flex-1 rounded-lg border border-stone-200 bg-white py-1.5 text-[11.5px] font-bold text-slate-600 hover:border-orange-200 hover:text-orange-600">Vertically</button>
+                          </div>
+                          <p className="mt-2.5 text-[10.5px] text-slate-400">Shift-click to add/remove · Ctrl+A selects all · drag to move together.</p>
+                        </div>
+                      ) : selectedElement ? (
                         <ElementInspector element={selectedElement} onChange={updateEl} onDelete={deleteEl} onDuplicate={duplicateEl} onReorder={reorderEl} onUploadImage={uploadImage} onAlign={alignEl} />
                       ) : (
-                        <div className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-[12.5px] text-slate-400">Tap an element to edit it, or add one above.</div>
+                        <div className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-[12.5px] text-slate-400">Tap an element to edit it (Shift-click for multiple), or add one above.</div>
                       )}
 
                       <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
