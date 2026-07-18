@@ -43,21 +43,16 @@ BEGIN
 IF NOT EXISTS (SELECT 1 FROM vista_label_templates) THEN
 INSERT INTO vista_label_templates (name, description, width, height, dpi, variables, elements) VALUES
 (
-  'Cart sticker', '3" x 2" cart tag with barcode', 609, 406, 203,
+  'Cart sticker', '3" x 2" cart tag — scannable QR + big cart number', 609, 406, 203,
   '[
-    {"key":"cart_number","label":"Cart number","default":"12"},
-    {"key":"subtitle","label":"Subtitle","default":"Inside area"},
-    {"key":"header","label":"Header","default":"Cart tracking"}
+    {"key":"cart_number","label":"Cart number","default":"302"},
+    {"key":"prefix","label":"Location prefix","default":"CLT1-GL"}
   ]'::jsonb,
   '[
-    {"id":"t1","type":"text","x":28,"y":26,"size":36,"value":"VISTA AUCTION"},
-    {"id":"t2","type":"text","x":30,"y":72,"size":22,"value":"${header}"},
-    {"id":"l1","type":"line","x":28,"y":102,"w":553,"thickness":3,"orient":"h"},
-    {"id":"t3","type":"text","x":28,"y":130,"size":40,"value":"CART"},
-    {"id":"t4","type":"text","x":24,"y":172,"size":164,"value":"${cart_number}"},
-    {"id":"t5","type":"text","x":28,"y":352,"size":28,"value":"${subtitle}"},
-    {"id":"b1","type":"barcode","x":368,"y":150,"height":120,"module":3,"symbology":"code128","showText":false,"value":"${cart_number}"},
-    {"id":"t6","type":"text","x":368,"y":278,"size":24,"value":"#${cart_number}"}
+    {"id":"qr","type":"barcode","x":40,"y":44,"module":10,"symbology":"qr","value":"${prefix}-${cart_number#4}"},
+    {"id":"cd","type":"text","x":41,"y":262,"w":208,"size":26,"align":"center","value":"${prefix}-${cart_number#4}"},
+    {"id":"nm","type":"text","x":258,"y":92,"w":341,"size":150,"align":"center","font":"archivo","value":"${cart_number}"},
+    {"id":"st","type":"text","x":10,"y":352,"w":589,"size":28,"align":"center","value":"Vistaauction.com"}
   ]'::jsonb
 ),
 (

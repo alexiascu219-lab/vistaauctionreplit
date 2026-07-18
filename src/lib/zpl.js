@@ -3,13 +3,24 @@
 // agent/exe sends to the Zebra verbatim — no template lookup needed printer-side.
 
 // Replace ${var} placeholders from a values object.
+// Supports a zero-pad width: ${cart_number#4} turns 302 into "0302".
 export function resolveVars(str, values = {}) {
-  return String(str == null ? '' : str).replace(/\$\{(\w+)\}/g, (_, k) => (values[k] != null ? String(values[k]) : ''));
+  return String(str == null ? '' : str).replace(/\$\{(\w+)(?:#(\d+))?\}/g, (_, k, pad) => {
+    let v = values[k] != null ? String(values[k]) : '';
+    if (pad) v = v.padStart(parseInt(pad, 10), '0');
+    return v;
+  });
 }
 
 // ^ and ~ are ZPL command prefixes; neutralize them inside field data.
 export function zplEscape(s) {
   return String(s == null ? '' : s).replace(/[\^~]/g, ' ');
+}
+
+// Only '0' and 'A'..'H' are valid Zebra font selectors; anything else
+// (e.g. a preview display-font key) falls back to the scalable font '0'.
+function zplFont(f) {
+  return /^[0-9A-H]$/.test(f || '') ? f : '0';
 }
 
 export function templateToZpl(t, values = {}) {
@@ -24,7 +35,14 @@ export function templateToZpl(t, values = {}) {
     if (el.type === 'text') {
       const v = zplEscape(resolveVars(el.value, values));
       const size = Math.round(el.size || 30);
-      L.push(`^FO${x},${y}^A${el.font || '0'}${el.rotation || 'N'},${size},${size}^FD${v}^FS`);
+      const font = `^A${zplFont(el.font)}${el.rotation || 'N'},${size},${size}`;
+      if (el.align === 'center' || el.align === 'right') {
+        const blockW = Math.round(el.w || w - 2 * x);
+        const just = el.align === 'center' ? 'C' : 'R';
+        L.push(`^FO${x},${y}${font}^FB${blockW},2,0,${just}^FD${v}^FS`);
+      } else {
+        L.push(`^FO${x},${y}${font}^FD${v}^FS`);
+      }
     } else if (el.type === 'barcode') {
       const v = zplEscape(resolveVars(el.value, values)) || '0';
       const mod = Math.max(1, Math.round(el.module || 3));
