@@ -55,6 +55,14 @@ const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReor
           <>
             <Num label="Font size" value={el.size} onChange={(v) => set({ size: v })} />
             <Rotation value={el.rotation} onChange={(v) => set({ rotation: v })} />
+            <label className="block">
+              <span className={LAB}>Align</span>
+              <select value={el.align || 'left'} onChange={(e) => set({ align: e.target.value })} className={FIELD}>
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </label>
           </>
         )}
 

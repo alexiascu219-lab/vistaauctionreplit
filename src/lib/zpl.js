@@ -29,7 +29,14 @@ export function templateToZpl(t, values = {}) {
     if (el.type === 'text') {
       const v = zplEscape(resolveVars(el.value, values));
       const size = Math.round(el.size || 30);
-      L.push(`^FO${x},${y}^A${el.font || '0'}${el.rotation || 'N'},${size},${size}^FD${v}^FS`);
+      const font = `^A${el.font || '0'}${el.rotation || 'N'},${size},${size}`;
+      if (el.align === 'center' || el.align === 'right') {
+        const blockW = Math.round(el.w || w - 2 * x);
+        const just = el.align === 'center' ? 'C' : 'R';
+        L.push(`^FO${x},${y}${font}^FB${blockW},2,0,${just}^FD${v}^FS`);
+      } else {
+        L.push(`^FO${x},${y}${font}^FD${v}^FS`);
+      }
     } else if (el.type === 'barcode') {
       const v = zplEscape(resolveVars(el.value, values)) || '0';
       const mod = Math.max(1, Math.round(el.module || 3));

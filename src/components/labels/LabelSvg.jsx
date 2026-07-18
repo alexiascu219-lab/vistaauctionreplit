@@ -6,6 +6,7 @@ import { startPointerDrag, clamp } from '../carts/floorplan/planDrag';
 // the selection outline, and the resize handle.
 function bbox(el, values) {
   if (el.type === 'text') {
+    if (el.align && el.w) return { x: el.x, y: el.y, w: el.w, h: el.size || 30 };
     const v = resolveVars(el.value, values) || ' ';
     return { x: el.x, y: el.y, w: Math.max(16, v.length * (el.size || 30) * 0.58), h: el.size || 30 };
   }
@@ -45,14 +46,22 @@ function barPattern(value, w, h) {
 
 const ROT = { N: 0, R: 90, I: 180, B: 270 };
 
-function ElementVisual({ el, values }) {
+function ElementVisual({ el, values, W = 609 }) {
   const deg = ROT[el.rotation] || 0;
   const rot = deg ? ` rotate(${deg})` : '';
   if (el.type === 'text') {
     const v = resolveVars(el.value, values);
+    const size = el.size || 30;
+    let tx = el.x;
+    let anchor = 'start';
+    if (el.align === 'center' || el.align === 'right') {
+      const blockW = el.w || W - 2 * el.x;
+      tx = el.align === 'center' ? el.x + blockW / 2 : el.x + blockW;
+      anchor = el.align === 'center' ? 'middle' : 'end';
+    }
     return (
       <g transform={deg ? `rotate(${deg} ${el.x} ${el.y})` : undefined}>
-        <text x={el.x} y={el.y + (el.size || 30) * 0.8} fontSize={el.size || 30} fontWeight="600" fill="#0f172a" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+        <text x={tx} y={el.y + size * 0.8} fontSize={size} textAnchor={anchor} fontWeight="600" fill="#0f172a" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
           {v}
         </text>
       </g>
@@ -155,7 +164,7 @@ const LabelSvg = ({ template, values = {}, interactive = false, selectedId, onSe
         const selected = interactive && selectedId === el.id;
         return (
           <g key={el.id}>
-            <ElementVisual el={el} values={values} />
+            <ElementVisual el={el} values={values} W={W} />
             {interactive && (
               <rect
                 x={b.x - 3}
