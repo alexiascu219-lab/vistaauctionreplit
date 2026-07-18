@@ -82,7 +82,7 @@ const Header = () => (
 
 const btn = 'pk-press inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-bold transition';
 
-const Labels = () => {
+const Labels = ({ embedded = false }) => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('print');
@@ -453,26 +453,32 @@ const Labels = () => {
   };
 
   return (
-    <div className="pickups-atelier min-h-screen font-sans text-slate-900 antialiased">
-      <div className="pickups-grid-veil" />
-      <Header />
+    <div className={embedded ? 'font-sans text-slate-900 antialiased' : 'pickups-atelier min-h-screen font-sans text-slate-900 antialiased'}>
+      {!embedded && <div className="pickups-grid-veil" />}
+      {!embedded && <Header />}
 
-      <main className="relative z-10 mx-auto max-w-[1240px] px-5 pb-24 pt-28 sm:px-8">
+      <main className={embedded ? 'relative z-10 mx-auto max-w-[1280px] px-5 pb-16 pt-5 sm:px-7' : 'relative z-10 mx-auto max-w-[1240px] px-5 pb-24 pt-28 sm:px-8'}>
         {/* Hero */}
-        <section className="pk-rise pt-4">
-          <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/80 py-1.5 pl-2.5 pr-3.5 shadow-soft">
-            <Tag size={13} className="text-orange-600" />
-            <span className="text-[11.5px] font-semibold tracky text-slate-900/70">LABEL STUDIO</span>
-          </span>
-          <h1 className="mt-6 font-fraunces text-[clamp(2.4rem,6vw,4rem)] font-normal leading-[0.98] tracking-[-0.03em] text-slate-900">
-            Design &amp; print{' '}
-            <span className="relative inline-block">stickers<span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-orange-600/90" /></span>
-          </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-slate-500">
-            Type a number to print, or open the maker to design a label — every job goes to the same Zebra print queue.
-          </p>
+        <section className={embedded ? 'pt-1' : 'pk-rise pt-4'}>
+          {!embedded && (
+            <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/80 py-1.5 pl-2.5 pr-3.5 shadow-soft">
+              <Tag size={13} className="text-orange-600" />
+              <span className="text-[11.5px] font-semibold tracky text-slate-900/70">LABEL STUDIO</span>
+            </span>
+          )}
+          {!embedded && (
+            <h1 className="mt-6 font-fraunces text-[clamp(2.4rem,6vw,4rem)] font-normal leading-[0.98] tracking-[-0.03em] text-slate-900">
+              Design &amp; print{' '}
+              <span className="relative inline-block">stickers<span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-orange-600/90" /></span>
+            </h1>
+          )}
+          {!embedded && (
+            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-slate-500">
+              Type a number to print, or open the maker to design a label — every job goes to the same Zebra print queue.
+            </p>
+          )}
 
-          <div className="mt-6 inline-flex items-center gap-1 rounded-2xl border border-stone-200 bg-white p-1 shadow-soft">
+          <div className={`${embedded ? '' : 'mt-6 '}inline-flex items-center gap-1 rounded-2xl border border-stone-200 bg-white p-1 shadow-soft`}>
             {[{ k: 'print', label: 'Print', icon: Printer }, { k: 'design', label: 'Design', icon: Pencil }, { k: 'data', label: 'Data', icon: Database }].map((m) => {
               const Icon = m.icon;
               const active = mode === m.k;
