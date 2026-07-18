@@ -1,5 +1,7 @@
 import React, { useRef } from 'react';
 import { resolveVars } from '../../lib/zpl';
+import { qrMatrix } from '../../lib/qr';
+import { fontCss } from '../../config/labelsConfig';
 import { startPointerDrag, clamp } from '../carts/floorplan/planDrag';
 
 // Estimated on-canvas bounding box of an element (dots), used for hit-testing,
@@ -12,7 +14,7 @@ function bbox(el, values) {
   }
   if (el.type === 'barcode') {
     const v = resolveVars(el.value, values) || '0';
-    if (el.symbology === 'qr') { const s = (el.module || 6) * 21; return { x: el.x, y: el.y, w: s, h: s }; }
+    if (el.symbology === 'qr') { const s = (el.module || 6) * qrMatrix(v).count; return { x: el.x, y: el.y, w: s, h: s }; }
     const w = Math.min(1200, (v.length * 11 + 35) * (el.module || 3));
     return { x: el.x, y: el.y, w, h: (el.height || 100) + (el.showText ? 26 : 0) };
   }
@@ -61,7 +63,7 @@ function ElementVisual({ el, values, W = 609 }) {
     }
     return (
       <g transform={deg ? `rotate(${deg} ${el.x} ${el.y})` : undefined}>
-        <text x={tx} y={el.y + size * 0.8} fontSize={size} textAnchor={anchor} fontWeight="600" fill="#0f172a" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+        <text x={tx} y={el.y + size * 0.8} fontSize={size} textAnchor={anchor} fontWeight="700" fill="#0f172a" style={{ fontFamily: fontCss(el.font) }}>
           {v}
         </text>
       </g>
@@ -71,18 +73,13 @@ function ElementVisual({ el, values, W = 609 }) {
     const v = resolveVars(el.value, values) || '0';
     const b = bbox(el, values);
     if (el.symbology === 'qr') {
-      const cells = 21;
-      const cell = b.w / cells;
-      let s = 7;
-      for (const ch of String(v)) s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+      const m = qrMatrix(v);
+      const cell = b.w / m.count;
       const dots = [];
-      for (let yy = 0; yy < cells; yy++)
-        for (let xx = 0; xx < cells; xx++) {
-          s = (s * 1103515245 + 12345) >>> 0;
-          const finder = (xx < 7 && yy < 7) || (xx >= cells - 7 && yy < 7) || (xx < 7 && yy >= cells - 7);
-          if (finder ? (xx % 6 === 0 || yy % 6 === 0 || (xx > 1 && xx < 5 && yy > 1 && yy < 5)) : (s >> 17) & 1)
-            dots.push(<rect key={`${xx}-${yy}`} x={xx * cell} y={yy * cell} width={cell} height={cell} fill="#111" />);
-        }
+      for (let yy = 0; yy < m.count; yy++)
+        for (let xx = 0; xx < m.count; xx++)
+          if (m.cells[yy][xx])
+            dots.push(<rect key={`${xx}-${yy}`} x={xx * cell} y={yy * cell} width={cell + 0.4} height={cell + 0.4} fill="#111" />);
       return <g transform={`translate(${el.x},${el.y})${rot}`}>{dots}</g>;
     }
     return (

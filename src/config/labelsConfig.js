@@ -13,6 +13,25 @@ export const SYMBOLOGIES = [
   { key: 'qr', label: 'QR code' },
 ];
 
+// Text fonts. `css` drives the on-screen preview; `zpl` is the printer-resident
+// font the Zebra renders (only '0' is smoothly scalable, so the display faces
+// map to it for print while staying distinct in the studio preview).
+export const LABEL_FONTS = [
+  { key: '0', label: 'Sans (default)', css: "'Inter', Arial, Helvetica, sans-serif", zpl: '0' },
+  { key: 'archivo', label: 'Archivo — display', css: "'Archivo', 'Arial Narrow', sans-serif", zpl: '0' },
+  { key: 'fraunces', label: 'Fraunces — serif', css: "'Fraunces', Georgia, 'Times New Roman', serif", zpl: '0' },
+];
+
+export function fontCss(key) {
+  return (LABEL_FONTS.find((f) => f.key === key) || LABEL_FONTS[0]).css;
+}
+
+// Map an element font key to a valid Zebra font letter for ZPL output.
+export function zplFont(key) {
+  if (/^[0-9A-H]$/.test(key || '')) return key;
+  return (LABEL_FONTS.find((f) => f.key === key) || LABEL_FONTS[0]).zpl;
+}
+
 // Common Zebra label stock, in dots at 203 dpi.
 export const PRESET_SIZES = [
   { label: '3" × 2"', w: 609, h: 406 },

@@ -49,16 +49,10 @@ INSERT INTO vista_label_templates (name, description, width, height, dpi, variab
     {"key":"prefix","label":"Location prefix","default":"CLT1-GL"}
   ]'::jsonb,
   '[
-    {"id":"bd","type":"box","x":10,"y":10,"w":589,"h":386,"thickness":3},
-    {"id":"br","type":"text","x":10,"y":26,"w":589,"size":24,"align":"center","value":"VISTA AUCTION"},
-    {"id":"dv1","type":"line","x":150,"y":66,"w":309,"thickness":2,"orient":"h"},
-    {"id":"qr","type":"barcode","x":44,"y":92,"module":8,"symbology":"qr","value":"${prefix}-${cart_number#4}"},
-    {"id":"cd","type":"text","x":28,"y":272,"w":200,"size":26,"align":"center","value":"${prefix}-${cart_number#4}"},
-    {"id":"dv2","type":"line","x":250,"y":92,"h":190,"thickness":2,"orient":"v"},
-    {"id":"ce","type":"text","x":262,"y":104,"w":325,"size":30,"align":"center","value":"CART"},
-    {"id":"nm","type":"text","x":262,"y":142,"w":325,"size":150,"align":"center","value":"${cart_number}"},
-    {"id":"dv3","type":"line","x":150,"y":330,"w":309,"thickness":2,"orient":"h"},
-    {"id":"st","type":"text","x":10,"y":346,"w":589,"size":26,"align":"center","value":"vistaauction.com"}
+    {"id":"qr","type":"barcode","x":40,"y":44,"module":10,"symbology":"qr","value":"${prefix}-${cart_number#4}"},
+    {"id":"cd","type":"text","x":41,"y":262,"w":208,"size":26,"align":"center","value":"${prefix}-${cart_number#4}"},
+    {"id":"nm","type":"text","x":258,"y":92,"w":341,"size":150,"align":"center","font":"archivo","value":"${cart_number}"},
+    {"id":"st","type":"text","x":10,"y":352,"w":589,"size":28,"align":"center","value":"Vistaauction.com"}
   ]'::jsonb
 ),
 (

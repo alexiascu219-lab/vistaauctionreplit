@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trash2, Copy, ChevronUp, ChevronDown } from 'lucide-react';
-import { SYMBOLOGIES } from '../../config/labelsConfig';
+import { SYMBOLOGIES, LABEL_FONTS } from '../../config/labelsConfig';
 
 const FIELD = 'w-full rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-[13px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 const LAB = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
@@ -55,6 +55,12 @@ const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReor
           <>
             <Num label="Font size" value={el.size} onChange={(v) => set({ size: v })} />
             <Rotation value={el.rotation} onChange={(v) => set({ rotation: v })} />
+            <label className="block">
+              <span className={LAB}>Font</span>
+              <select value={el.font || '0'} onChange={(e) => set({ font: e.target.value })} className={FIELD}>
+                {LABEL_FONTS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+              </select>
+            </label>
             <label className="block">
               <span className={LAB}>Align</span>
               <select value={el.align || 'left'} onChange={(e) => set({ align: e.target.value })} className={FIELD}>

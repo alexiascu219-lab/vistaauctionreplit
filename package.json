@@ -22,6 +22,7 @@
     "framer-motion": "^12.40.0",
     "lucide-react": "^0.562.0",
     "pdfjs-dist": "^5.4.530",
+    "qrcode-generator": "^2.0.4",
     "react": "^18.2.0",
     "react-calendly": "^4.4.0",
     "react-chartjs-2": "^5.3.1",

@@ -17,6 +17,12 @@ export function zplEscape(s) {
   return String(s == null ? '' : s).replace(/[\^~]/g, ' ');
 }
 
+// Only '0' and 'A'..'H' are valid Zebra font selectors; anything else
+// (e.g. a preview display-font key) falls back to the scalable font '0'.
+function zplFont(f) {
+  return /^[0-9A-H]$/.test(f || '') ? f : '0';
+}
+
 export function templateToZpl(t, values = {}) {
   const w = Math.round(t.width || 609);
   const h = Math.round(t.height || 406);
@@ -29,7 +35,7 @@ export function templateToZpl(t, values = {}) {
     if (el.type === 'text') {
       const v = zplEscape(resolveVars(el.value, values));
       const size = Math.round(el.size || 30);
-      const font = `^A${el.font || '0'}${el.rotation || 'N'},${size},${size}`;
+      const font = `^A${zplFont(el.font)}${el.rotation || 'N'},${size},${size}`;
       if (el.align === 'center' || el.align === 'right') {
         const blockW = Math.round(el.w || w - 2 * x);
         const just = el.align === 'center' ? 'C' : 'R';
