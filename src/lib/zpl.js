@@ -54,7 +54,11 @@ export function templateToZpl(t, values = {}) {
       }
     } else if (el.type === 'box') {
       const th = Math.max(1, Math.round(el.thickness || 2));
-      L.push(`^FO${x},${y}^GB${Math.round(el.w || 40)},${Math.round(el.h || 40)},${th}^FS`);
+      const round = Math.max(0, Math.min(8, Math.round(el.rounding || 0)));
+      L.push(`^FO${x},${y}^GB${Math.round(el.w || 40)},${Math.round(el.h || 40)},${th},B,${round}^FS`);
+    } else if (el.type === 'ellipse') {
+      const th = Math.max(1, Math.round(el.thickness || 3));
+      L.push(`^FO${x},${y}^GE${Math.round(el.w || 60)},${Math.round(el.h || 60)},${th},B^FS`);
     } else if (el.type === 'line') {
       const th = Math.max(1, Math.round(el.thickness || 3));
       if (el.orient === 'v') L.push(`^FO${x},${y}^GB${th},${Math.round(el.h || el.w || 40)},${th}^FS`);

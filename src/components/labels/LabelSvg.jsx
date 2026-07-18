@@ -94,14 +94,22 @@ function ElementVisual({ el, values, W = 609 }) {
     );
   }
   if (el.type === 'box') {
-    return <rect x={el.x} y={el.y} width={el.w || 40} height={el.h || 40} fill="none" stroke="#0f172a" strokeWidth={el.thickness || 2} />;
+    const round = Math.max(0, Math.min(8, el.rounding || 0));
+    const rx = round ? (Math.min(el.w || 40, el.h || 40) / 2) * (round / 8) : 0;
+    return <rect x={el.x} y={el.y} width={el.w || 40} height={el.h || 40} rx={rx} fill="none" stroke="#0f172a" strokeWidth={el.thickness || 2} />;
+  }
+  if (el.type === 'ellipse') {
+    const w = el.w || 60;
+    const h = el.h || 60;
+    return <ellipse cx={el.x + w / 2} cy={el.y + h / 2} rx={w / 2} ry={h / 2} fill="none" stroke="#0f172a" strokeWidth={el.thickness || 3} />;
   }
   // line
   const b = bbox(el, values);
   return <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="#0f172a" />;
 }
 
-const LabelSvg = ({ template, values = {}, interactive = false, selectedId, onSelect, onLiveChange, onCommit, className, style }) => {
+const LabelSvg = ({ template, values = {}, interactive = false, selectedId, onSelect, onLiveChange, onCommit, snap = 0, className, style }) => {
+  const snapTo = (n) => (snap > 0 ? Math.round(n / snap) * snap : n);
   const svgRef = useRef(null);
   const start = useRef(null);
   const W = template.width || 609;
@@ -120,8 +128,8 @@ const LabelSvg = ({ template, values = {}, interactive = false, selectedId, onSe
     startPointerDrag(e, {
       onMove: (dxPx, dyPx) => {
         onLiveChange(el.id, {
-          x: clamp(Math.round(start.current.x + dxPx * scale), 0, W),
-          y: clamp(Math.round(start.current.y + dyPx * scale), 0, H),
+          x: clamp(snapTo(Math.round(start.current.x + dxPx * scale)), 0, W),
+          y: clamp(snapTo(Math.round(start.current.y + dyPx * scale)), 0, H),
         });
       },
       onEnd: (moved) => moved && onCommit?.(),

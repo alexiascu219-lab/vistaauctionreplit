@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
   Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database, ImagePlus, X, RotateCw,
+  Circle, Undo2, Redo2, Grid3x3,
 } from 'lucide-react';
 import Toast from '../components/Toast';
 import LabelSvg from '../components/labels/LabelSvg';
@@ -14,7 +15,7 @@ import { expandNumbers } from '../lib/zpl';
 import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
 import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromRequest } from '../lib/labelsAi';
 
-const TOOL_ICONS = { Type, Barcode, Square, Minus };
+const TOOL_ICONS = { Type, Barcode, Square, Minus, Circle };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // Decode a picked file to something drawable. createImageBitmap handles
@@ -99,6 +100,15 @@ const Labels = () => {
   const [aiBusy, setAiBusy] = useState(false);
   const [claudeReq, setClaudeReq] = useState(null);
   const [claudeStatus, setClaudeStatus] = useState('idle'); // idle | pending
+  const [snap, setSnap] = useState(0); // grid size in dots; 0 = off
+
+  // Undo/redo history + copy-paste clipboard.
+  const pastRef = useRef([]);
+  const futureRef = useRef([]);
+  const lastRef = useRef(null);
+  const histLock = useRef(false);
+  const clipRef = useRef(null);
+  const resetHistory = () => { pastRef.current = []; futureRef.current = []; lastRef.current = null; };
 
   // Watch a queued Claude request until the Routine fills it in.
   useEffect(() => {
@@ -155,6 +165,7 @@ const Labels = () => {
   useEffect(() => { load(); }, [load]);
 
   function selectTemplate(t) {
+    resetHistory();
     setSelectedId(t.id);
     setWork(clone(t));
     setSelEl(null);
@@ -166,6 +177,7 @@ const Labels = () => {
   }
 
   const newTemplate = () => {
+    resetHistory();
     const t = { ...clone(DEFAULT_LABEL), name: 'New label', elements: [] };
     setSelectedId(null);
     setWork(t);
@@ -212,15 +224,65 @@ const Labels = () => {
     setDirty(true);
   };
 
-  // Keyboard: nudge / delete / duplicate the selected element in Design mode.
+  // Debounced undo history: once an edit settles, bank the prior state.
   useEffect(() => {
-    if (mode !== 'design' || !selEl) return undefined;
+    if (!work) return undefined;
+    if (lastRef.current === null) { lastRef.current = clone(work); return undefined; }
+    const t = setTimeout(() => {
+      if (histLock.current) { histLock.current = false; lastRef.current = clone(work); return; }
+      if (JSON.stringify(lastRef.current) !== JSON.stringify(work)) {
+        pastRef.current.push(lastRef.current);
+        if (pastRef.current.length > 60) pastRef.current.shift();
+        futureRef.current = [];
+        lastRef.current = clone(work);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [work]);
+
+  const undo = () => {
+    if (!pastRef.current.length) return;
+    futureRef.current.push(clone(work));
+    const prev = pastRef.current.pop();
+    histLock.current = true;
+    lastRef.current = clone(prev);
+    setWork(prev); setSelEl(null); setDirty(true);
+  };
+  const redo = () => {
+    if (!futureRef.current.length) return;
+    pastRef.current.push(clone(work));
+    const next = futureRef.current.pop();
+    histLock.current = true;
+    lastRef.current = clone(next);
+    setWork(next); setSelEl(null); setDirty(true);
+  };
+  const copyEl = () => { const el = (work?.elements || []).find((e) => e.id === selEl); if (el) clipRef.current = clone(el); };
+  const pasteEl = () => {
+    if (!clipRef.current) return;
+    setWork((w) => {
+      const copy = { ...clone(clipRef.current), id: `e${Math.random().toString(36).slice(2, 7)}`, x: Math.min((w.width || 609) - 4, (clipRef.current.x || 0) + 16), y: Math.min((w.height || 406) - 4, (clipRef.current.y || 0) + 16) };
+      setSelEl(copy.id);
+      return { ...w, elements: [...w.elements, copy] };
+    });
+    setDirty(true);
+  };
+
+  // Keyboard: undo/redo, copy/paste, nudge / delete / duplicate in Design mode.
+  useEffect(() => {
+    if (mode !== 'design') return undefined;
     const onKey = (e) => {
       const t = (e.target.tagName || '').toLowerCase();
       if (t === 'input' || t === 'textarea' || t === 'select' || e.target.isContentEditable) return;
+      const cmd = e.metaKey || e.ctrlKey;
+      if (cmd && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+      if (cmd && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return; }
+      if (cmd && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); copyEl(); return; }
+      if (cmd && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); pasteEl(); return; }
+      if (!selEl) return;
       if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteEl(selEl); return; }
-      if ((e.key === 'd' || e.key === 'D') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); duplicateEl(selEl); return; }
-      const step = e.shiftKey ? 10 : 1;
+      if ((e.key === 'd' || e.key === 'D') && cmd) { e.preventDefault(); duplicateEl(selEl); return; }
+      const base = e.shiftKey ? 10 : 1;
+      const step = snap ? snap : base;
       const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
       if (moves[e.key]) {
         e.preventDefault();
@@ -231,7 +293,7 @@ const Labels = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [mode, selEl]);
+  }, [mode, selEl, snap, work]);
 
   const selectedElement = useMemo(() => (work?.elements || []).find((e) => e.id === selEl) || null, [work, selEl]);
 
@@ -464,6 +526,10 @@ const Labels = () => {
                         </button>
                       );
                     })}
+                    <span className="mx-1 h-5 w-px bg-stone-200" />
+                    <button onClick={undo} title="Undo (Ctrl+Z)" className={`${btn} border border-stone-200 bg-white text-slate-500 hover:border-stone-300 hover:text-slate-800`}><Undo2 size={14} /></button>
+                    <button onClick={redo} title="Redo (Ctrl+Shift+Z)" className={`${btn} border border-stone-200 bg-white text-slate-500 hover:border-stone-300 hover:text-slate-800`}><Redo2 size={14} /></button>
+                    <button onClick={() => setSnap((s) => (s ? 0 : 10))} title="Snap to grid" className={`${btn} border ${snap ? 'border-orange-200 bg-orange-50 text-orange-600' : 'border-stone-200 bg-white text-slate-500 hover:border-stone-300'}`}><Grid3x3 size={14} /> {snap ? 'Snap on' : 'Snap'}</button>
                     <div className="ml-auto flex items-center gap-2">
                       {dirty && <span className="text-[11.5px] font-semibold text-amber-600">Unsaved</span>}
                       {work.id && <button onClick={del} disabled={busy} className={`${btn} border border-stone-200 bg-white text-slate-400 hover:border-red-200 hover:text-red-500`}><Trash2 size={14} /></button>}
@@ -482,6 +548,7 @@ const Labels = () => {
                             template={work}
                             values={(work.variables || []).reduce((a, v) => ((a[v.key] = v.default), a), {})}
                             interactive
+                            snap={snap}
                             selectedId={selEl}
                             onSelect={setSelEl}
                             onLiveChange={updateEl}

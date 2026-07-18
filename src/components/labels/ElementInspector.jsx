@@ -95,6 +95,15 @@ const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReor
             <Num label="Width" value={el.w} onChange={(v) => set({ w: v })} />
             <Num label="Height" value={el.h} onChange={(v) => set({ h: v })} />
             <Num label="Thickness" value={el.thickness} onChange={(v) => set({ thickness: v })} />
+            <Num label="Rounding (0–8)" value={el.rounding} onChange={(v) => set({ rounding: Math.max(0, Math.min(8, v)) })} />
+          </>
+        )}
+
+        {el.type === 'ellipse' && (
+          <>
+            <Num label="Width" value={el.w} onChange={(v) => set({ w: v })} />
+            <Num label="Height" value={el.h} onChange={(v) => set({ h: v })} />
+            <Num label="Thickness" value={el.thickness} onChange={(v) => set({ thickness: v })} />
           </>
         )}
 
