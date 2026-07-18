@@ -144,9 +144,8 @@ export function templateFromRequest(req) {
 export async function generateLabelDesign({ prompt, base, provider = 'mistral', image = null }) {
   const W = base?.width || 609;
   const H = base?.height || 406;
-  if (provider !== 'mistral') throw new Error('Only Mistral is wired up right now.');
 
-  const text = await callAi({ task: 'design', prompt, base: { width: W, height: H }, image });
+  const text = await callAi({ task: 'design', provider, prompt, base: { width: W, height: H }, image });
   const template = sanitizeTemplate(extractJson(text), { width: W, height: H });
   if (!template.elements.length) throw new Error('The AI returned an empty label — try describing it differently.');
   return template;

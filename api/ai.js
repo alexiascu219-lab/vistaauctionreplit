@@ -1,20 +1,24 @@
 import { generateText } from 'ai';
 import { createMistral } from '@ai-sdk/mistral';
+import { createAnthropic } from '@ai-sdk/anthropic';
 
 // ============================================================================
-// /api/ai — server-side Mistral proxy for Label Studio.
-//   POST { task:'design', prompt, base:{width,height}, image? }  -> { text }
-//   POST { task:'map', instruction, columns, variables }          -> { text }
+// /api/ai — server-side AI proxy for Label Studio (Mistral + Claude).
+//   POST { task:'design', provider?, prompt, base:{width,height}, image? } -> { text }
+//   POST { task:'map', instruction, columns, variables }                   -> { text }
 //
-// The key lives ONLY here, read from a server env var, so it is never shipped
-// to the browser or committed to the repo. Set MISTRAL_API_KEY in Vercel.
+// provider: 'mistral' (default) or 'claude'. Keys live ONLY here, read from
+// server env vars, so they never ship to the browser or the repo:
+//   MISTRAL_API_KEY   for Mistral / Pixtral
+//   ANTHROPIC_API_KEY for Claude
 // ============================================================================
 
 export const config = { maxDuration: 60 };
 
-// Ordered fallback chains — every Mistral model we'll try, best first.
+// Ordered fallback chains — every model we'll try, best first.
 const VISION_MODELS = ['pixtral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'pixtral-12b-2409'];
 const TEXT_MODELS = ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'open-mistral-nemo', 'open-mixtral-8x22b'];
+const CLAUDE_MODELS = ['claude-sonnet-5', 'claude-haiku-4-5-20251001', 'claude-3-5-sonnet-latest'];
 
 const designSystem = (W, H) => `You design thermal labels for a Zebra printer and output ONLY JSON.
 
@@ -65,15 +69,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const key = process.env.MISTRAL_API_KEY || process.env.VITE_MISTRAL_API_KEY;
-  if (!key) return res.status(500).json({ error: 'MISTRAL_API_KEY is not set on the server.' });
-  const mistral = createMistral({ apiKey: key });
-
   const body = typeof req.body === 'string' ? safeJson(req.body) : req.body || {};
   const task = body.task || 'design';
+  const provider = body.provider === 'claude' ? 'claude' : 'mistral';
+
+  // Pick the provider + credentials for this request.
+  const mistralKey = process.env.MISTRAL_API_KEY || process.env.VITE_MISTRAL_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   try {
     if (task === 'map') {
+      if (!mistralKey) return res.status(500).json({ error: 'MISTRAL_API_KEY is not set on the server.' });
+      const mistral = createMistral({ apiKey: mistralKey });
       const columns = Array.isArray(body.columns) ? body.columns : [];
       const variables = Array.isArray(body.variables) ? body.variables : [];
       const prompt = `COLUMNS: ${JSON.stringify(columns)}\nVARIABLES: ${JSON.stringify(variables)}\nINSTRUCTION: ${body.instruction || ''}`;
@@ -92,6 +99,16 @@ export default async function handler(req, res) {
           { type: 'image', image },
         ] }]
       : [{ role: 'user', content: ask }];
+
+    if (provider === 'claude') {
+      if (!anthropicKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not set on the server.' });
+      const anthropic = createAnthropic({ apiKey: anthropicKey });
+      const text = await runModels(anthropic, CLAUDE_MODELS, { system: designSystem(W, H), messages, temperature: image ? 0.4 : 0.5 });
+      return res.status(200).json({ text });
+    }
+
+    if (!mistralKey) return res.status(500).json({ error: 'MISTRAL_API_KEY is not set on the server.' });
+    const mistral = createMistral({ apiKey: mistralKey });
     const text = await runModels(mistral, image ? VISION_MODELS : TEXT_MODELS, {
       system: designSystem(W, H),
       messages,
@@ -99,7 +116,7 @@ export default async function handler(req, res) {
     });
     return res.status(200).json({ text });
   } catch (e) {
-    return res.status(502).json({ error: `${task === 'design' ? 'Mistral' : 'Mistral map'} error: ${e.message}` });
+    return res.status(502).json({ error: `${provider === 'claude' ? 'Claude' : 'Mistral'} error: ${e.message}` });
   }
 }
 

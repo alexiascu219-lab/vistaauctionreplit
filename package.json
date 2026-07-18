@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.16",
     "@ai-sdk/groq": "^3.0.15",
     "@ai-sdk/mistral": "^3.0.15",
     "@google/generative-ai": "^0.24.1",
