@@ -30,16 +30,25 @@ Sizing (dots at 203 dpi): 1"=203, 2"=406, 3"=609, 4"=812, 6"=1218, 8"=1624. Keep
 Whatever size you choose, keep every element fully inside those bounds.
 
 Element types (each is an object in "elements"):
-- text:    { "type":"text", "x":int, "y":int, "size":int, "value":string }   (size = character height in dots, ~24 small, ~160 huge)
-- barcode: { "type":"barcode", "x":int, "y":int, "height":int, "module":int, "symbology":"code128"|"code39"|"qr", "showText":bool, "value":string }
-- box:     { "type":"box", "x":int, "y":int, "w":int, "h":int, "thickness":int }
-- line:    { "type":"line", "x":int, "y":int, "w":int, "thickness":int, "orient":"h" }  (or "orient":"v" with "h":int for a vertical line)
+- text:    { "type":"text", "x":int, "y":int, "size":int, "value":string,
+             "font"?:"0"|"archivo"|"fraunces",   // archivo = bold industrial display (great for big numbers), fraunces = serif, 0 = clean sans
+             "align"?:"left"|"center"|"right", "w"?:int,   // for align to work, set "w" = the block width the text centers/right-aligns within
+             "rotation"?:"N"|"R"|"I"|"B",         // N=0°, R=90°, I=180°, B=270°
+             "inverse"?:bool }                    // white text on a solid black block (badges like SOLD)
+- barcode: { "type":"barcode", "x":int, "y":int, "height":int, "module":int, "symbology":"code128"|"code39"|"qr", "showText":bool, "value":string }   // qr: module≈6-10 sets size; code128/39: height in dots
+- box:     { "type":"box", "x":int, "y":int, "w":int, "h":int, "thickness":int, "rounding"?:int(0-8) }
+- ellipse: { "type":"ellipse", "x":int, "y":int, "w":int, "h":int, "thickness":int }   // circle when w==h
+- line:    { "type":"line", "x":int, "y":int, "w":int, "thickness":int, "orient":"h" }  (or "orient":"v" with "h":int)
+- arrow:   { "type":"arrow", "x":int, "y":int, "w":int, "h":int, "thickness":int, "dir":"up"|"down"|"left"|"right" }
 
-Rules:
+Design like a senior label designer — clean, scannable, professional:
 - Put anything that changes per label as a \${key} placeholder inside a text/barcode "value" (e.g. "CART \${cart_number}"), and list every such key in "variables".
-- Prefer one dominant large number/text, a title, and a barcode when an ID is involved.
+- Establish clear hierarchy: ONE dominant value (large, "font":"archivo"), supporting labels smaller (~24-34 dots).
+- ALIGN things: share x/edges across related elements; center multi-field values by giving each a "w" and "align":"center". Group with a "box"; separate fields with vertical "line" dividers.
+- For multi-field IDs (e.g. warehouse Area/Aisle/Rack/Level/Position), lay fields left→right with dividers and a small caption under each; add an "arrow" for directional cues.
+- Add a "qr" (or code128) whenever there's a scannable ID; a QR can encode a composite like "\${area}-\${aisle}-\${rack}".
+- Keep consistent margins (≥18 dots), don't overlap important elements, and respect the bounds.
 - Brand text can be "VISTA AUCTION".
-- Do not overlap important elements; leave small margins.
 
 Return ONLY this JSON object, no prose, no code fences:
 { "name": string, "width": ${W}, "height": ${H}, "variables": [{ "key":string, "label":string, "default":string }], "elements": [ ... ] }`;

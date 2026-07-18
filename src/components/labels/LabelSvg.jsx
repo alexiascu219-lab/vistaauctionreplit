@@ -120,17 +120,41 @@ function ElementVisual({ el, values, W = 609 }) {
     if (!el.src) return <rect x={el.x} y={el.y} width={w} height={h} fill="#f1f5f9" stroke="#cbd5e1" strokeWidth={2} strokeDasharray="5 4" />;
     return <image href={el.src} x={el.x} y={el.y} width={w} height={h} preserveAspectRatio="none" />;
   }
+  if (el.type === 'arrow') {
+    const w = el.w || 60;
+    const h = el.h || 120;
+    const t = el.thickness || 8;
+    const dir = el.dir || 'up';
+    const vertical = dir === 'up' || dir === 'down';
+    const head = Math.min(vertical ? w : h, (vertical ? h : w) * 0.45);
+    const cxp = el.x + w / 2;
+    const cyp = el.y + h / 2;
+    let shaft; let headPts;
+    if (dir === 'up' || dir === 'down') {
+      shaft = <line x1={cxp} y1={el.y} x2={cxp} y2={el.y + h} stroke="#0f172a" strokeWidth={t} />;
+      headPts = dir === 'up'
+        ? `${cxp},${el.y} ${cxp - head / 2},${el.y + head} ${cxp + head / 2},${el.y + head}`
+        : `${cxp},${el.y + h} ${cxp - head / 2},${el.y + h - head} ${cxp + head / 2},${el.y + h - head}`;
+    } else {
+      shaft = <line x1={el.x} y1={cyp} x2={el.x + w} y2={cyp} stroke="#0f172a" strokeWidth={t} />;
+      headPts = dir === 'left'
+        ? `${el.x},${cyp} ${el.x + head},${cyp - head / 2} ${el.x + head},${cyp + head / 2}`
+        : `${el.x + w},${cyp} ${el.x + w - head},${cyp - head / 2} ${el.x + w - head},${cyp + head / 2}`;
+    }
+    return <g>{shaft}<polygon points={headPts} fill="#0f172a" /></g>;
+  }
   // line
   const b = bbox(el, values);
   return <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="#0f172a" />;
 }
 
-const LabelSvg = ({ template, values = {}, interactive = false, selectedId, onSelect, onLiveChange, onCommit, snap = 0, className, style }) => {
+const LabelSvg = ({ template, values = {}, interactive = false, selectedId, selectedIds = [], onSelect, onLiveChange, onCommit, snap = 0, className, style }) => {
   const snapTo = (n) => (snap > 0 ? Math.round(n / snap) * snap : n);
   const svgRef = useRef(null);
   const start = useRef(null);
   const W = template.width || 609;
   const H = template.height || 406;
+  const selSet = new Set(selectedIds.length ? selectedIds : selectedId ? [selectedId] : []);
 
   const getScale = () => {
     const rect = svgRef.current?.getBoundingClientRect();
@@ -139,15 +163,23 @@ const LabelSvg = ({ template, values = {}, interactive = false, selectedId, onSe
 
   const beginMove = (e, el) => {
     if (!interactive) return;
-    onSelect?.(el.id);
+    // Clicking an element already in a multi-selection drags the whole group;
+    // otherwise this click selects it (shift toggles into the selection).
+    const inGroup = selSet.has(el.id) && selSet.size > 1;
+    if (!inGroup) onSelect?.(el.id, e.shiftKey);
     const scale = getScale();
-    start.current = { x: el.x, y: el.y };
+    const group = inGroup ? (template.elements || []).filter((g) => selSet.has(g.id)) : [el];
+    start.current = { items: group.map((g) => ({ id: g.id, x: g.x || 0, y: g.y || 0 })) };
     startPointerDrag(e, {
       onMove: (dxPx, dyPx) => {
-        onLiveChange(el.id, {
-          x: clamp(snapTo(Math.round(start.current.x + dxPx * scale)), 0, W),
-          y: clamp(snapTo(Math.round(start.current.y + dyPx * scale)), 0, H),
-        });
+        const dx = dxPx * scale;
+        const dy = dyPx * scale;
+        for (const it of start.current.items) {
+          onLiveChange(it.id, {
+            x: clamp(snapTo(Math.round(it.x + dx)), 0, W),
+            y: clamp(snapTo(Math.round(it.y + dy)), 0, H),
+          });
+        }
       },
       onEnd: (moved) => moved && onCommit?.(),
     });
@@ -183,7 +215,8 @@ const LabelSvg = ({ template, values = {}, interactive = false, selectedId, onSe
       <rect x="0" y="0" width={W} height={H} fill="#fff" />
       {(template.elements || []).map((el) => {
         const b = bbox(el, values);
-        const selected = interactive && selectedId === el.id;
+        const selected = interactive && selSet.has(el.id);
+        const primary = interactive && selSet.size === 1 && selSet.has(el.id);
         return (
           <g key={el.id}>
             <ElementVisual el={el} values={values} W={W} />
@@ -200,7 +233,7 @@ const LabelSvg = ({ template, values = {}, interactive = false, selectedId, onSe
                 onPointerDown={(e) => beginMove(e, el)}
               />
             )}
-            {selected && (
+            {primary && (
               <rect
                 x={b.x + b.w - 5}
                 y={b.y + b.h - 5}

@@ -52,7 +52,7 @@ export function templateToZpl(t, values = {}) {
       } else {
         L.push(`^FO${x},${y}${font}^FD${v}^FS`);
       }
-    } else if (el.type === 'image') {
+    } else if (el.type === 'image' || el.type === 'arrow') {
       if (el.gfHex && el.gfBpr && el.gfRows) {
         const total = el.gfBpr * el.gfRows;
         L.push(`^FO${x},${y}^GFA,${total},${total},${el.gfBpr},${el.gfHex}^FS`);

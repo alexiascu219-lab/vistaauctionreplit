@@ -12,4 +12,11 @@ contextBridge.exposeInMainWorld('api', {
   onLog: (cb) => ipcRenderer.on('engine:log', (_e, line) => cb(line)),
   onStatus: (cb) => ipcRenderer.on('engine:status', (_e, s) => cb(s)),
   onQueue: (cb) => ipcRenderer.on('queue:update', (_e, jobs) => cb(jobs)),
+  // Custom window chrome (frameless).
+  isDesktop: true,
+  winMinimize: () => ipcRenderer.invoke('win:minimize'),
+  winMaximizeToggle: () => ipcRenderer.invoke('win:maximizeToggle'),
+  winClose: () => ipcRenderer.invoke('win:close'),
+  winIsMaximized: () => ipcRenderer.invoke('win:isMaximized'),
+  onWinState: (cb) => ipcRenderer.on('win:state', (_e, s) => cb(s)),
 });
