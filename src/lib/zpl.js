@@ -3,8 +3,13 @@
 // agent/exe sends to the Zebra verbatim — no template lookup needed printer-side.
 
 // Replace ${var} placeholders from a values object.
+// Supports a zero-pad width: ${cart_number#4} turns 302 into "0302".
 export function resolveVars(str, values = {}) {
-  return String(str == null ? '' : str).replace(/\$\{(\w+)\}/g, (_, k) => (values[k] != null ? String(values[k]) : ''));
+  return String(str == null ? '' : str).replace(/\$\{(\w+)(?:#(\d+))?\}/g, (_, k, pad) => {
+    let v = values[k] != null ? String(values[k]) : '';
+    if (pad) v = v.padStart(parseInt(pad, 10), '0');
+    return v;
+  });
 }
 
 // ^ and ~ are ZPL command prefixes; neutralize them inside field data.
