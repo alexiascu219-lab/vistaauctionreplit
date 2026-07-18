@@ -16,10 +16,14 @@ CREATE TABLE IF NOT EXISTS vista_label_ai_requests (
                  CHECK (status IN ('pending', 'processing', 'done', 'error')),
     result       JSONB,                                -- the generated template model
     error        TEXT,
+    image        TEXT,                                 -- optional base64 JPEG data URL (vision reference)
     requested_by TEXT,
     created_at   TIMESTAMPTZ DEFAULT NOW(),
     updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Reference image for vision designs (added after initial deploy).
+ALTER TABLE vista_label_ai_requests ADD COLUMN IF NOT EXISTS image TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_label_ai_status  ON vista_label_ai_requests(status);
 CREATE INDEX IF NOT EXISTS idx_label_ai_created ON vista_label_ai_requests(created_at DESC);

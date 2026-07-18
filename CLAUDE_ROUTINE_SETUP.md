@@ -20,23 +20,31 @@ where this one gets created.
 
 1. Go to **claude.ai → Routines → New Routine**.
 2. **Connectors:** enable **Supabase**.
-3. **Schedule:** hourly is fine (or leave it and fire it on demand — see below).
+3. **Schedule:** pick the **most frequent** option the UI offers (e.g. every 15
+   min) so requests are picked up quickly — or fire it on demand (see below).
 4. **Prompt:** paste this exactly:
 
 ```
-You are the Vista Auction Label Studio AI worker. Each run, generate label
-designs for any pending requests using the Supabase tools (project
-lovfbqnuxdihjidxacet). Work quickly; do not ask questions.
+You are the Vista Auction Label Studio AI worker. Be fast and decisive; never
+ask questions. Use the Supabase tools (project lovfbqnuxdihjidxacet).
 
-1. Read pending requests:
-   execute_sql: SELECT id, prompt, base FROM vista_label_ai_requests
-   WHERE status='pending' ORDER BY created_at ASC LIMIT 10;
-   If there are none, stop.
+1. Claim pending work in one query:
+   execute_sql:
+     UPDATE vista_label_ai_requests SET status='processing', updated_at=now()
+     WHERE id IN (SELECT id FROM vista_label_ai_requests WHERE status='pending'
+                  ORDER BY created_at ASC LIMIT 5)
+     RETURNING id, prompt, base, image;
+   If it returns no rows, stop immediately.
 
-2. For EACH row, design a Zebra thermal label as a JSON object.
-   Coordinates are DOTS at 203 dpi; origin top-left; x right, y down.
-   Label size is base.width x base.height dots (default 609 x 406) — keep every
-   element inside those bounds.
+2. For EACH returned row, design a Zebra thermal label as a JSON object.
+   - If "image" is set, it is a base64 JPEG data URL. LOOK AT IT: strip the
+     "data:...;base64," prefix, run in Bash
+       echo '<BASE64>' | base64 -d > /tmp/ref.jpg
+     then use the Read tool on /tmp/ref.jpg and recreate that reference as a
+     printable label (layout, wording, barcodes) — do not copy pixel-for-pixel.
+   - Coordinates are DOTS at 203 dpi; origin top-left; x right, y down.
+     Label size is base.width x base.height dots (default 609 x 406); keep every
+     element inside those bounds.
    Element types (objects in "elements"):
    - {"type":"text","x":int,"y":int,"size":int,"value":str}  (size = char height in dots)
    - {"type":"barcode","x":int,"y":int,"height":int,"module":int,"symbology":"code128"|"code39"|"qr","showText":bool,"value":str}
@@ -55,23 +63,30 @@ lovfbqnuxdihjidxacet). Work quickly; do not ask questions.
    If you cannot design one:
    UPDATE vista_label_ai_requests SET status='error', error='<short reason>', updated_at=now() WHERE id='<ID>';
 
-Process every pending row, then stop.
+Process every claimed row, then stop.
 ```
+
+> The claim-in-one-query step (`pending` → `processing`) means overlapping runs
+> won't fight over the same rows, so you can schedule it aggressively.
 
 ## Using it
 
-- In **Label Studio → Design**, pick **Claude**, type your prompt, hit **Send to
-  Claude**. The request is queued and the panel shows "Claude is drafting via your
-  Routine…". When the Routine runs and fills it in, the design loads into the
-  canvas automatically (while the page is open).
-- **Instant vs scheduled:** scheduled Routines run at most hourly. For an
-  immediate result, open the Routine in claude.ai and **Run now** after sending a
-  request — it processes the queue within a minute.
-- **Mistral** (the other option) is a direct browser call and is always instant —
-  use it when you want a draft right away.
+- In **Label Studio → Design**, pick **Claude**, type your prompt (and/or
+  **Add reference image** — Claude will see it), hit **Send to Claude**. The
+  request is queued and the panel shows "Claude is drafting via your Routine…".
+  When the Routine runs and fills it in, the design loads into the canvas
+  automatically (while the page is open; the Studio now polls every ~2s).
+- **Speed:** the floor is how often the Routine runs. Set the schedule to the
+  most frequent option, or — for an immediate result — open the Routine in
+  claude.ai and **Run now** right after sending; it processes the queue in well
+  under a minute. The app itself picks the result up within a couple seconds.
+- **Mistral** (the other option) is a direct browser call and is always instant,
+  and also accepts a reference image (via Pixtral) — use it when you want a draft
+  right away.
 
 ## Table reference
 
 `vista_label_ai_requests` — `label_ai_requests_schema.sql` (already applied):
-`prompt`, `base {width,height}`, `status` (pending → done/error), `result` (the
-design), `requested_by`.
+`prompt`, `base {width,height}`, `image` (optional base64 JPEG data URL),
+`status` (pending → processing → done/error), `result` (the design),
+`requested_by`.

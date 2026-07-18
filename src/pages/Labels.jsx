@@ -17,29 +17,48 @@ import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromR
 const TOOL_ICONS = { Type, Barcode, Square, Minus };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
-// Re-encode a picked image to a downscaled JPEG data URL. This normalises
-// iPhone HEIC (which vision APIs reject) to JPEG and keeps the payload small
-// enough for the model — the two things that make raw phone photos fail.
-function prepImage(file, maxDim = 1024, quality = 0.85) {
-  return new Promise((resolve, reject) => {
+// Decode a picked file to something drawable. createImageBitmap handles
+// JPEG/PNG/WebP (and HEIC on Safari); for HEIC the browser can't decode we fall
+// back to the heic2any decoder, then a plain <img> as a last resort.
+async function decodeImage(file) {
+  const isHeic = /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name || '');
+  if (!isHeic && 'createImageBitmap' in window) {
+    try { return await createImageBitmap(file); } catch { /* fall through */ }
+  }
+  if (isHeic) {
+    try {
+      const heic2any = (await import('heic2any')).default;
+      const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+      const jpeg = Array.isArray(out) ? out[0] : out;
+      return await createImageBitmap(jpeg);
+    } catch { /* fall through to <img> */ }
+  }
+  return await new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (!width || !height) return reject(new Error('That image could not be read'));
-      const s = Math.min(1, maxDim / Math.max(width, height));
-      width = Math.round(width * s);
-      height = Math.round(height * s);
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That image format could not be read — try a screenshot or JPEG')); };
     img.src = url;
   });
+}
+
+// Re-encode a picked image to a downscaled JPEG data URL — normalises iPhone
+// HEIC (which vision APIs reject) to JPEG and keeps the payload small enough for
+// the model, the two things that make raw phone photos fail.
+async function prepImage(file, maxDim = 1024, quality = 0.85) {
+  const src = await decodeImage(file);
+  const iw = src.width;
+  const ih = src.height;
+  if (!iw || !ih) throw new Error('That image could not be read');
+  const s = Math.min(1, maxDim / Math.max(iw, ih));
+  const w = Math.round(iw * s);
+  const h = Math.round(ih * s);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(src, 0, 0, w, h);
+  if (src.close) src.close();
+  return canvas.toDataURL('image/jpeg', quality);
 }
 
 const Header = () => (
@@ -110,10 +129,10 @@ const Labels = () => {
       } catch {
         /* keep waiting */
       }
-      if (tries < 300) setTimeout(tick, 5000); // keep watching (~25 min) while the page is open
+      if (tries < 600) setTimeout(tick, 2000); // poll fast (~20 min) while the page is open
       else setClaudeStatus('idle');
     };
-    const h = setTimeout(tick, 3000);
+    const h = setTimeout(tick, 1200);
     return () => {
       stop = true;
       clearTimeout(h);
@@ -294,9 +313,9 @@ const Labels = () => {
     if (aiProvider === 'claude') {
       setClaudeStatus('pending');
       try {
-        const req = await enqueueClaudeDesign({ prompt: aiPrompt.trim(), base, by: 'Label Studio' });
+        const req = await enqueueClaudeDesign({ prompt: aiPrompt.trim(), base, by: 'Label Studio', image: aiImage });
         setClaudeReq(req.id);
-        setToast({ message: 'Sent to Claude — your Routine will draft it', type: 'info' });
+        setToast({ message: aiImage ? 'Sent to Claude with your image — the Routine will draft it' : 'Sent to Claude — your Routine will draft it', type: 'info' });
       } catch (err) {
         setClaudeStatus('idle');
         setToast({ message: err.message || 'Could not reach the Claude queue', type: 'error' });
@@ -521,13 +540,13 @@ const Labels = () => {
                           className="w-full resize-none rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
                         />
 
-                        {aiProvider === 'mistral' && (
+                        {(
                           aiImage ? (
                             <div className="mt-2 flex items-center gap-2.5 rounded-xl border border-violet-200 bg-white p-2">
                               <img src={aiImage} alt="Reference" className="h-12 w-12 rounded-lg border border-stone-200 object-cover" />
                               <div className="min-w-0 flex-1">
                                 <p className="text-[11.5px] font-bold text-slate-700">Reference image attached</p>
-                                <p className="text-[10.5px] text-violet-600">Pixtral vision will look at this</p>
+                                <p className="text-[10.5px] text-violet-600">{aiProvider === 'claude' ? 'Claude will look at this' : 'Pixtral vision will look at this'}</p>
                               </div>
                               <button onClick={() => setAiImage(null)} title="Remove image" className="rounded-lg p-1.5 text-slate-400 hover:bg-stone-100 hover:text-red-500"><X size={15} /></button>
                             </div>
@@ -550,12 +569,12 @@ const Labels = () => {
                             className="pk-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-[13px] font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
                           >
                             {aiBusy ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
-                            {aiProvider === 'claude' ? 'Send to Claude' : aiImage ? 'Generate from image' : 'Generate design'}
+                            {aiProvider === 'claude' ? (aiImage ? 'Send image to Claude' : 'Send to Claude') : aiImage ? 'Generate from image' : 'Generate design'}
                           </button>
                         )}
                         <p className="mt-1.5 text-[10.5px] text-slate-400">
                           {aiProvider === 'claude'
-                            ? 'Claude drafts via your Routine, then loads here. (Text only — no image reference.)'
+                            ? 'Claude drafts via your Routine, then loads here. Attach an image and Claude will see it.'
                             : aiImage
                               ? 'Uses Pixtral vision to design from your reference image.'
                               : 'Creates a new unsaved template you can tweak. Add an image to design from a reference.'}

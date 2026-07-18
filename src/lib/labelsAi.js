@@ -14,6 +14,11 @@ const mistralModel = (model = 'mistral-large-latest') => {
   return createMistral({ apiKey })(model);
 };
 
+// Ordered fallback chains — every Mistral model we'll try, best first.
+// Vision-capable models handle a reference image; the rest are text-only.
+const VISION_MODELS = ['pixtral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'pixtral-12b-2409'];
+const TEXT_MODELS = ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'open-mistral-nemo', 'open-mixtral-8x22b'];
+
 const systemPrompt = (W, H) => `You design thermal labels for a Zebra printer and output ONLY JSON.
 
 Coordinates are in DOTS at 203 dpi. Origin is the top-left; x increases to the right, y increases downward.
@@ -130,12 +135,16 @@ Use only column names from COLUMNS and variable keys from VARIABLES. Use null fo
 
 // ---- Claude via the Routine queue -----------------------------------------
 // Drop a request; a Claude Code Routine fulfils it and writes back the design.
-export async function enqueueClaudeDesign({ prompt, base, by = null }) {
-  const { data, error } = await supabase
-    .from('vista_label_ai_requests')
-    .insert([{ prompt, base: { width: base?.width || 609, height: base?.height || 406 }, provider: 'claude', requested_by: by, status: 'pending' }])
-    .select()
-    .single();
+export async function enqueueClaudeDesign({ prompt, base, by = null, image = null }) {
+  const row = {
+    prompt: prompt || 'Design a label from the attached reference image.',
+    base: { width: base?.width || 609, height: base?.height || 406 },
+    provider: 'claude',
+    requested_by: by,
+    status: 'pending',
+  };
+  if (image) row.image = image; // base64 JPEG data URL — the Routine reads it as a file
+  const { data, error } = await supabase.from('vista_label_ai_requests').insert([row]).select().single();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -167,9 +176,10 @@ export async function generateLabelDesign({ prompt, base, provider = 'mistral', 
       ] }]
     : [{ role: 'user', content: ask }];
 
-  // With an image, try Pixtral Large, then fall back to the widely-available
-  // Pixtral 12B if the account can't reach the large model.
-  const candidates = image ? ['pixtral-large-latest', 'pixtral-12b-2409'] : ['mistral-large-latest'];
+  // Try Mistral models in order until one succeeds — vision-capable models for
+  // an image, the strongest text models otherwise. Whatever the account can
+  // reach wins; the rest are graceful fallbacks.
+  const candidates = image ? VISION_MODELS : TEXT_MODELS;
   let text;
   let lastErr = null;
   for (const id of candidates) {
