@@ -9,6 +9,7 @@ const { printJob, DEFAULT_ZPL } = require('./print/engine');
 // right inside the app. Supabase is public/RLS-gated, so the print engine claims
 // and completes jobs straight from the database — no API/agent key required.
 const VISTA_URL = process.env.VISTA_URL || 'https://vistaauction.vercel.app';
+const STATION_URL = `${VISTA_URL.replace(/\/$/, '')}/station`;
 const SUPABASE_URL = 'https://lovfbqnuxdihjidxacet.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_xnr_6Ad9e9_-tgfOrXsGtw_z6oxB6X_';
 
@@ -80,9 +81,9 @@ function printerReady() {
   return false;
 }
 
-// ---- Renderer messaging (to the control panel) -----------------------------
+// ---- Renderer messaging (to the station window + control panel) ------------
 function send(channel, payload) {
-  if (panel && !panel.isDestroyed()) panel.webContents.send(channel, payload);
+  for (const w of [win, panel]) if (w && !w.isDestroyed()) w.webContents.send(channel, payload);
 }
 function log(message) {
   const line = `${new Date().toLocaleTimeString()}  ${message}`;
@@ -249,20 +250,21 @@ ipcMain.handle('queue:fetch', async () => {
 });
 
 // ---- Windows + tray --------------------------------------------------------
-// The main window IS the website — everything the site has (carts, Label
-// Studio, the print queue) lives here. It gets no preload/IPC (it's remote).
+// The main window loads the bespoke Print Station workspace (/station) — the
+// custom design/queue/printers UI. The preload bridge is attached so the
+// Printers panel can drive the local print engine over IPC.
 function createWindow() {
   win = new BrowserWindow({
-    width: 1280,
-    height: 860,
-    minWidth: 900,
-    minHeight: 600,
-    backgroundColor: '#faf9f7',
-    title: 'Vista Auction',
-    webPreferences: { contextIsolation: true, nodeIntegration: false },
+    width: 1360,
+    height: 900,
+    minWidth: 1024,
+    minHeight: 680,
+    backgroundColor: '#14181f',
+    title: 'Vista Print Station',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.setMenuBarVisibility(false);
-  win.loadURL(config.vistaUrl);
+  win.loadURL(STATION_URL);
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http')) shell.openExternal(url);
     return { action: 'deny' };
