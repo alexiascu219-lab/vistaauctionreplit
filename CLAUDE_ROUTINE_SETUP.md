@@ -1,11 +1,11 @@
 # Claude label design — Routine setup
 
-> **Note:** The **Claude** button in Label Studio now designs **instantly** via a
-> server-side Anthropic API call (`/api/ai`, key `ANTHROPIC_API_KEY` in Vercel) —
-> just like Mistral, with image/vision support. The scheduled-Routine flow below
-> is the older async alternative and is **optional**; you don't need it unless you
-> specifically want designs generated through your claude.ai account instead of an
-> API key.
+> The **Claude** button in Label Studio runs through this Routine — it designs
+> using your **claude.ai subscription** (no API key, no per-call billing), and it
+> can see a reference image. **Mistral** is the instant, in-browser alternative
+> (server-side `/api/ai`). An optional direct-Anthropic-API path also exists in
+> `/api/ai` (`ANTHROPIC_API_KEY`) if you ever want instant Claude via a paid key,
+> but it's off unless that key is set and the UI is pointed at it.
 
 ---
 
