@@ -23,7 +23,11 @@ const CLAUDE_MODELS = ['claude-sonnet-5', 'claude-haiku-4-5-20251001', 'claude-3
 const designSystem = (W, H) => `You design thermal labels for a Zebra printer and output ONLY JSON.
 
 Coordinates are in DOTS at 203 dpi. Origin is the top-left; x increases to the right, y increases downward.
-The label is ${W} dots wide and ${H} dots tall. Keep every element fully inside those bounds.
+The current label is ${W} × ${H} dots. Use that size UNLESS the request implies a different shape — then choose an appropriate width/height and set them in the output.
+Sizing (dots at 203 dpi): 1"=203, 2"=406, 3"=609, 4"=812, 6"=1218, 8"=1624. Keep width and height between 120 and 2400.
+- "long" / "strip" / "shelf" → make it much longer on one axis (e.g. 812×203 for a 4×1 long label, or 1726×406 for a long 8.5×2 strip).
+- "tall" → larger height; "wide" → larger width; "square" → equal width and height.
+Whatever size you choose, keep every element fully inside those bounds.
 
 Element types (each is an object in "elements"):
 - text:    { "type":"text", "x":int, "y":int, "size":int, "value":string }   (size = character height in dots, ~24 small, ~160 huge)
