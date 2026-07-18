@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
-  Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database, ImagePlus, X,
+  Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database, ImagePlus, X, RotateCw,
 } from 'lucide-react';
 import Toast from '../components/Toast';
 import LabelSvg from '../components/labels/LabelSvg';
@@ -504,10 +504,11 @@ const Labels = () => {
                           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Height (dots)</span>
                           <input type="number" value={work.height} onChange={(e) => patchWork({ height: Number(e.target.value) })} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[14px] font-semibold" />
                         </label>
-                        <div className="flex flex-wrap gap-1.5 sm:col-span-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:col-span-2">
                           {PRESET_SIZES.map((s) => (
                             <button key={s.label} onClick={() => patchWork({ width: s.w, height: s.h })} className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold transition ${work.width === s.w && work.height === s.h ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-stone-200 bg-white text-slate-500 hover:border-stone-300'}`}>{s.label}</button>
                           ))}
+                          <button onClick={() => patchWork({ width: work.height, height: work.width })} title="Swap width & height" className="ml-auto inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-[11.5px] font-bold text-slate-500 transition hover:border-stone-300"><RotateCw size={13} /> Rotate</button>
                         </div>
                       </div>
                     </div>

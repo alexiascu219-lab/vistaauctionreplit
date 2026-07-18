@@ -32,15 +32,26 @@ export function zplFont(key) {
   return (LABEL_FONTS.find((f) => f.key === key) || LABEL_FONTS[0]).zpl;
 }
 
-// Common Zebra label stock, in dots at 203 dpi.
+// Common Zebra label stock, in dots at 203 dpi (w × h).
 export const PRESET_SIZES = [
-  { label: '3" × 2"', w: 609, h: 406 },
+  { label: '1.5" × 0.5"', w: 305, h: 102 },
   { label: '2" × 1"', w: 406, h: 203 },
   { label: '2.25" × 1.25"', w: 457, h: 254 },
+  { label: '3" × 1"', w: 609, h: 203 },
+  { label: '3" × 2"', w: 609, h: 406 },
+  { label: '4" × 1" (long)', w: 812, h: 203 },
   { label: '4" × 2"', w: 812, h: 406 },
   { label: '4" × 3"', w: 812, h: 609 },
-  { label: '4" × 6"', w: 812, h: 1218 },
+  { label: '4" × 6" (long)', w: 812, h: 1218 },
+  { label: '4" × 8" (long)', w: 812, h: 1624 },
+  { label: '6" × 4"', w: 1218, h: 812 },
+  { label: '8.5" × 2" (long)', w: 1726, h: 406 },
 ];
+
+// Swap width/height (portrait ⇄ landscape).
+export function rotateSize({ width, height }) {
+  return { width: height, height: width };
+}
 
 export const DEFAULT_LABEL = {
   name: 'New label',
