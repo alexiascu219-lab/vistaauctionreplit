@@ -17,6 +17,31 @@ import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromR
 const TOOL_ICONS = { Type, Barcode, Square, Minus };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
+// Re-encode a picked image to a downscaled JPEG data URL. This normalises
+// iPhone HEIC (which vision APIs reject) to JPEG and keeps the payload small
+// enough for the model — the two things that make raw phone photos fail.
+function prepImage(file, maxDim = 1024, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (!width || !height) return reject(new Error('That image could not be read'));
+      const s = Math.min(1, maxDim / Math.max(width, height));
+      width = Math.round(width * s);
+      height = Math.round(height * s);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That image format could not be read — try a screenshot or JPEG')); };
+    img.src = url;
+  });
+}
+
 const Header = () => (
   <header className="fixed inset-x-0 top-0 z-50">
     <div className="border-b border-stone-200/80 bg-white/72 backdrop-blur-xl">
@@ -253,13 +278,13 @@ const Labels = () => {
     }
   };
 
-  const onPickImage = (file) => {
+  const onPickImage = async (file) => {
     if (!file) return;
-    if (!/^image\//.test(file.type)) return setToast({ message: 'Please choose an image file', type: 'error' });
-    if (file.size > 5 * 1024 * 1024) return setToast({ message: 'Image too large — keep it under 5 MB', type: 'error' });
-    const reader = new FileReader();
-    reader.onload = () => setAiImage(reader.result);
-    reader.readAsDataURL(file);
+    try {
+      setAiImage(await prepImage(file));
+    } catch (e) {
+      setToast({ message: e.message || 'Could not read that image', type: 'error' });
+    }
   };
 
   const generate = async () => {

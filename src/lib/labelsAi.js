@@ -160,7 +160,6 @@ export async function generateLabelDesign({ prompt, base, provider = 'mistral', 
   if (provider !== 'mistral') throw new Error('Only Mistral is wired up right now.');
 
   const ask = `Design a label: ${prompt || 'based on the attached reference image'}`;
-  const model = mistralModel(image ? 'pixtral-large-latest' : 'mistral-large-latest');
   const messages = image
     ? [{ role: 'user', content: [
         { type: 'text', text: `${ask}\n\nUse the attached image as a visual reference for the layout, style, and wording. Recreate it as a printable Zebra label — do not copy it pixel-for-pixel.` },
@@ -168,12 +167,29 @@ export async function generateLabelDesign({ prompt, base, provider = 'mistral', 
       ] }]
     : [{ role: 'user', content: ask }];
 
-  const { text } = await generateText({
-    model,
-    system: systemPrompt(W, H),
-    messages,
-    temperature: image ? 0.4 : 0.5,
-  });
+  // With an image, try Pixtral Large, then fall back to the widely-available
+  // Pixtral 12B if the account can't reach the large model.
+  const candidates = image ? ['pixtral-large-latest', 'pixtral-12b-2409'] : ['mistral-large-latest'];
+  let text;
+  let lastErr = null;
+  for (const id of candidates) {
+    try {
+      ({ text } = await generateText({
+        model: mistralModel(id),
+        system: systemPrompt(W, H),
+        messages,
+        temperature: image ? 0.4 : 0.5,
+      }));
+      lastErr = null;
+      break;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr) {
+    const detail = lastErr?.data?.error?.message || lastErr?.responseBody || lastErr?.message || String(lastErr);
+    throw new Error(`${image ? 'Pixtral (image)' : 'Mistral'} error: ${String(detail).slice(0, 300)}`);
+  }
   const template = sanitizeTemplate(extractJson(text), { width: W, height: H });
   if (!template.elements.length) throw new Error('The AI returned an empty label — try describing it differently.');
   return template;
