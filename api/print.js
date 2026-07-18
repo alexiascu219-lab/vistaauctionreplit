@@ -16,8 +16,14 @@ import { createClient } from '@supabase/supabase-js';
 // ============================================================================
 
 function getClient() {
-  const url = process.env.VITE_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  // Prefer env vars; fall back to the public URL + anon key (safe: already
+  // shipped to the browser, gated by RLS) so the endpoint works with no config.
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://lovfbqnuxdihjidxacet.supabase.co';
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    'sb_publishable_xnr_6Ad9e9_-tgfOrXsGtw_z6oxB6X_';
   return createClient(url, key);
 }
 
