@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
-  Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database,
+  Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database, ImagePlus, X,
 } from 'lucide-react';
 import Toast from '../components/Toast';
 import LabelSvg from '../components/labels/LabelSvg';
@@ -51,6 +51,7 @@ const Labels = () => {
   const [toast, setToast] = useState(null);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiProvider, setAiProvider] = useState('mistral');
+  const [aiImage, setAiImage] = useState(null); // data URL reference image (vision)
   const [aiBusy, setAiBusy] = useState(false);
   const [claudeReq, setClaudeReq] = useState(null);
   const [claudeStatus, setClaudeStatus] = useState('idle'); // idle | pending
@@ -252,8 +253,17 @@ const Labels = () => {
     }
   };
 
+  const onPickImage = (file) => {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) return setToast({ message: 'Please choose an image file', type: 'error' });
+    if (file.size > 5 * 1024 * 1024) return setToast({ message: 'Image too large — keep it under 5 MB', type: 'error' });
+    const reader = new FileReader();
+    reader.onload = () => setAiImage(reader.result);
+    reader.readAsDataURL(file);
+  };
+
   const generate = async () => {
-    if (!aiPrompt.trim()) return;
+    if (!aiPrompt.trim() && !aiImage) return;
     const base = { width: work?.width || 609, height: work?.height || 406 };
 
     if (aiProvider === 'claude') {
@@ -271,7 +281,7 @@ const Labels = () => {
 
     setAiBusy(true);
     try {
-      const t = await generateLabelDesign({ prompt: aiPrompt.trim(), base, provider: aiProvider });
+      const t = await generateLabelDesign({ prompt: aiPrompt.trim(), base, provider: aiProvider, image: aiImage });
       setWork({ ...t, id: undefined });
       setSelectedId(null);
       setSelEl(null);
@@ -482,9 +492,28 @@ const Labels = () => {
                           onChange={(e) => setAiPrompt(e.target.value)}
                           rows={3}
                           disabled={claudeStatus === 'pending'}
-                          placeholder="e.g. A bin tag with a big cart number and a QR code"
+                          placeholder={aiImage ? 'Optional: describe changes to the reference image…' : 'e.g. A bin tag with a big cart number and a QR code'}
                           className="w-full resize-none rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
                         />
+
+                        {aiProvider === 'mistral' && (
+                          aiImage ? (
+                            <div className="mt-2 flex items-center gap-2.5 rounded-xl border border-violet-200 bg-white p-2">
+                              <img src={aiImage} alt="Reference" className="h-12 w-12 rounded-lg border border-stone-200 object-cover" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11.5px] font-bold text-slate-700">Reference image attached</p>
+                                <p className="text-[10.5px] text-violet-600">Pixtral vision will look at this</p>
+                              </div>
+                              <button onClick={() => setAiImage(null)} title="Remove image" className="rounded-lg p-1.5 text-slate-400 hover:bg-stone-100 hover:text-red-500"><X size={15} /></button>
+                            </div>
+                          ) : (
+                            <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-violet-300 bg-white py-2 text-[12px] font-bold text-violet-600 transition hover:bg-violet-50">
+                              <ImagePlus size={15} /> Add reference image
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => { onPickImage(e.target.files?.[0]); e.target.value = ''; }} />
+                            </label>
+                          )
+                        )}
+
                         {claudeStatus === 'pending' ? (
                           <div className="mt-2 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-[12px] font-semibold text-violet-700">
                             <Loader2 size={15} className="animate-spin" /> Claude is drafting via your Routine…
@@ -492,15 +521,19 @@ const Labels = () => {
                         ) : (
                           <button
                             onClick={generate}
-                            disabled={aiBusy || !aiPrompt.trim()}
+                            disabled={aiBusy || (!aiPrompt.trim() && !aiImage)}
                             className="pk-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-[13px] font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
                           >
                             {aiBusy ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
-                            {aiProvider === 'claude' ? 'Send to Claude' : 'Generate design'}
+                            {aiProvider === 'claude' ? 'Send to Claude' : aiImage ? 'Generate from image' : 'Generate design'}
                           </button>
                         )}
                         <p className="mt-1.5 text-[10.5px] text-slate-400">
-                          {aiProvider === 'claude' ? 'Claude drafts via your Routine, then loads here.' : 'Creates a new unsaved template you can tweak.'}
+                          {aiProvider === 'claude'
+                            ? 'Claude drafts via your Routine, then loads here. (Text only — no image reference.)'
+                            : aiImage
+                              ? 'Uses Pixtral vision to design from your reference image.'
+                              : 'Creates a new unsaved template you can tweak. Add an image to design from a reference.'}
                         </p>
                       </div>
 

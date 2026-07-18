@@ -13,6 +13,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -42,7 +45,26 @@ jobs:
             print-app/dist/*.exe
           if-no-files-found: error
 
-      - name: Attach to release
+      # Publish a public, one-click download: a "latest" GitHub Release with the
+      # .exe attached. Updated on every build so the link always serves the
+      # newest app — no GitHub login or unzip needed to download it.
+      - name: Publish latest release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: print-station-latest
+          name: Vista Print Station (latest)
+          body: |
+            The Vista Print Station desktop app for the PC connected to the Zebra printer.
+
+            **Download `Vista.Print.Station.Setup.*.exe`** below and run it. On first launch,
+            Windows SmartScreen may warn (the app is unsigned) — click **More info → Run anyway**.
+            The portable `.exe` runs without installing if you prefer.
+          make_latest: true
+          files: print-app/dist/*.exe
+
+      # Also attach to a real tagged release when one is published.
+      - name: Attach to published release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
