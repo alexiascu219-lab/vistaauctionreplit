@@ -6,10 +6,12 @@ import { supabase } from '../supabaseClient';
 // setup (src/utils/aiService.js). The model returns a label design as JSON,
 // which we then sanitise hard before letting it near the canvas.
 
-const mistralModel = () => {
+// Mistral Large for text prompts; Pixtral (vision) when a reference image is
+// attached, so the model can actually look at the picture.
+const mistralModel = (model = 'mistral-large-latest') => {
   const apiKey = import.meta.env.VITE_MISTRAL_API_KEY;
   if (!apiKey) throw new Error('Add VITE_MISTRAL_API_KEY to use AI generation.');
-  return createMistral({ apiKey })('mistral-large-latest');
+  return createMistral({ apiKey })(model);
 };
 
 const systemPrompt = (W, H) => `You design thermal labels for a Zebra printer and output ONLY JSON.
@@ -149,16 +151,28 @@ export function templateFromRequest(req) {
   return sanitizeTemplate(req.result || {}, { width: req.base?.width || 609, height: req.base?.height || 406 });
 }
 
-export async function generateLabelDesign({ prompt, base, provider = 'mistral' }) {
+// `image` (optional) is a data URL (e.g. "data:image/png;base64,...") the model
+// uses as a visual reference. With an image we call Pixtral (vision); without
+// one, Mistral Large.
+export async function generateLabelDesign({ prompt, base, provider = 'mistral', image = null }) {
   const W = base?.width || 609;
   const H = base?.height || 406;
   if (provider !== 'mistral') throw new Error('Only Mistral is wired up right now.');
 
+  const ask = `Design a label: ${prompt || 'based on the attached reference image'}`;
+  const model = mistralModel(image ? 'pixtral-large-latest' : 'mistral-large-latest');
+  const messages = image
+    ? [{ role: 'user', content: [
+        { type: 'text', text: `${ask}\n\nUse the attached image as a visual reference for the layout, style, and wording. Recreate it as a printable Zebra label — do not copy it pixel-for-pixel.` },
+        { type: 'image', image },
+      ] }]
+    : [{ role: 'user', content: ask }];
+
   const { text } = await generateText({
-    model: mistralModel(),
+    model,
     system: systemPrompt(W, H),
-    prompt: `Design a label: ${prompt}`,
-    temperature: 0.5,
+    messages,
+    temperature: image ? 0.4 : 0.5,
   });
   const template = sanitizeTemplate(extractJson(text), { width: W, height: H });
   if (!template.elements.length) throw new Error('The AI returned an empty label — try describing it differently.');
