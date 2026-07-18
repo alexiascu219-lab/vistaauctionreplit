@@ -4,14 +4,21 @@ const fs = require('fs');
 const os = require('os');
 const { printJob, DEFAULT_ZPL } = require('./print/engine');
 
+// ---- Hardcoded config (turnkey — no setup needed except your printer) ------
+// The full Vista Auction site (carts, labels, design studio, print queue) loads
+// right inside the app. Supabase is public/RLS-gated, so the print engine claims
+// and completes jobs straight from the database — no API/agent key required.
+const VISTA_URL = process.env.VISTA_URL || 'https://vistaauction.vercel.app';
+const SUPABASE_URL = 'https://lovfbqnuxdihjidxacet.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_xnr_6Ad9e9_-tgfOrXsGtw_z6oxB6X_';
+
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 const PS_PATH = path.join(__dirname, 'assets', 'send-raw.ps1');
 
 const DEFAULT_CONFIG = {
-  serverUrl: '',
-  agentKey: '',
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  vistaUrl: VISTA_URL,
+  supabaseUrl: SUPABASE_URL,
+  supabaseAnonKey: SUPABASE_ANON,
   agentName: os.hostname(),
   mode: 'network', // network | windows | zebradesigner
   host: '',
@@ -22,14 +29,16 @@ const DEFAULT_CONFIG = {
   labelFile: '',
   pollSeconds: 4,
   running: false,
-  autoStart: false,
+  autoStart: true,
 };
 
 let config = { ...DEFAULT_CONFIG };
-let win = null;
+let win = null; // the website window
+let panel = null; // the control-panel window (printer settings + queue)
 let tray = null;
 let pollTimer = null;
 let engineOn = false;
+let trayRebuild = () => {};
 
 // ---- Config persistence ----------------------------------------------------
 function loadConfig() {
@@ -38,6 +47,10 @@ function loadConfig() {
   } catch (e) {
     log(`Could not read config: ${e.message}`);
   }
+  // Always keep the hardcoded connection values current.
+  config.vistaUrl = VISTA_URL;
+  config.supabaseUrl = SUPABASE_URL;
+  config.supabaseAnonKey = SUPABASE_ANON;
 }
 function saveConfig() {
   try {
@@ -60,9 +73,16 @@ function engineConfig() {
   };
 }
 
-// ---- Renderer messaging ----------------------------------------------------
+function printerReady() {
+  if (config.mode === 'network') return !!config.host;
+  if (config.mode === 'windows') return !!config.printerName;
+  if (config.mode === 'zebradesigner') return !!config.watchFolder;
+  return false;
+}
+
+// ---- Renderer messaging (to the control panel) -----------------------------
 function send(channel, payload) {
-  if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+  if (panel && !panel.isDestroyed()) panel.webContents.send(channel, payload);
 }
 function log(message) {
   const line = `${new Date().toLocaleTimeString()}  ${message}`;
@@ -72,29 +92,66 @@ function log(message) {
 function pushStatus() {
   send('engine:status', { running: engineOn, mode: config.mode });
   if (tray) tray.setToolTip(`Vista Print Station — printing ${engineOn ? 'ON' : 'off'}`);
+  trayRebuild();
 }
 
-// ---- Print queue transport -------------------------------------------------
-async function claimJobs() {
-  const url = `${config.serverUrl.replace(/\/$/, '')}/api/print?agent=${encodeURIComponent(config.agentName)}`;
-  const r = await fetch(url, { headers: { 'x-api-key': config.agentKey } });
-  if (!r.ok) throw new Error(`poll ${r.status}: ${(await r.text()).slice(0, 160)}`);
-  return (await r.json()).jobs || [];
+// ---- Supabase REST (direct claim/complete — no agent key) ------------------
+function sbHeaders() {
+  return {
+    apikey: SUPABASE_ANON,
+    Authorization: `Bearer ${SUPABASE_ANON}`,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  };
 }
+
+async function claimJobs() {
+  const base = `${SUPABASE_URL}/rest/v1/vista_print_jobs`;
+  const q = await fetch(`${base}?status=eq.queued&order=created_at.asc&limit=10`, { headers: sbHeaders() });
+  if (!q.ok) throw new Error(`poll ${q.status}: ${(await q.text()).slice(0, 140)}`);
+  const queued = await q.json();
+  if (!queued.length) return [];
+  const ids = queued.map((j) => j.id).join(',');
+  // Claim only rows still queued, so a second station can't double-print.
+  const u = await fetch(`${base}?id=in.(${ids})&status=eq.queued`, {
+    method: 'PATCH',
+    headers: sbHeaders(),
+    body: JSON.stringify({ status: 'printing', claimed_at: new Date().toISOString(), agent: config.agentName }),
+  });
+  if (!u.ok) throw new Error(`claim ${u.status}: ${(await u.text()).slice(0, 140)}`);
+  return await u.json();
+}
+
 async function reportComplete(id, status, error) {
   try {
-    await fetch(`${config.serverUrl.replace(/\/$/, '')}/api/print-complete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': config.agentKey },
-      body: JSON.stringify({ id, status, error: error || null, agent: config.agentName }),
+    await fetch(`${SUPABASE_URL}/rest/v1/vista_print_jobs?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: sbHeaders(),
+      body: JSON.stringify({
+        status,
+        error: error ? String(error).slice(0, 500) : null,
+        printed_at: status === 'printed' ? new Date().toISOString() : null,
+        agent: config.agentName,
+      }),
     });
   } catch (e) {
     log(`Could not report job ${id}: ${e.message}`);
   }
 }
 
+async function refreshQueue() {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/vista_print_jobs?select=*&order=created_at.desc&limit=60`;
+    const r = await fetch(url, { headers: sbHeaders() });
+    if (!r.ok) return;
+    send('queue:update', await r.json());
+  } catch {
+    /* ignore */
+  }
+}
+
 async function tick() {
-  if (!config.serverUrl || !config.agentKey) return;
+  if (!printerReady()) return;
   let jobs = [];
   try {
     jobs = await claimJobs();
@@ -118,8 +175,9 @@ async function tick() {
 
 function startEngine() {
   if (engineOn) return;
-  if (!config.serverUrl || !config.agentKey) {
-    log('Set the server URL and agent key in Settings first.');
+  if (!printerReady()) {
+    log('Open the Control Panel and set your Zebra printer to start printing.');
+    if (!panel) createControlPanel();
     return;
   }
   engineOn = true;
@@ -143,25 +201,13 @@ function stopEngine() {
   pushStatus();
 }
 
-// ---- Queue display (reads Supabase directly for history) -------------------
-async function refreshQueue() {
-  if (!config.supabaseUrl || !config.supabaseAnonKey) return;
-  try {
-    const url = `${config.supabaseUrl.replace(/\/$/, '')}/rest/v1/vista_print_jobs?select=*&order=created_at.desc&limit=60`;
-    const r = await fetch(url, { headers: { apikey: config.supabaseAnonKey, Authorization: `Bearer ${config.supabaseAnonKey}` } });
-    if (!r.ok) return;
-    send('queue:update', await r.json());
-  } catch {
-    /* ignore */
-  }
-}
-
-// ---- IPC -------------------------------------------------------------------
+// ---- IPC (from the control panel) ------------------------------------------
 ipcMain.handle('config:get', () => config);
 ipcMain.handle('config:set', (_e, patch) => {
   config = { ...config, ...patch };
   saveConfig();
   pushStatus();
+  if (config.autoStart && !engineOn && printerReady()) startEngine();
   return config;
 });
 ipcMain.handle('engine:toggle', (_e, on) => {
@@ -193,7 +239,7 @@ ipcMain.handle('designs:list', () => {
   }
 });
 ipcMain.handle('dialog:pickFolder', async () => {
-  const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
+  const r = await dialog.showOpenDialog(panel || win, { properties: ['openDirectory'] });
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('shell:open', (_e, p) => (p ? shell.openPath(p) : null));
@@ -202,19 +248,25 @@ ipcMain.handle('queue:fetch', async () => {
   return true;
 });
 
-// ---- Window + tray ---------------------------------------------------------
+// ---- Windows + tray --------------------------------------------------------
+// The main window IS the website — everything the site has (carts, Label
+// Studio, the print queue) lives here. It gets no preload/IPC (it's remote).
 function createWindow() {
   win = new BrowserWindow({
-    width: 1000,
-    height: 700,
-    minWidth: 720,
-    minHeight: 520,
+    width: 1280,
+    height: 860,
+    minWidth: 900,
+    minHeight: 600,
     backgroundColor: '#faf9f7',
-    title: 'Vista Print Station',
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+    title: 'Vista Auction',
+    webPreferences: { contextIsolation: true, nodeIntegration: false },
   });
   win.setMenuBarVisibility(false);
-  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.loadURL(config.vistaUrl);
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http')) shell.openExternal(url);
+    return { action: 'deny' };
+  });
   win.on('close', (e) => {
     if (!app.isQuitting) {
       e.preventDefault();
@@ -223,18 +275,47 @@ function createWindow() {
   });
 }
 
+// The control panel is the local UI: printer settings, engine on/off, live log,
+// and the print queue. It uses the preload bridge for IPC.
+function createControlPanel() {
+  if (panel && !panel.isDestroyed()) {
+    panel.show();
+    panel.focus();
+    return;
+  }
+  panel = new BrowserWindow({
+    width: 1000,
+    height: 720,
+    minWidth: 720,
+    minHeight: 520,
+    backgroundColor: '#faf9f7',
+    title: 'Vista Print Station — Control Panel',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+  });
+  panel.setMenuBarVisibility(false);
+  panel.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  panel.on('closed', () => { panel = null; });
+}
+
 function createTray() {
   try {
     const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png'));
     tray = new Tray(icon);
-    const menu = Menu.buildFromTemplate([
-      { label: 'Open Print Station', click: () => (win ? win.show() : createWindow()) },
-      { type: 'separator' },
-      { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } },
-    ]);
     tray.setToolTip('Vista Print Station');
-    tray.setContextMenu(menu);
     tray.on('click', () => (win ? (win.isVisible() ? win.hide() : win.show()) : createWindow()));
+    // Rebuild the menu whenever engine state changes so its label stays accurate.
+    trayRebuild = () => {
+      if (!tray) return;
+      tray.setContextMenu(Menu.buildFromTemplate([
+        { label: 'Open Vista Auction', click: () => (win ? win.show() : createWindow()) },
+        { label: 'Control Panel (printer & queue)', click: () => createControlPanel() },
+        { type: 'separator' },
+        { label: engineOn ? 'Stop printing' : 'Start printing', click: () => (engineOn ? stopEngine() : startEngine()) },
+        { type: 'separator' },
+        { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } },
+      ]));
+    };
+    trayRebuild();
   } catch (e) {
     console.log('Tray unavailable:', e.message);
   }
