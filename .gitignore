@@ -29,3 +29,6 @@ dist-ssr
 demo/.env
 node_modules/
 dist/
+
+# Print agent local config (holds printer address + shared secret)
+print-agent/config.json

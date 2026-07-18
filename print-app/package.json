@@ -1,0 +1,40 @@
+{
+  "name": "vista-print-station",
+  "version": "1.0.0",
+  "description": "Vista Auction Print Station — live print queue, Zebra printing, and ZebraDesigner handoff.",
+  "main": "main.js",
+  "author": "Vista Auction",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.vistaauction.printstation",
+    "productName": "Vista Print Station",
+    "files": ["**/*", "!**/*.md"],
+    "directories": { "output": "dist" },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Vista Print Station"
+    },
+    "portable": {
+      "artifactName": "VistaPrintStation-portable-${version}.exe"
+    }
+  }
+}

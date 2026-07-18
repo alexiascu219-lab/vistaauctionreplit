@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vista Print Station</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <div>
+          <div class="brand-title">Print Station</div>
+          <div class="brand-sub">VISTA AUCTION</div>
+        </div>
+      </div>
+      <div class="status">
+        <span id="statusPill" class="pill pill-off"><span class="dot"></span><span id="statusText">Printing off</span></span>
+        <button id="toggleBtn" class="btn btn-primary">Start printing</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="queue">Queue</button>
+      <button class="tab" data-tab="designs">Designs</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <main>
+      <!-- QUEUE -->
+      <section id="tab-queue" class="panel active">
+        <div class="row-between">
+          <h2>Print queue</h2>
+          <button id="refreshQueue" class="btn btn-ghost">Refresh</button>
+        </div>
+        <div id="queueList" class="list"><p class="empty">Connect Supabase in Settings to see the queue.</p></div>
+
+        <h3 class="log-title">Activity</h3>
+        <pre id="log" class="log"></pre>
+      </section>
+
+      <!-- DESIGNS -->
+      <section id="tab-designs" class="panel">
+        <div class="row-between">
+          <h2>Zebra designs</h2>
+          <button id="refreshDesigns" class="btn btn-ghost">Rescan</button>
+        </div>
+        <p class="note">
+          Your ZebraDesigner <code>.nlbl</code> files. To print them automatically you need <b>ZebraDesigner
+          Automation</b> watching the folder set in Settings; the Station drops each job's data there. On
+          ZebraDesigner <b>Professional</b> (no Automation), use <b>ZPL mode</b> instead — the built-in template prints
+          reliably with no ZebraDesigner needed. Click a design to open it in ZebraDesigner.
+        </p>
+        <div id="designsList" class="list"><p class="empty">Pick a designs folder in Settings.</p></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="tab-settings" class="panel">
+        <h2>Settings</h2>
+
+        <div class="card">
+          <h3>Connection</h3>
+          <label>Site URL <span class="hint">where /api/print lives</span>
+            <input id="serverUrl" placeholder="https://your-site.vercel.app" />
+          </label>
+          <label>Agent key <span class="hint">matches PRINT_AGENT_KEY on the server</span>
+            <input id="agentKey" type="password" placeholder="paste secret" />
+          </label>
+          <div class="two">
+            <label>Supabase URL <span class="hint">to show the queue</span>
+              <input id="supabaseUrl" placeholder="https://xxxx.supabase.co" />
+            </label>
+            <label>Supabase anon key
+              <input id="supabaseAnonKey" type="password" placeholder="public anon key" />
+            </label>
+          </div>
+          <label>Station name
+            <input id="agentName" placeholder="front-desk-zebra" />
+          </label>
+        </div>
+
+        <div class="card">
+          <h3>Printer</h3>
+          <label>Print mode
+            <select id="mode">
+              <option value="network">Network — send ZPL to the printer's IP (recommended)</option>
+              <option value="windows">Windows driver — send ZPL through the installed driver</option>
+              <option value="zebradesigner">ZebraDesigner — hand jobs to Automation (.nlbl)</option>
+            </select>
+          </label>
+          <div class="two mode-network mode-field">
+            <label>Printer IP <input id="host" placeholder="192.168.1.50" /></label>
+            <label>Port <input id="port" placeholder="9100" /></label>
+          </div>
+          <label class="mode-windows mode-field">Windows printer name
+            <input id="printerName" placeholder="ZDesigner GK420d" />
+          </label>
+          <label class="mode-zebradesigner mode-field">ZebraDesigner Automation watch folder
+            <span class="folder"><input id="watchFolder" placeholder="C:\VistaPrint\incoming" /><button class="btn btn-ghost" data-pick="watchFolder">Browse</button></span>
+          </label>
+          <label>Designs folder <span class="hint">where your .nlbl files live</span>
+            <span class="folder"><input id="designsFolder" placeholder="C:\Labels" /><button class="btn btn-ghost" data-pick="designsFolder">Browse</button></span>
+          </label>
+          <div class="two">
+            <label>Poll every (seconds) <input id="pollSeconds" placeholder="4" /></label>
+            <label class="checkbox"><input id="autoStart" type="checkbox" /> Start printing when the app opens</label>
+          </div>
+        </div>
+
+        <div class="row-between">
+          <div class="test">
+            <input id="testCart" placeholder="cart #" value="12" />
+            <button id="testBtn" class="btn btn-ghost">Test print</button>
+          </div>
+          <button id="saveBtn" class="btn btn-primary">Save settings</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

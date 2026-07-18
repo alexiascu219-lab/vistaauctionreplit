@@ -1,0 +1,49 @@
+name: Build Print Station (Windows)
+
+# Builds the Vista Print Station desktop app into a Windows .exe.
+# - Runs on every push that touches print-app/ (so you get a fresh build to download).
+# - Also runnable on demand (workflow_dispatch) and attaches to GitHub Releases.
+
+on:
+  push:
+    paths:
+      - "print-app/**"
+      - ".github/workflows/build-print-app.yml"
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: print-app
+        run: npm install
+
+      - name: Build Windows installer + portable exe
+        working-directory: print-app
+        run: npm run dist
+        env:
+          # Skip code-signing; the app is unsigned (Windows SmartScreen will warn once).
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: VistaPrintStation-windows
+          path: |
+            print-app/dist/*.exe
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: print-app/dist/*.exe

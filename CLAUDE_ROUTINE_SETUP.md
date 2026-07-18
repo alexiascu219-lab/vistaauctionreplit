@@ -1,0 +1,77 @@
+# Claude label design — Routine setup
+
+Label Studio's **Claude** option doesn't call an Anthropic API. Instead it drops
+a design request into a Supabase table (`vista_label_ai_requests`), and a
+**Claude Code Routine** — running as *you* — picks it up, designs the label, and
+writes it back. The Studio then loads the finished design into the canvas.
+
+Everything on the app side is built. You just create the Routine once.
+
+## Why it must be created from the claude.ai Routines UI
+
+The Routine needs to read/write the Supabase table. In the Claude Code runtime,
+direct network calls to `supabase.co` are blocked by the environment's network
+policy — so the Routine must use the **Supabase connector** (MCP), which goes
+through Anthropic's control plane instead of the blocked network. Connectors can
+only be attached to a Routine from the **claude.ai → Routines** UI, so that's
+where this one gets created.
+
+## Create it (once)
+
+1. Go to **claude.ai → Routines → New Routine**.
+2. **Connectors:** enable **Supabase**.
+3. **Schedule:** hourly is fine (or leave it and fire it on demand — see below).
+4. **Prompt:** paste this exactly:
+
+```
+You are the Vista Auction Label Studio AI worker. Each run, generate label
+designs for any pending requests using the Supabase tools (project
+lovfbqnuxdihjidxacet). Work quickly; do not ask questions.
+
+1. Read pending requests:
+   execute_sql: SELECT id, prompt, base FROM vista_label_ai_requests
+   WHERE status='pending' ORDER BY created_at ASC LIMIT 10;
+   If there are none, stop.
+
+2. For EACH row, design a Zebra thermal label as a JSON object.
+   Coordinates are DOTS at 203 dpi; origin top-left; x right, y down.
+   Label size is base.width x base.height dots (default 609 x 406) — keep every
+   element inside those bounds.
+   Element types (objects in "elements"):
+   - {"type":"text","x":int,"y":int,"size":int,"value":str}  (size = char height in dots)
+   - {"type":"barcode","x":int,"y":int,"height":int,"module":int,"symbology":"code128"|"code39"|"qr","showText":bool,"value":str}
+   - {"type":"box","x":int,"y":int,"w":int,"h":int,"thickness":int}
+   - {"type":"line","x":int,"y":int,"w":int,"thickness":int,"orient":"h"}  (or "orient":"v" with "h":int)
+   Put per-label values as ${key} placeholders in text/barcode "value" and list
+   each key in "variables". Brand text may be "VISTA AUCTION". Favor one dominant
+   large number/text, a title, and a barcode when an ID is involved.
+   The design object must be exactly:
+   {"name":str,"width":int,"height":int,"variables":[{"key":str,"label":str,"default":str}],"elements":[...]}
+
+3. Write it back (execute_sql), embedding the compact JSON as a jsonb literal:
+   UPDATE vista_label_ai_requests
+   SET status='done', result='<DESIGN_JSON>'::jsonb, updated_at=now()
+   WHERE id='<ID>';
+   If you cannot design one:
+   UPDATE vista_label_ai_requests SET status='error', error='<short reason>', updated_at=now() WHERE id='<ID>';
+
+Process every pending row, then stop.
+```
+
+## Using it
+
+- In **Label Studio → Design**, pick **Claude**, type your prompt, hit **Send to
+  Claude**. The request is queued and the panel shows "Claude is drafting via your
+  Routine…". When the Routine runs and fills it in, the design loads into the
+  canvas automatically (while the page is open).
+- **Instant vs scheduled:** scheduled Routines run at most hourly. For an
+  immediate result, open the Routine in claude.ai and **Run now** after sending a
+  request — it processes the queue within a minute.
+- **Mistral** (the other option) is a direct browser call and is always instant —
+  use it when you want a draft right away.
+
+## Table reference
+
+`vista_label_ai_requests` — `label_ai_requests_schema.sql` (already applied):
+`prompt`, `base {width,height}`, `status` (pending → done/error), `result` (the
+design), `requested_by`.

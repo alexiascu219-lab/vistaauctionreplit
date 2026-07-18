@@ -1,0 +1,15 @@
+{
+  "name": "vista-zebra-print-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Polls the Vista Auction cloud print queue and prints cart stickers on a Zebra printer.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node agent.mjs",
+    "test-print": "node agent.mjs --test 12",
+    "dry-run": "node agent.mjs --dry-run --once"
+  }
+}
