@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
   Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database, ImagePlus, X, RotateCw,
-  Circle, Undo2, Redo2, Grid3x3,
+  Circle, Undo2, Redo2, Grid3x3, Image as ImageIcon,
 } from 'lucide-react';
 import Toast from '../components/Toast';
 import LabelSvg from '../components/labels/LabelSvg';
@@ -14,8 +14,9 @@ import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, newElement, reference
 import { expandNumbers } from '../lib/zpl';
 import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
 import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromRequest } from '../lib/labelsAi';
+import { rasterizeToGF } from '../lib/raster';
 
-const TOOL_ICONS = { Type, Barcode, Square, Minus, Circle };
+const TOOL_ICONS = { Type, Barcode, Square, Minus, Circle, Image: ImageIcon };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // Decode a picked file to something drawable. createImageBitmap handles
@@ -256,6 +257,55 @@ const Labels = () => {
     lastRef.current = clone(next);
     setWork(next); setSelEl(null); setDirty(true);
   };
+  // Re-rasterize image elements to a 1-bit ^GF whenever their src or size
+  // changes, so the printed label matches the preview and ZPL stays sync.
+  useEffect(() => {
+    if (!work) return undefined;
+    const stale = (work.elements || []).filter((e) => e.type === 'image' && e.src && (!e.gfHex || e.gfW !== e.w || e.gfH !== e.h));
+    if (!stale.length) return undefined;
+    let cancelled = false;
+    (async () => {
+      for (const el of stale) {
+        try {
+          const gf = await rasterizeToGF(el.src, el.w, el.h);
+          if (cancelled) return;
+          updateEl(el.id, { ...gf, gfW: el.w, gfH: el.h });
+        } catch { /* ignore a bad image */ }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [work]);
+
+  const uploadImage = async (id, file) => {
+    try {
+      const src = await prepImage(file, 512, 0.92);
+      updateEl(id, { src, gfHex: null }); // clear old raster; effect recomputes
+    } catch (e) {
+      setToast({ message: e.message || 'Could not read that image', type: 'error' });
+    }
+  };
+
+  const alignEl = (id, how) => {
+    setWork((w) => {
+      const W = w.width || 609;
+      const H = w.height || 406;
+      return { ...w, elements: w.elements.map((e) => {
+        if (e.id !== id) return e;
+        const bw = e.w || 0;
+        const bh = e.type === 'text' ? (e.size || 30) : (e.h || e.thickness || 0);
+        let { x, y } = e;
+        if (how === 'left') x = 0;
+        if (how === 'hcenter') x = Math.round((W - bw) / 2);
+        if (how === 'right') x = Math.round(W - bw);
+        if (how === 'top') y = 0;
+        if (how === 'vcenter') y = Math.round((H - bh) / 2);
+        if (how === 'bottom') y = Math.round(H - bh);
+        return { ...e, x: Math.max(0, x), y: Math.max(0, y) };
+      }) };
+    });
+    setDirty(true);
+  };
+
   const copyEl = () => { const el = (work?.elements || []).find((e) => e.id === selEl); if (el) clipRef.current = clone(el); };
   const pasteEl = () => {
     if (!clipRef.current) return;
@@ -652,7 +702,7 @@ const Labels = () => {
                       </div>
 
                       {selectedElement ? (
-                        <ElementInspector element={selectedElement} onChange={updateEl} onDelete={deleteEl} onDuplicate={duplicateEl} onReorder={reorderEl} />
+                        <ElementInspector element={selectedElement} onChange={updateEl} onDelete={deleteEl} onDuplicate={duplicateEl} onReorder={reorderEl} onUploadImage={uploadImage} onAlign={alignEl} />
                       ) : (
                         <div className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-[12.5px] text-slate-400">Tap an element to edit it, or add one above.</div>
                       )}

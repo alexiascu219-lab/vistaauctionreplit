@@ -36,12 +36,26 @@ export function templateToZpl(t, values = {}) {
       const v = zplEscape(resolveVars(el.value, values));
       const size = Math.round(el.size || 30);
       const font = `^A${zplFont(el.font)}${el.rotation || 'N'},${size},${size}`;
-      if (el.align === 'center' || el.align === 'right') {
+      // Inverse = white text on a solid black block. Draw the block, then the
+      // text with ^FR (field reverse) so the glyphs knock out to white.
+      if (el.inverse) {
+        const blockW = Math.round(el.w || Math.max(size, String(v).length * size * 0.62));
+        const blockH = Math.round(size * 1.3);
+        const pad = Math.round(size * 0.15);
+        L.push(`^FO${x},${y}^GB${blockW},${blockH},${blockH}^FS`);
+        const just = el.align === 'center' ? 'C' : el.align === 'right' ? 'R' : 'L';
+        L.push(`^FO${x},${y + pad}^FR${font}^FB${blockW},2,0,${just}^FD${v}^FS`);
+      } else if (el.align === 'center' || el.align === 'right') {
         const blockW = Math.round(el.w || w - 2 * x);
         const just = el.align === 'center' ? 'C' : 'R';
         L.push(`^FO${x},${y}${font}^FB${blockW},2,0,${just}^FD${v}^FS`);
       } else {
         L.push(`^FO${x},${y}${font}^FD${v}^FS`);
+      }
+    } else if (el.type === 'image') {
+      if (el.gfHex && el.gfBpr && el.gfRows) {
+        const total = el.gfBpr * el.gfRows;
+        L.push(`^FO${x},${y}^GFA,${total},${total},${el.gfBpr},${el.gfHex}^FS`);
       }
     } else if (el.type === 'barcode') {
       const v = zplEscape(resolveVars(el.value, values)) || '0';
