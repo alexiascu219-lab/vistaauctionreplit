@@ -3,27 +3,48 @@
 Two ways to print by voice. Build either (or both) in the iOS **Shortcuts** app.
 
 Base URL: `https://vistaauction.vercel.app`
-If you set `PRINT_API_KEY` in Vercel, add header `x-api-key: <key>` to every request. If it's unset, the endpoints are open (fine for first-run).
+If you set `PRINT_API_KEY` in Vercel, add header `x-api-key: <key>` to every
+request (Get Contents of URL → Show More → Headers). If it's unset, the
+endpoints are open (fine for first-run).
+
+> **You must build these by hand in the Shortcuts app.** Apple no longer lets you
+> import an unsigned `.shortcut` file, so a downloadable file won't open — the
+> steps below are the way in.
 
 ---
 
-## A) Guided shortcut — "Print a label"
-Asks, in order: **which label → how many → each field the label needs**, then prints.
-The fields change automatically per label (a cart tag asks for the cart; a warehouse tag asks Area/Aisle/Rack/Level/Position).
+## A) Guided shortcut — "Print a label" (menu-driven, asks each thing)
+Uses **Choose from Menu** to pick the label, then asks each field, how many
+copies, and — for warehouse labels — lets you say **all** for level/position to
+print every one from the spreadsheet.
 
-**APIs**
-- `GET /api/templates` → `{ names:[…], templates:[{ name, variables:[{key,label,default}] }] }`
-- `POST /api/print` → `{ template, quantity, data:{ <key>:<value>… } }` → renders that label's ZPL server-side and queues it. Returns `{ spoken }` for Siri to read back.
+**API used:** `POST /api/print-command` accepts a *structured* body:
+`{ template, quantity, data:{ <field>:<value>… }, useSheet }`. Any field left
+blank or set to **all** / **every** / **any** / **\*** is not filtered — with
+`useSheet:true` it expands to every matching row in your sheet. Returns
+`{ ok, count, spoken }` for Siri to read back.
 
 **Build it**
-1. **Get Contents of** `…/api/templates` (GET).
-2. **Get Dictionary Value** `names` → **Choose from List** ("Which label?") → save as **Label**.
-3. **Ask for Input** — "How many?" (Number, default 1) → save as **Qty**.
-4. **Get Dictionary Value** `templates` → **Find** where `name` is **Label** → **Get Dictionary Value** `variables` → **Repeat with Each**:
-   - **Ask for Input** — prompt = current item's `label`, default = current item's `default`.
-   - **Set Dictionary Value** on a dictionary **Data**: key = current item's `key`, value = the answer.
-5. **Get Contents of** `…/api/print` — POST, JSON body: `template` = **Label**, `quantity` = **Qty**, `data` = **Data**.
-6. **Get Dictionary Value** `spoken` → **Speak**.
+1. Add **Choose from Menu** — prompt "What are you printing?" with items:
+   **Cart tag**, **Warehouse location**.
+2. **Under "Cart tag":**
+   - **Ask for Input** (Text) — "Cart number?" 
+   - **Ask for Input** (Number, default 1) — "How many copies?"
+   - **Get Contents of** `…/api/print-command` — POST, header `x-api-key`, JSON body:
+     `template` = `Vista cart sticker`, `quantity` = the copies answer,
+     `data` = a Dictionary with `cart_number` = the cart-number answer.
+   - **Get Dictionary Value** `spoken` → **Speak**.
+3. **Under "Warehouse location":**
+   - **Ask** (Text) "Area?" · "Aisle?" · "Rack?" · "Level? (say ALL for every level)" · "Position? (say ALL for every position)"
+   - **Ask** (Number, default 1) "How many copies of each?"
+   - **Get Contents of** `…/api/print-command` — POST, header `x-api-key`, JSON body:
+     `template` = `Warehouse location`, `quantity` = copies, `useSheet` = `true` (Boolean),
+     `data` = a Dictionary with `area`,`aisle`,`rack`,`level`,`position` = each answer.
+   - **Get Dictionary Value** `spoken` → **Speak**.
+
+Say **all** for level and position (with a couple of fixed fields like aisle/rack)
+and it prints every matching spot from the sheet. Give every field a real value
+and it prints that one label (× copies).
 
 Trigger: *"Hey Siri, print a label."*
 

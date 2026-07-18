@@ -87,6 +87,25 @@ export default async function handler(req, res) {
 
   const body = typeof req.body === 'string' ? safeJson(req.body) : req.body || {};
   const parsed = parseCommand(body.text);
+
+  // Structured (guided) input overrides text parsing. The guided Siri shortcut
+  // sends the fields directly as { data:{…} } (or { filters:{…} }); a field left
+  // blank or set to "all"/"every"/"any"/"*" means "don't filter that one" — so
+  // with a sheet it expands to every matching row (all levels/positions/etc).
+  const structured = body.data || body.filters;
+  if (structured && typeof structured === 'object' && !Array.isArray(structured)) {
+    const DROP = new Set(['', 'all', 'every', 'any', 'each', '*', '-']);
+    const f = {};
+    for (const [k, v] of Object.entries(structured)) {
+      const val = String(v ?? '').trim();
+      if (!DROP.has(val.toLowerCase())) f[k] = val;
+    }
+    parsed.filters = f;
+  }
+  if (body.quantity != null) parsed.quantity = Math.max(1, Math.min(50, parseInt(body.quantity, 10) || 1));
+  if (body.useSheet != null) parsed.useSheet = !!body.useSheet;
+  if (body.sheet) parsed.useSheet = true;
+
   const supabase = getClient();
 
   const { data: tpls } = await supabase.from('vista_label_templates').select('id, name, width, height, variables, elements').eq('archived', false);
