@@ -102,6 +102,7 @@ const Labels = ({ embedded = false }) => {
   const [claudeReq, setClaudeReq] = useState(null);
   const [claudeStatus, setClaudeStatus] = useState('idle'); // idle | pending
   const [snap, setSnap] = useState(0); // grid size in dots; 0 = off
+  const [zoom, setZoom] = useState(1);
 
   // Undo/redo history + copy-paste clipboard.
   const pastRef = useRef([]);
@@ -598,8 +599,13 @@ const Labels = ({ embedded = false }) => {
                   <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_290px]">
                     {/* Canvas */}
                     <div>
-                      <div className="rounded-2xl border border-stone-200 p-4 shadow-soft" style={{ background: 'repeating-conic-gradient(#f5f5f4 0% 25%, #fff 0% 50%) 50% / 22px 22px' }}>
-                        <div className="mx-auto overflow-hidden rounded-lg shadow-lift" style={{ maxWidth: Math.min(560, work.width) }}>
+                      <div className="mb-2 flex items-center justify-end gap-1.5">
+                        <button onClick={() => setZoom((z) => Math.max(0.4, Math.round((z - 0.15) * 100) / 100))} className="rounded-lg border border-stone-200 bg-white p-1.5 text-slate-500 transition hover:text-slate-800"><Minus size={13} /></button>
+                        <button onClick={() => setZoom(1)} className="min-w-[52px] rounded-lg border border-stone-200 bg-white px-2 py-1 text-[11.5px] font-bold tabular-nums text-slate-600 transition hover:text-slate-900">{Math.round(zoom * 100)}%</button>
+                        <button onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.15) * 100) / 100))} className="rounded-lg border border-stone-200 bg-white p-1.5 text-slate-500 transition hover:text-slate-800"><Plus size={13} /></button>
+                      </div>
+                      <div className="overflow-auto rounded-2xl border border-stone-200 p-4 shadow-soft" style={{ background: 'repeating-conic-gradient(#f5f5f4 0% 25%, #fff 0% 50%) 50% / 22px 22px' }}>
+                        <div className="mx-auto overflow-hidden rounded-lg shadow-lift" style={{ width: Math.round(Math.min(560, work.width) * zoom), maxWidth: 'none' }}>
                           <LabelSvg
                             template={work}
                             values={(work.variables || []).reduce((a, v) => ((a[v.key] = v.default), a), {})}
