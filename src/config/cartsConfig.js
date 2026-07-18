@@ -64,23 +64,32 @@ export const STATUS_OPTIONS = [
 // ---- Floor-plan editor -----------------------------------------------------
 // Element types you can drop onto an area's plan. Sizes are % of the canvas.
 export const ELEMENT_TYPES = [
+  { type: 'aisle', label: 'Aisle', icon: 'RectangleHorizontal', defaults: { w: 22, h: 9 } },
   { type: 'rack', label: 'Rack', icon: 'Rows3', defaults: { w: 24, h: 10 } },
   { type: 'area', label: 'Zone', icon: 'SquareDashedBottom', defaults: { w: 30, h: 24 } },
+  { type: 'path', label: 'Path', icon: 'Minus', defaults: { w: 40, h: 5 } },
+  { type: 'door', label: 'Door', icon: 'DoorOpen', defaults: { w: 8, h: 8 } },
+  { type: 'caution', label: 'No-enter', icon: 'TriangleAlert', defaults: { w: 6, h: 22 } },
+  { type: 'arrow', label: 'Arrow', icon: 'ArrowUp', defaults: { w: 4, h: 11 } },
   { type: 'wall', label: 'Wall', icon: 'BrickWall', defaults: { w: 2.5, h: 30 } },
-  { type: 'door', label: 'Door', icon: 'DoorOpen', defaults: { w: 12, h: 5 } },
   { type: 'label', label: 'Label', icon: 'Type', defaults: { w: 22, h: 7 } },
 ];
 
 // Colour tokens for plan elements (fills that sit on the paper canvas).
 export const ELEMENT_COLORS = {
   slate: { name: 'Slate', fill: '#f1f5f9', border: '#cbd5e1', text: '#334155', accent: '#64748b' },
-  rose: { name: 'Rose', fill: '#fff1f2', border: '#fecdd3', text: '#9f1239', accent: '#f43f5e' },
-  orange: { name: 'Orange', fill: '#fff7ed', border: '#fed7aa', text: '#9a3412', accent: '#ea580c' },
+  rose: { name: 'Red', fill: '#fff1f2', border: '#fecdd3', text: '#9f1239', accent: '#ef4444' },
+  orange: { name: 'Orange', fill: '#fff7ed', border: '#fed7aa', text: '#9a3412', accent: '#f97316' },
+  peach: { name: 'Peach', fill: '#fff7ed', border: '#fed7aa', text: '#9a3412', accent: '#fdba74' },
   amber: { name: 'Amber', fill: '#fffbeb', border: '#fde68a', text: '#92400e', accent: '#f59e0b' },
-  lime: { name: 'Lime', fill: '#f7fee7', border: '#d9f99d', text: '#3f6212', accent: '#84cc16' },
+  lime: { name: 'Green', fill: '#f7fee7', border: '#d9f99d', text: '#3f6212', accent: '#84cc16' },
   emerald: { name: 'Emerald', fill: '#ecfdf5', border: '#a7f3d0', text: '#065f46', accent: '#10b981' },
+  teal: { name: 'Teal', fill: '#ecfeff', border: '#a5f3fc', text: '#0e7490', accent: '#22d3ee' },
   sky: { name: 'Sky', fill: '#f0f9ff', border: '#bae6fd', text: '#075985', accent: '#0ea5e9' },
+  blue: { name: 'Blue', fill: '#eef2ff', border: '#c7d2fe', text: '#3730a3', accent: '#4f6ef7' },
   violet: { name: 'Violet', fill: '#f5f3ff', border: '#ddd6fe', text: '#5b21b6', accent: '#8b5cf6' },
+  purple: { name: 'Purple', fill: '#faf5ff', border: '#e9d5ff', text: '#6b21a8', accent: '#c084fc' },
+  fuchsia: { name: 'Pink', fill: '#fdf4ff', border: '#f5d0fe', text: '#a21caf', accent: '#e879c9' },
 };
 export const ELEMENT_COLOR_KEYS = Object.keys(ELEMENT_COLORS);
 

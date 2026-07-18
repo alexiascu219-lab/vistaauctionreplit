@@ -3,9 +3,15 @@
 > The **Claude** button in Label Studio runs through this Routine — it designs
 > using your **claude.ai subscription** (no API key, no per-call billing), and it
 > can see a reference image. **Mistral** is the instant, in-browser alternative
-> (server-side `/api/ai`). An optional direct-Anthropic-API path also exists in
-> `/api/ai` (`ANTHROPIC_API_KEY`) if you ever want instant Claude via a paid key,
-> but it's off unless that key is set and the UI is pointed at it.
+> (server-side `/api/ai`).
+>
+> **Instant Claude (fire on send):** set these in Vercel and the app fires the
+> Routine the moment you hit *Send to Claude* — no waiting for the schedule:
+>   - `CLAUDE_ROUTINE_TOKEN` — your `sk-ant-oat01-…` token
+>   - `CLAUDE_ROUTINE_ID` — the routine's `trig_…` id (or `CLAUDE_ROUTINE_FIRE_URL` = the full `…/routines/<id>/fire` URL)
+>
+> These live only on the server (never in the repo or browser). Rotate the token
+> if it's ever shared. Without them, requests still queue and run on schedule.
 
 ---
 

@@ -14,6 +14,14 @@ import {
   Cloud,
   Loader2,
   MapPin,
+  RectangleHorizontal,
+  TriangleAlert,
+  ArrowUp,
+  Minus,
+  Copy,
+  RotateCw,
+  BringToFront,
+  SendToBack,
 } from 'lucide-react';
 import { ZoneIcon } from '../cartsUi';
 import {
@@ -27,15 +35,15 @@ import { fetchLayout, saveLayout } from '../../../lib/cartsApi';
 import PlanElement from './PlanElement';
 import PlanCart from './PlanCart';
 
-const TYPE_ICONS = { Rows3, SquareDashedBottom, Type, DoorOpen, BrickWall };
+const TYPE_ICONS = { RectangleHorizontal, Rows3, SquareDashedBottom, Minus, DoorOpen, TriangleAlert, ArrowUp, BrickWall, Type };
 
 const uid = () => `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const defaultsFor = (type) => {
   const t = ELEMENT_TYPES.find((x) => x.type === type);
-  const color = { rack: 'slate', area: 'sky', wall: 'slate', label: 'slate', door: 'emerald' }[type] || 'slate';
-  const label = { rack: 'Rack', area: 'Zone', wall: '', label: 'Label', door: 'Door' }[type] || 'Element';
-  return { ...t.defaults, color, label };
+  const color = { aisle: 'blue', rack: 'slate', area: 'sky', wall: 'slate', label: 'slate', door: 'teal', path: 'slate', caution: 'amber', arrow: 'slate' }[type] || 'slate';
+  const label = { aisle: 'Aisle', rack: 'Rack', area: 'Zone', wall: '', label: 'Label', door: 'Door', path: '', caution: 'No entry', arrow: '' }[type] ?? 'Element';
+  return { ...t.defaults, color, label, rotation: 0 };
 };
 
 const FloorPlanView = ({ carts, operatorName, onOpenCart, onReposition, onToast }) => {
@@ -125,6 +133,34 @@ const FloorPlanView = ({ carts, operatorName, onOpenCart, onReposition, onToast 
     },
     [queueSave],
   );
+
+  const duplicateElement = useCallback((id) => {
+    setElements((els) => {
+      const el = els.find((e) => e.id === id);
+      if (!el) return els;
+      const copy = { ...el, id: uid(), x: Math.min(100 - el.w, el.x + 3), y: Math.min(100 - el.h, el.y + 3) };
+      setSelectedId(copy.id);
+      return [...els, copy];
+    });
+    queueSave();
+  }, [queueSave]);
+
+  const rotateElement = useCallback((id) => {
+    setElements((els) => els.map((e) => (e.id === id ? { ...e, rotation: ((e.rotation || 0) + 90) % 360 } : e)));
+    queueSave();
+  }, [queueSave]);
+
+  const reorder = useCallback((id, dir) => {
+    setElements((els) => {
+      const i = els.findIndex((e) => e.id === id);
+      if (i === -1) return els;
+      const arr = [...els];
+      const [el] = arr.splice(i, 1);
+      if (dir === 'front') arr.push(el); else arr.unshift(el);
+      return arr;
+    });
+    queueSave();
+  }, [queueSave]);
 
   // ---- Carts ---------------------------------------------------------------
   const areaCarts = useMemo(() => carts.filter((c) => c.zone === area), [carts, area]);
@@ -321,7 +357,7 @@ const FloorPlanView = ({ carts, operatorName, onOpenCart, onReposition, onToast 
               placeholder="Label"
               className="min-w-[140px] flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-[14px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/15"
             />
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {ELEMENT_COLOR_KEYS.map((key) => (
                 <button
                   key={key}
@@ -331,6 +367,26 @@ const FloorPlanView = ({ carts, operatorName, onOpenCart, onReposition, onToast 
                   style={{ background: ELEMENT_COLORS[key].accent }}
                 />
               ))}
+            </div>
+            {/* Precise position + size */}
+            <div className="flex items-center gap-1 rounded-xl border border-stone-200 bg-[#FBFBFA] px-1.5 py-1">
+              {[['x', 'X'], ['y', 'Y'], ['w', 'W'], ['h', 'H']].map(([k, lab]) => (
+                <label key={k} className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-400">{lab}</span>
+                  <input
+                    type="number"
+                    value={Math.round(selected[k])}
+                    onChange={(e) => patchElement(selected.id, { [k]: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
+                    className="w-12 rounded-md border border-stone-200 bg-white px-1.5 py-1 text-[12px] font-semibold text-slate-800"
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => rotateElement(selected.id)} title="Rotate 90°" className="rounded-lg border border-stone-200 bg-white p-2 text-slate-500 hover:text-slate-800"><RotateCw size={15} /></button>
+              <button onClick={() => reorder(selected.id, 'front')} title="Bring to front" className="rounded-lg border border-stone-200 bg-white p-2 text-slate-500 hover:text-slate-800"><BringToFront size={15} /></button>
+              <button onClick={() => reorder(selected.id, 'back')} title="Send to back" className="rounded-lg border border-stone-200 bg-white p-2 text-slate-500 hover:text-slate-800"><SendToBack size={15} /></button>
+              <button onClick={() => duplicateElement(selected.id)} title="Duplicate" className="rounded-lg border border-stone-200 bg-white p-2 text-slate-500 hover:text-slate-800"><Copy size={15} /></button>
             </div>
             <button
               onClick={() => deleteElement(selected.id)}
