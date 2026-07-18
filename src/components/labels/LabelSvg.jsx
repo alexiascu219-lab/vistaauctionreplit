@@ -61,6 +61,17 @@ function ElementVisual({ el, values, W = 609 }) {
       tx = el.align === 'center' ? el.x + blockW / 2 : el.x + blockW;
       anchor = el.align === 'center' ? 'middle' : 'end';
     }
+    if (el.inverse) {
+      const blockW = el.w || Math.max(size, String(v).length * size * 0.62);
+      const blockH = size * 1.3;
+      const ix = anchor === 'middle' ? el.x + blockW / 2 : anchor === 'end' ? el.x + blockW : el.x + size * 0.15;
+      return (
+        <g transform={deg ? `rotate(${deg} ${el.x} ${el.y})` : undefined}>
+          <rect x={el.x} y={el.y} width={blockW} height={blockH} fill="#0f172a" />
+          <text x={ix} y={el.y + blockH * 0.72} fontSize={size} textAnchor={anchor} fontWeight="700" fill="#fff" style={{ fontFamily: fontCss(el.font) }}>{v}</text>
+        </g>
+      );
+    }
     return (
       <g transform={deg ? `rotate(${deg} ${el.x} ${el.y})` : undefined}>
         <text x={tx} y={el.y + size * 0.8} fontSize={size} textAnchor={anchor} fontWeight="700" fill="#0f172a" style={{ fontFamily: fontCss(el.font) }}>
@@ -102,6 +113,12 @@ function ElementVisual({ el, values, W = 609 }) {
     const w = el.w || 60;
     const h = el.h || 60;
     return <ellipse cx={el.x + w / 2} cy={el.y + h / 2} rx={w / 2} ry={h / 2} fill="none" stroke="#0f172a" strokeWidth={el.thickness || 3} />;
+  }
+  if (el.type === 'image') {
+    const w = el.w || 60;
+    const h = el.h || 60;
+    if (!el.src) return <rect x={el.x} y={el.y} width={w} height={h} fill="#f1f5f9" stroke="#cbd5e1" strokeWidth={2} strokeDasharray="5 4" />;
+    return <image href={el.src} x={el.x} y={el.y} width={w} height={h} preserveAspectRatio="none" />;
   }
   // line
   const b = bbox(el, values);

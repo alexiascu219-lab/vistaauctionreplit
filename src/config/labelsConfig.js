@@ -6,6 +6,7 @@ export const LABEL_ELEMENT_TYPES = [
   { type: 'box', label: 'Box', icon: 'Square' },
   { type: 'ellipse', label: 'Circle', icon: 'Circle' },
   { type: 'line', label: 'Line', icon: 'Minus' },
+  { type: 'image', label: 'Image', icon: 'Image' },
 ];
 
 export const SYMBOLOGIES = [
@@ -78,6 +79,8 @@ export function newElement(type, t) {
       return { id, type: 'box', x: cx - 90, y: cy - 55, w: 180, h: 110, thickness: 3, rounding: 0 };
     case 'ellipse':
       return { id, type: 'ellipse', x: cx - 70, y: cy - 70, w: 140, h: 140, thickness: 3 };
+    case 'image':
+      return { id, type: 'image', x: cx - 80, y: cy - 80, w: 160, h: 160, src: null };
     case 'line':
       return { id, type: 'line', x: cx - 110, y: cy, w: 220, thickness: 3, orient: 'h' };
     case 'text':

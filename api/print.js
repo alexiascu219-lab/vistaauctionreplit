@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { templateToZpl } from '../src/lib/zpl.js';
 
 // ============================================================================
 // /api/print — the bridge between "ask for a sticker" and "a Zebra prints it".
@@ -114,23 +115,49 @@ export default async function handler(req, res) {
     if (!auth.ok) return res.status(401).json({ error: 'Unauthorized' });
 
     const body = typeof req.body === 'string' ? safeJson(req.body) : req.body || {};
-    const template = (body.template || 'cart_label').toString();
+    const requested = (body.template || 'cart_label').toString();
     const quantity = Math.max(1, Math.min(50, parseInt(body.quantity, 10) || 1));
     const source = ['web', 'cart', 'siri', 'api'].includes(body.source) ? body.source : 'siri';
     const requestedBy = (body.requested_by || body.by || 'Siri').toString().slice(0, 80);
 
     const cartNumber = parseCartNumber(body.cart_number ?? body.cart ?? body.number ?? body.text);
     const data = { ...(body.data || {}) };
+    // Fold any top-level fields the shortcut sent (aisle, rack, cart, etc.) into data.
+    for (const k of ['cart_number', 'aisle', 'rack', 'level', 'position', 'zone', 'spot', 'number']) {
+      if (body[k] != null && data[k] === undefined) data[k] = String(body[k]);
+    }
+    if (cartNumber && data.cart_number === undefined) data.cart_number = cartNumber;
     let title = body.title;
+    let template = requested;
 
-    if (template === 'cart_label') {
-      if (!cartNumber) {
-        return res.status(400).json({ error: 'Which cart? Provide cart_number (e.g. "12").' });
+    // Resolve the requested label against the saved templates (by id or name),
+    // so a Siri Shortcut can print ANY design. We render its ZPL server-side and
+    // attach it, so the Print Station prints it verbatim.
+    const { data: tpls } = await supabase
+      .from('vista_label_templates')
+      .select('id, name, width, height, variables, elements')
+      .eq('archived', false);
+    const tpl = (tpls || []).find((t) => t.id === requested || (t.name || '').toLowerCase() === requested.toLowerCase());
+
+    if (tpl) {
+      const values = {};
+      for (const v of tpl.variables || []) values[v.key] = v.default ?? '';
+      Object.assign(values, data); // caller-provided values win over defaults
+      // Any declared variable the caller didn't supply is an error worth flagging.
+      const missing = (tpl.variables || []).map((v) => v.key).filter((k) => !String(values[k] ?? '').trim());
+      if (missing.length) {
+        return res.status(400).json({ error: `Missing ${missing.join(', ')} for "${tpl.name}".`, missing, template: tpl.name });
       }
-      data.cart_number = cartNumber;
-      if (body.zone && !data.zone) data.zone = String(body.zone);
-      if (body.spot && !data.spot) data.spot = String(body.spot);
+      data.zpl = templateToZpl(tpl, values);
+      Object.assign(data, values);
+      template = tpl.name;
+      title = title || `${tpl.name}${values.cart_number ? ` ${values.cart_number}` : ''}`;
+    } else if (requested === 'cart_label') {
+      // Built-in fallback (the Print Station renders its own cart ZPL).
+      if (!cartNumber) return res.status(400).json({ error: 'Which cart? Provide cart_number (e.g. "12").' });
       title = title || `Cart ${cartNumber}`;
+    } else {
+      return res.status(404).json({ error: `No label named "${requested}". Call /api/templates for the list.` });
     }
 
     const { data: job, error } = await supabase
@@ -140,11 +167,12 @@ export default async function handler(req, res) {
       .single();
     if (error) return res.status(500).json({ error: error.message });
 
+    const what = data.cart_number ? `cart ${data.cart_number}` : (title || template);
     return res.status(201).json({
       ok: true,
       job,
       // A short line Siri can read back out loud.
-      spoken: `Okay — queued ${quantity > 1 ? quantity + ' stickers' : 'a sticker'} for cart ${cartNumber || title}.`,
+      spoken: `Okay — queued ${quantity > 1 ? quantity + ' labels' : 'a label'} for ${what}.`,
     });
   }
 

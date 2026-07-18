@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Copy, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, Copy, ChevronUp, ChevronDown, Upload, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal } from 'lucide-react';
 import { SYMBOLOGIES, LABEL_FONTS } from '../../config/labelsConfig';
 
 const FIELD = 'w-full rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-[13px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
@@ -23,7 +23,16 @@ const Rotation = ({ value, onChange }) => (
   </label>
 );
 
-const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReorder }) => {
+const ALIGNS = [
+  { k: 'left', d: 'Left', Icon: AlignStartVertical },
+  { k: 'hcenter', d: 'Center', Icon: AlignCenterVertical },
+  { k: 'right', d: 'Right', Icon: AlignEndVertical },
+  { k: 'top', d: 'Top', Icon: AlignStartHorizontal },
+  { k: 'vcenter', d: 'Middle', Icon: AlignCenterHorizontal },
+  { k: 'bottom', d: 'Bottom', Icon: AlignEndHorizontal },
+];
+
+const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReorder, onUploadImage, onAlign }) => {
   if (!el) return null;
   const set = (patch) => onChange(el.id, patch);
 
@@ -68,6 +77,21 @@ const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReor
                 <option value="center">Center</option>
                 <option value="right">Right</option>
               </select>
+            </label>
+            <label className="col-span-2 flex items-center gap-2 pt-1">
+              <input type="checkbox" checked={!!el.inverse} onChange={(e) => set({ inverse: e.target.checked })} />
+              <span className="text-[12px] font-semibold text-slate-600">Inverse (white on black)</span>
+            </label>
+          </>
+        )}
+
+        {el.type === 'image' && (
+          <>
+            <Num label="Width" value={el.w} onChange={(v) => set({ w: v })} />
+            <Num label="Height" value={el.h} onChange={(v) => set({ h: v })} />
+            <label className="col-span-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-orange-300 bg-white py-2 text-[12px] font-bold text-orange-600 transition hover:bg-orange-50">
+              <Upload size={14} /> {el.src ? 'Replace image' : 'Upload image'}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) onUploadImage?.(el.id, e.target.files[0]); e.target.value = ''; }} />
             </label>
           </>
         )}
@@ -119,6 +143,19 @@ const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReor
             <Num label={el.orient === 'v' ? 'Length (h)' : 'Length (w)'} value={el.orient === 'v' ? el.h || el.w : el.w} onChange={(v) => set(el.orient === 'v' ? { h: v } : { w: v })} />
             <Num label="Thickness" value={el.thickness} onChange={(v) => set({ thickness: v })} />
           </>
+        )}
+
+        {onAlign && (
+          <div className="col-span-2 pt-1">
+            <span className={LAB}>Align on label</span>
+            <div className="flex gap-1">
+              {ALIGNS.map((a) => (
+                <button key={a.k} onClick={() => onAlign(el.id, a.k)} title={a.d} className="flex-1 rounded-lg border border-stone-200 bg-white p-1.5 text-slate-500 transition hover:border-orange-200 hover:text-orange-600">
+                  <a.Icon size={14} className="mx-auto" />
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>
