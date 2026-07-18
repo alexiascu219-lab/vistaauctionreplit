@@ -114,17 +114,15 @@ export async function mapDataWithAI({ instruction, columns, variables }) {
 // ---- Claude via the Routine queue -----------------------------------------
 // Drop a request; a Claude Code Routine fulfils it and writes back the design.
 export async function enqueueClaudeDesign({ prompt, base, by = null, image = null }) {
-  const row = {
-    prompt: prompt || 'Design a label from the attached reference image.',
-    base: { width: base?.width || 609, height: base?.height || 406 },
-    provider: 'claude',
-    requested_by: by,
-    status: 'pending',
-  };
-  if (image) row.image = image; // base64 JPEG data URL — the Routine reads it as a file
-  const { data, error } = await supabase.from('vista_label_ai_requests').insert([row]).select().single();
-  if (error) throw new Error(error.message);
-  return data;
+  // Server-side: queues the request AND fires the Claude Routine immediately.
+  const r = await fetch('/api/claude-design', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, base: { width: base?.width || 609, height: base?.height || 406 }, image, by }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Claude request failed (${r.status})`);
+  return data; // { id, fired, … }
 }
 
 export async function fetchAiRequest(id) {
