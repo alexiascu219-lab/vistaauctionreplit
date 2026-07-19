@@ -300,6 +300,7 @@ function createWindow() {
     frame: false, // custom in-app title bar (see /station)
     backgroundColor: '#14181f',
     title: 'Vista Print Station',
+    icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.setMenuBarVisibility(false);
@@ -333,6 +334,7 @@ function createControlPanel() {
     minHeight: 520,
     backgroundColor: '#faf9f7',
     title: 'Vista Print Station — Control Panel',
+    icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   panel.setMenuBarVisibility(false);
@@ -342,7 +344,8 @@ function createControlPanel() {
 
 function createTray() {
   try {
-    const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png'));
+    const raw = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
+    const icon = raw.isEmpty() ? raw : raw.resize({ width: 32, height: 32 });
     tray = new Tray(icon);
     tray.setToolTip('Vista Print Station');
     tray.on('click', () => (win ? (win.isVisible() ? win.hide() : win.show()) : createWindow()));
