@@ -21,6 +21,7 @@
     "files": ["**/*", "!**/*.md"],
     "directories": { "output": "dist" },
     "win": {
+      "icon": "build/icon.png",
       "target": [
         { "target": "nsis", "arch": ["x64"] },
         { "target": "portable", "arch": ["x64"] }
@@ -31,7 +32,8 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Vista Print Station"
+      "shortcutName": "Vista Print Station",
+      "include": "build/installer.nsh"
     },
     "portable": {
       "artifactName": "VistaPrintStation-portable-${version}.exe"
