@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Power, Wifi, Usb, FolderCog, Play, Printer, Download, Terminal, CircleDot } from 'lucide-react';
+import { Power, Wifi, Usb, FolderCog, Play, Printer, Download, Terminal, CircleDot, RefreshCw, Search, Send, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const hasBridge = () => typeof window !== 'undefined' && !!window.api;
 
@@ -18,6 +18,9 @@ export default function StationPrinters() {
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState([]);
   const [testCart, setTestCart] = useState('00');
+  const [status, setStatus] = useState(null); // { online, detail }
+  const [discovered, setDiscovered] = useState(null); // installed Windows printers
+  const [discovering, setDiscovering] = useState(false);
   const logRef = useRef(null);
 
   useEffect(() => {
@@ -26,6 +29,24 @@ export default function StationPrinters() {
     window.api.onStatus((s) => setRunning(!!s.running));
     window.api.onLog((line) => setLog((l) => [...l.slice(-200), line]));
   }, [bridge]);
+
+  // Poll live printer status (feature-detected — older app builds simply skip).
+  const refreshStatus = React.useCallback(() => {
+    if (!bridge || !window.api.printerStatus) return;
+    window.api.printerStatus().then(setStatus).catch(() => setStatus({ online: false, detail: 'Unavailable' }));
+  }, [bridge]);
+  useEffect(() => {
+    if (!bridge || !window.api.printerStatus) return undefined;
+    refreshStatus();
+    const t = setInterval(refreshStatus, 6000);
+    return () => clearInterval(t);
+  }, [bridge, refreshStatus, cfg?.mode, cfg?.host, cfg?.printerName, cfg?.watchFolder]);
+
+  const discover = async () => {
+    if (!window.api.discoverPrinters) return;
+    setDiscovering(true);
+    try { setDiscovered(await window.api.discoverPrinters()); } finally { setDiscovering(false); }
+  };
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [log]);
 
@@ -60,9 +81,16 @@ export default function StationPrinters() {
               <p className="font-mono text-[11px] text-slate-400">{running ? 'Claiming jobs from the queue' : 'The engine is idle'}</p>
             </div>
           </div>
-          <button onClick={() => window.api.toggleEngine(!running)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold text-white transition ${running ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
-            <Power size={15} /> {running ? 'Stop' : 'Start'}
-          </button>
+          <div className="flex items-center gap-2">
+            {status && (
+              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10.5px] font-bold ${status.online ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`} title={status.detail}>
+                {status.online ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />} {status.detail || (status.online ? 'Ready' : 'Offline')}
+              </span>
+            )}
+            <button onClick={() => window.api.toggleEngine(!running)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold text-white transition ${running ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+              <Power size={15} /> {running ? 'Stop' : 'Start'}
+            </button>
+          </div>
         </div>
 
         {/* Mode */}
@@ -83,16 +111,51 @@ export default function StationPrinters() {
             <>
               <label className="block"><span className={LAB}>Printer IP</span><input value={cfg.host || ''} onChange={(e) => patch({ host: e.target.value })} placeholder="192.168.1.50" className={FIELD} /></label>
               <label className="block"><span className={LAB}>Port</span><input value={cfg.port || 9100} onChange={(e) => patch({ port: Number(e.target.value) || 9100 })} className={FIELD} /></label>
+              {window.api.printerStatus && (
+                <div className="col-span-2">
+                  <button onClick={refreshStatus} className="inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 py-2 text-[12.5px] font-bold text-slate-700 transition hover:border-orange-200 hover:text-orange-600"><RefreshCw size={13} /> Test connection</button>
+                </div>
+              )}
             </>
           )}
           {cfg.mode === 'windows' && (
-            <label className="col-span-2 block"><span className={LAB}>Windows printer name</span><input value={cfg.printerName || ''} onChange={(e) => patch({ printerName: e.target.value })} placeholder="ZDesigner ZD621" className={FIELD} /></label>
+            <>
+              <div className="col-span-2 flex items-end gap-2">
+                <label className="block flex-1"><span className={LAB}>Windows printer name</span><input value={cfg.printerName || ''} onChange={(e) => patch({ printerName: e.target.value })} placeholder="ZDesigner ZD621" className={FIELD} /></label>
+                {window.api.discoverPrinters && (
+                  <button onClick={discover} disabled={discovering} className="inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 py-2 text-[12.5px] font-bold text-slate-600 disabled:opacity-50"><Search size={13} /> {discovering ? 'Scanning…' : 'Discover'}</button>
+                )}
+              </div>
+              {discovered && (
+                <div className="col-span-2 -mt-1 flex flex-wrap gap-1.5">
+                  {discovered.length === 0 && <span className="text-[12px] text-slate-400">No installed printers found.</span>}
+                  {discovered.map((p) => (
+                    <button key={p.name} onClick={() => patch({ printerName: p.name })} className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold transition ${cfg.printerName === p.name ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-stone-200 bg-white text-slate-600 hover:border-stone-300'}`}>
+                      {p.zebra && <span className="mr-1 text-orange-500">◆</span>}{p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
           {cfg.mode === 'zebradesigner' && (
-            <div className="col-span-2 flex items-end gap-2">
-              <label className="block flex-1"><span className={LAB}>Watched folder</span><input value={cfg.watchFolder || ''} readOnly placeholder="Choose a folder…" className={FIELD} /></label>
-              <button onClick={async () => { const f = await window.api.pickFolder(); if (f) patch({ watchFolder: f }); }} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-[12.5px] font-bold text-slate-600">Browse</button>
-            </div>
+            <>
+              <div className="col-span-2 flex items-end gap-2">
+                <label className="block flex-1"><span className={LAB}>Watched folder</span><input value={cfg.watchFolder || ''} readOnly placeholder="Choose a folder…" className={FIELD} /></label>
+                <button onClick={async () => { const f = await window.api.pickFolder(); if (f) patch({ watchFolder: f }); }} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-[12.5px] font-bold text-slate-600">Browse</button>
+              </div>
+              <label className="col-span-2 block"><span className={LAB}>Default .nlbl label file</span><input value={cfg.labelFile || ''} onChange={(e) => patch({ labelFile: e.target.value })} placeholder="cart-tag.nlbl" className={FIELD} /></label>
+              <div className="col-span-2 rounded-xl border border-stone-200 bg-[#FBFBFA] p-3 text-[12px] leading-relaxed text-slate-500">
+                <p className="mb-1 font-bold text-slate-700">Bridge to ZebraDesigner official</p>
+                Jobs land here as <code className="text-orange-600">job-*.csv</code> (one row per number) plus a rolling <code className="text-orange-600">vista-data.csv</code>.
+                Point a <b>ZebraDesigner Automation</b> file trigger at this folder for hands-off printing, or bind a <b>ZebraDesigner Professional</b> label to <code className="text-orange-600">vista-data.csv</code> and Print all records.
+                {window.api.bridgeTest && (
+                  <div className="mt-2">
+                    <button onClick={async () => { const r = await window.api.bridgeTest(); if (r?.error) alert(r.error); }} className="inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-[12px] font-bold text-slate-700 transition hover:border-orange-200 hover:text-orange-600"><Send size={13} /> Write bridge test (3 rows)</button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
           <label className="block"><span className={LAB}>Poll every (sec)</span><input value={cfg.pollSeconds || 4} onChange={(e) => patch({ pollSeconds: Math.max(1, Number(e.target.value) || 4) })} className={FIELD} /></label>
           <label className="col-span-2 mt-1 flex items-center gap-2"><input type="checkbox" checked={!!cfg.autoStart} onChange={(e) => patch({ autoStart: e.target.checked })} /> <span className="text-[12.5px] font-semibold text-slate-600">Start printing automatically on launch</span></label>

@@ -2,7 +2,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, nativeImage } = 
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { printJob, DEFAULT_ZPL } = require('./print/engine');
+const { printJob, probeNetwork, listWindowsPrinters, DEFAULT_ZPL } = require('./print/engine');
 
 // ---- Hardcoded config (turnkey — no setup needed except your printer) ------
 // The full Vista Auction site (carts, labels, design studio, print queue) loads
@@ -224,6 +224,36 @@ ipcMain.handle('print:test', async (_e, cart) => {
     return { ok: true };
   } catch (e) {
     log(`✗ test print failed — ${e.message}`);
+    return { ok: false, error: e.message };
+  }
+});
+ipcMain.handle('printer:status', async () => {
+  // Live reachability/status for the current connection.
+  try {
+    if (config.mode === 'network') return await probeNetwork({ host: config.host, port: config.port });
+    if (config.mode === 'windows') return { online: !!config.printerName, detail: config.printerName ? 'Driver configured' : 'No printer selected' };
+    if (config.mode === 'zebradesigner') {
+      const ok = !!config.watchFolder && fs.existsSync(config.watchFolder);
+      return { online: ok, detail: ok ? 'Watched folder ready' : 'Folder not set' };
+    }
+    return { online: false, detail: 'Not configured' };
+  } catch (e) {
+    return { online: false, detail: e.message };
+  }
+});
+ipcMain.handle('printers:discover', async () => {
+  try { return await listWindowsPrinters(); } catch { return []; }
+});
+ipcMain.handle('bridge:test', async () => {
+  // Write a 3-row sample range through the ZebraDesigner bridge so the operator
+  // can confirm ZebraDesigner picks it up.
+  const job = { id: `test-${Date.now()}`, title: 'Bridge test', quantity: 1, data: { bridge: { label: config.labelFile || 'label.nlbl', rows: [{ number: '397' }, { number: '398' }, { number: '399' }] } } };
+  try {
+    const r = await printJob(engineConfig(), job);
+    log(`✓ bridge test wrote ${r.bridged || 0} rows to ${config.watchFolder}`);
+    return { ok: true, count: r.bridged || 0 };
+  } catch (e) {
+    log(`✗ bridge test failed — ${e.message}`);
     return { ok: false, error: e.message };
   }
 });
