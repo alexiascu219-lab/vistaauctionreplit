@@ -88,10 +88,25 @@ function printZebraDesigner(job, vars, qty, { watchFolder, labelFile }) {
 
   const base = path.join(watchFolder, `job-${job.id}`);
   fs.writeFileSync(`${base}.csv`, csv, 'utf8');
-  // A stable filename Professional can bind to permanently (always the latest).
+  // Stable filenames Professional binds to permanently (always the latest range):
+  //  - vista-data.csv           : the most recent job, any label
+  //  - vista-<label>.csv        : per-label, so multiple .nlbl bindings don't
+  //                               clobber each other
   fs.writeFileSync(path.join(watchFolder, 'vista-data.csv'), csv, 'utf8');
-  fs.writeFileSync(`${base}.json`, JSON.stringify({ id: job.id, label: label || null, quantity: qty, count: rows.length, rows }, null, 2));
+  const slug = labelSlug(label);
+  if (slug) fs.writeFileSync(path.join(watchFolder, `vista-${slug}.csv`), csv, 'utf8');
+  fs.writeFileSync(`${base}.json`, JSON.stringify({ id: job.id, label: label || null, dataFile: slug ? `vista-${slug}.csv` : 'vista-data.csv', quantity: qty, count: rows.length, rows }, null, 2));
   return rows.length;
+}
+
+// A filesystem-safe stem from a label file name: "Cart Tag.nlbl" -> "cart-tag".
+function labelSlug(label) {
+  return String(label || '')
+    .replace(/\.[a-z0-9]+$/i, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
 }
 
 // Probe a network Zebra with ~HS (host status) — a quick reachability + status
