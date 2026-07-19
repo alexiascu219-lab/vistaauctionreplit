@@ -31,8 +31,8 @@ software**, exactly as you asked.
 | Tier | Hands-off? | How it consumes the bridge |
 | --- | --- | --- |
 | **ZebraDesigner Automation** (paid) | ✅ Fully automatic | A **file trigger** watches the folder; each `job-*.csv` prints the whole range with no clicks. This is the true "website → prints" path. |
-| **ZebraDesigner Professional** | ⚙️ One click | Bind the label's variables to `vista-data.csv` and use **Print → All records**. Every job rewrites `vista-data.csv`, so you just hit Print. |
-| **ZebraDesigner (free)** | ⚙️ Manual import | Same as Pro but you import `vista-data.csv` each run. |
+| **ZebraDesigner Professional** | ⚙️ One click | Bind the label's variables to its `vista-<label>.csv` and use **Print → All records**. Every job rewrites that file, so you just hit Print. |
+| **ZebraDesigner (free)** | ⚙️ Manual import | Same as Pro but you import the CSV each run. |
 
 > Don't have (or want) ZebraDesigner? The built-in **Vista (ZPL)** engine already
 > prints the same designs directly to the Zebra — the bridge is only for teams
@@ -57,7 +57,29 @@ software**, exactly as you asked.
   `job-*.csv`, map CSV columns → variables, set copies from the `quantity`
   column, action = Print. Deploy/start the trigger.
 - **Professional/free:** set the label's data source to a **Text file /
-  database** = `C:\Vista\ZD\vista-data.csv`, then Print → *All records*.
+  database** = the label's stable CSV, then Print → *All records*.
+
+### ZebraDesigner Professional — exact steps (one-time per label)
+Each label writes its own stable file `vista-<label>.csv` (e.g. label
+`Cart Tag.nlbl` → `C:\Vista\ZD\vista-cart-tag.csv`), so multiple labels never
+overwrite each other. Bind once:
+
+1. **File → New / open your label** in ZebraDesigner Professional.
+2. **Data sources → Add database → Text file.** Browse to
+   `C:\Vista\ZD\vista-cart-tag.csv` (match your label's slug — lowercase, spaces
+   and dots become `-`).
+3. Delimiter **Comma**, **first row = field names** (the CSV has a header row).
+   Finish the wizard. You'll see fields `cart_number`, `prefix`, `quantity`,
+   `label`.
+4. **Bind each label object** to its field (double-click the text/barcode →
+   Data source → the matching database field).
+5. (Optional) Set **copies from a field**: label Properties → Print quantity →
+   *Variable* → `quantity` — so per-row copies are honoured.
+6. **Print** dialog → **All records** → Print. Because the file is refreshed on
+   every send, you only ever click Print.
+
+To reprint the same range later, just Print again; to print a new range, send a
+new run from the website first, then Print.
 
 ### 3. On the website → Label Studio → Print
 1. Pick the design.
@@ -80,7 +102,8 @@ cart_number,prefix,quantity,label
 - Columns are your template's variable keys, then `quantity` (copies per row)
   and `label` (the .nlbl to open).
 - `job-<id>.csv` is unique per job (good for Automation triggers);
-  `vista-data.csv` always holds the latest range (good for a fixed Pro binding).
+  `vista-data.csv` holds the latest range for any label; `vista-<label>.csv`
+  holds the latest range for that specific label (the file Professional binds to).
 
 ## Notes
 - The bridge routes through ZebraDesigner **whenever a job carries bridge data**,
