@@ -139,11 +139,11 @@ export function templateFromRequest(req) {
 // `image` (optional) is a data URL (e.g. "data:image/png;base64,...") the model
 // uses as a visual reference. The /api/ai proxy picks a vision model when an
 // image is present and a text model otherwise, trying all Mistral models.
-export async function generateLabelDesign({ prompt, base, provider = 'mistral', image = null }) {
+export async function generateLabelDesign({ prompt, base, provider = 'mistral', image = null, current = null }) {
   const W = base?.width || 609;
   const H = base?.height || 406;
 
-  const text = await callAi({ task: 'design', provider, prompt, base: { width: W, height: H }, image });
+  const text = await callAi({ task: 'design', provider, prompt, base: { width: W, height: H }, image, current });
   const template = sanitizeTemplate(extractJson(text), { width: W, height: H });
   if (!template.elements.length) throw new Error('The AI returned an empty label — try describing it differently.');
   return template;

@@ -10,9 +10,11 @@ import {
 import Toast from '../components/Toast';
 import LabelSvg from '../components/labels/LabelSvg';
 import ElementInspector from '../components/labels/ElementInspector';
+import LayersPanel from '../components/labels/LayersPanel';
+import CanvasRulers from '../components/labels/CanvasRulers';
 import DataPanel from '../components/labels/DataPanel';
-import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, newElement, referencedVars } from '../config/labelsConfig';
-import { expandNumbers } from '../lib/zpl';
+import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, VARIABLE_TYPES, DATE_FORMATS, newElement, referencedVars } from '../config/labelsConfig';
+import { expandNumbers, hasDynamicVars, formatStamp, resolveDynamic } from '../lib/zpl';
 import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
 import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromRequest } from '../lib/labelsAi';
 import { rasterizeToGF, rasterizeArrowGF } from '../lib/raster';
@@ -103,6 +105,7 @@ const Labels = ({ embedded = false }) => {
   const [toast, setToast] = useState(null);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiProvider, setAiProvider] = useState('mistral');
+  const [aiEdit, setAiEdit] = useState(false); // edit current design vs. generate fresh
   const [aiImage, setAiImage] = useState(null); // data URL reference image (vision)
   const [aiBusy, setAiBusy] = useState(false);
   const [claudeReq, setClaudeReq] = useState(null);
@@ -228,6 +231,15 @@ const Labels = ({ embedded = false }) => {
       const arr = [...w.elements];
       [arr[i], arr[j]] = [arr[j], arr[i]];
       return { ...w, elements: arr };
+    });
+    setDirty(true);
+  };
+  const toEdge = (id, edge) => {
+    setWork((w) => {
+      const el = w.elements.find((e) => e.id === id);
+      if (!el) return w;
+      const rest = w.elements.filter((e) => e.id !== id);
+      return { ...w, elements: edge === 'front' ? [...rest, el] : [el, ...rest] };
     });
     setDirty(true);
   };
@@ -398,6 +410,15 @@ const Labels = ({ embedded = false }) => {
 
   const selectedElement = useMemo(() => (work?.elements || []).find((e) => e.id === selEl) || null, [work, selEl]);
 
+  // Canvas preview values: variable defaults with counters/date resolved to a
+  // representative first value, so serialized fields render instead of blank.
+  const designPreviewValues = useMemo(() => {
+    if (!work) return {};
+    const base = {};
+    (work.variables || []).forEach((v) => (base[v.key] = v.default ?? ''));
+    return resolveDynamic(work.variables || [], base, 0);
+  }, [work]);
+
   // Variables
   const setVar = (i, patch) => patchWork({ variables: work.variables.map((v, idx) => (idx === i ? { ...v, ...patch } : v)) });
   const addVar = () => patchWork({ variables: [...(work.variables || []), { key: `var${(work.variables?.length || 0) + 1}`, label: 'Variable', default: '' }] });
@@ -444,6 +465,25 @@ const Labels = ({ embedded = false }) => {
   const batchList = useMemo(() => (batch.trim() ? expandNumbers(batch) : []), [batch]);
   const previewValues = useMemo(() => (batchList.length ? { ...values, [primaryKey]: batchList[0] } : values), [values, batchList, primaryKey]);
 
+  // Human summary of a serialized run: counter ranges + stamped dates.
+  const serialInfo = useMemo(() => {
+    if (!work || !hasDynamicVars(work.variables)) return '';
+    const count = (batchList.length || 1) * Math.max(1, quantity | 0 || 1);
+    const parts = [];
+    for (const v of work.variables || []) {
+      if (v.type === 'counter') {
+        const start = parseInt(values[v.key] ?? v.default, 10) || 0;
+        const step = parseInt(v.step, 10) || 1;
+        const pad = parseInt(v.pad, 10) || 0;
+        const fmt = (n) => (pad ? String(n).padStart(pad, '0') : String(n));
+        parts.push(`${v.key} ${fmt(start)}→${fmt(start + (count - 1) * step)}`);
+      } else if (v.type === 'date') {
+        parts.push(`${v.key} = ${formatStamp(new Date(), v.format || 'YYYY-MM-DD')}`);
+      }
+    }
+    return `${count} label${count === 1 ? '' : 's'} · ${parts.join(', ')}`;
+  }, [work, batchList, quantity, values]);
+
   const doPrint = async () => {
     if (!work) return;
     setBusy(true);
@@ -488,14 +528,21 @@ const Labels = ({ embedded = false }) => {
     }
 
     // Mistral / Pixtral is instant via the /api/ai proxy.
+    const editing = aiEdit && !!work?.elements?.length;
     setAiBusy(true);
     try {
-      const t = await generateLabelDesign({ prompt: aiPrompt.trim(), base, provider: aiProvider, image: aiImage });
-      setWork({ ...t, id: undefined });
-      setSelectedId(null);
+      const t = await generateLabelDesign({
+        prompt: aiPrompt.trim(),
+        base,
+        provider: aiProvider,
+        image: aiImage,
+        current: editing ? { width: work.width, height: work.height, variables: work.variables, elements: work.elements } : null,
+      });
+      setWork((w) => ({ ...t, id: editing ? w?.id : undefined, name: editing && w?.name ? w.name : t.name }));
+      if (!editing) setSelectedId(null);
       setSelIds([]);
       setDirty(true);
-      setToast({ message: 'Mistral designed your label — tweak, then Save', type: 'success' });
+      setToast({ message: editing ? 'Mistral edited your label — tweak, then Save' : 'Mistral designed your label — tweak, then Save', type: 'success' });
     } catch (err) {
       setToast({ message: err.message || 'AI generation failed', type: 'error' });
     } finally {
@@ -589,13 +636,29 @@ const Labels = ({ embedded = false }) => {
                   <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-soft">
                     <h3 className="font-fraunces text-[19px] font-medium tracking-tight text-slate-900">{work.name}</h3>
                     <div className="mt-4 space-y-3">
-                      {(work.variables || []).map((v) => (
-                        <label key={v.key} className="block">
-                          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-400">{v.label || v.key}</span>
-                          <input value={values[v.key] ?? ''} onChange={(e) => setValues((s) => ({ ...s, [v.key]: e.target.value }))} className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-[15px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/15" />
-                        </label>
-                      ))}
+                      {(work.variables || []).map((v) => {
+                        const type = v.type || 'text';
+                        if (type === 'date') {
+                          return (
+                            <div key={v.key} className="block">
+                              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-400">{v.label || v.key} · date</span>
+                              <div className="rounded-xl border border-stone-200 bg-[#FBFBFA] px-3.5 py-2.5 text-[14px] font-semibold text-slate-500">{formatStamp(new Date(), v.format || 'YYYY-MM-DD')} <span className="text-[11px] text-slate-400">(stamped at print)</span></div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <label key={v.key} className="block">
+                            <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-400">{v.label || v.key}{type === 'counter' ? ' · start' : ''}</span>
+                            <input value={values[v.key] ?? ''} onChange={(e) => setValues((s) => ({ ...s, [v.key]: e.target.value }))} className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-[15px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/15" />
+                          </label>
+                        );
+                      })}
                     </div>
+                    {serialInfo && (
+                      <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-[11.5px] font-semibold text-violet-700">
+                        Serialized run — {serialInfo}
+                      </div>
+                    )}
 
                     <div className="mt-5 rounded-xl border border-stone-200 bg-[#FBFBFA] p-3.5">
                       <label className="block">
@@ -655,18 +718,22 @@ const Labels = ({ embedded = false }) => {
                         <button onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.15) * 100) / 100))} className="rounded-lg border border-stone-200 bg-white p-1.5 text-slate-500 transition hover:text-slate-800"><Plus size={13} /></button>
                       </div>
                       <div className="overflow-auto rounded-2xl border border-stone-200 p-4 shadow-soft" style={{ background: 'repeating-conic-gradient(#f5f5f4 0% 25%, #fff 0% 50%) 50% / 22px 22px' }}>
-                        <div className="mx-auto overflow-hidden rounded-lg shadow-lift" style={{ width: Math.round(Math.min(560, work.width) * zoom), maxWidth: 'none' }}>
-                          <LabelSvg
-                            template={work}
-                            values={(work.variables || []).reduce((a, v) => ((a[v.key] = v.default), a), {})}
-                            interactive
-                            snap={snap}
-                            selectedId={selEl}
-                            selectedIds={selIds}
-                            onSelect={selectEl}
-                            onLiveChange={updateEl}
-                            onCommit={() => setDirty(true)}
-                          />
+                        <div className="mx-auto w-max">
+                          <CanvasRulers width={work.width} height={work.height} dispW={Math.round(Math.min(560, work.width) * zoom)}>
+                            <div className="h-full w-full overflow-hidden rounded-sm shadow-lift">
+                              <LabelSvg
+                                template={work}
+                                values={designPreviewValues}
+                                interactive
+                                snap={snap}
+                                selectedId={selEl}
+                                selectedIds={selIds}
+                                onSelect={selectEl}
+                                onLiveChange={updateEl}
+                                onCommit={() => setDirty(true)}
+                              />
+                            </div>
+                          </CanvasRulers>
                         </div>
                       </div>
 
@@ -713,13 +780,20 @@ const Labels = ({ embedded = false }) => {
                               {p.label}
                             </button>
                           ))}
+                          {aiProvider === 'mistral' && (work.elements || []).length > 0 && (
+                            <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-stone-200">
+                              {[{ k: false, label: 'Create' }, { k: true, label: 'Edit' }].map((m) => (
+                                <button key={String(m.k)} onClick={() => setAiEdit(m.k)} className={`px-2.5 py-1 text-[11.5px] font-bold transition ${aiEdit === m.k ? 'bg-violet-600 text-white' : 'bg-white text-slate-500 hover:text-violet-600'}`}>{m.label}</button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <textarea
                           value={aiPrompt}
                           onChange={(e) => setAiPrompt(e.target.value)}
                           rows={3}
                           disabled={aiBusy || claudeStatus === 'pending'}
-                          placeholder={aiImage ? 'Optional: describe changes to the reference image…' : 'e.g. A bin tag with a big cart number and a QR code'}
+                          placeholder={aiEdit && aiProvider === 'mistral' && (work.elements || []).length ? 'Describe the change… e.g. make the number bigger, add a QR, move the title up' : aiImage ? 'Optional: describe changes to the reference image…' : 'e.g. A bin tag with a big cart number and a QR code'}
                           className="w-full resize-none rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
                         />
 
@@ -752,7 +826,7 @@ const Labels = ({ embedded = false }) => {
                             className="pk-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-[13px] font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
                           >
                             {aiBusy ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
-                            {aiBusy ? 'Designing…' : aiProvider === 'claude' ? (aiImage ? 'Send image to Claude' : 'Send to Claude') : aiImage ? 'Generate from image' : 'Generate design'}
+                            {aiBusy ? 'Designing…' : aiProvider === 'claude' ? (aiImage ? 'Send image to Claude' : 'Send to Claude') : aiEdit && (work.elements || []).length ? 'Edit design' : aiImage ? 'Generate from image' : 'Generate design'}
                           </button>
                         )}
                         <p className="mt-1.5 text-[10.5px] text-slate-400">
@@ -792,6 +866,15 @@ const Labels = ({ embedded = false }) => {
                         <div className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-[12.5px] text-slate-400">Tap an element to edit it (Shift-click for multiple), or add one above.</div>
                       )}
 
+                      <LayersPanel
+                        elements={work.elements || []}
+                        selIds={selIds}
+                        onSelect={selectEl}
+                        onChange={updateEl}
+                        onToEdge={toEdge}
+                        onDelete={deleteEl}
+                      />
+
                       <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
                         <div className="mb-2.5 flex items-center justify-between">
                           <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-slate-700"><Layers size={14} /> Variables</span>
@@ -802,16 +885,40 @@ const Labels = ({ embedded = false }) => {
                             Declare {missingVars.map((v) => `\${${v}}`).join(', ')}
                           </button>
                         )}
-                        <div className="space-y-2">
-                          {(work.variables || []).map((v, i) => (
-                            <div key={i} className="flex items-center gap-1.5">
-                              <input value={v.key} onChange={(e) => setVar(i, { key: e.target.value })} placeholder="key" className="w-[38%] rounded-lg border border-stone-200 px-2 py-1.5 text-[12px] font-bold text-slate-900" />
-                              <input value={v.default ?? ''} onChange={(e) => setVar(i, { default: e.target.value })} placeholder="default" className="flex-1 rounded-lg border border-stone-200 px-2 py-1.5 text-[12px] font-semibold text-slate-600" />
-                              <button onClick={() => removeVar(i)} className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>
-                            </div>
-                          ))}
+                        <div className="space-y-2.5">
+                          {(work.variables || []).map((v, i) => {
+                            const type = v.type || 'text';
+                            return (
+                              <div key={i} className="rounded-xl border border-stone-200 bg-[#FBFBFA] p-2">
+                                <div className="flex items-center gap-1.5">
+                                  <input value={v.key} onChange={(e) => setVar(i, { key: e.target.value })} placeholder="key" className="w-[40%] rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-bold text-slate-900" />
+                                  <select value={type} onChange={(e) => setVar(i, { type: e.target.value })} className="flex-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-600">
+                                    {VARIABLE_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+                                  </select>
+                                  <button onClick={() => removeVar(i)} className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>
+                                </div>
+                                {type === 'counter' ? (
+                                  <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                                    <input value={v.default ?? ''} onChange={(e) => setVar(i, { default: e.target.value })} placeholder="start" title="Start" className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700" />
+                                    <input value={v.step ?? ''} onChange={(e) => setVar(i, { step: e.target.value })} placeholder="step" title="Step" className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700" />
+                                    <input value={v.pad ?? ''} onChange={(e) => setVar(i, { pad: e.target.value })} placeholder="pad" title="Zero-pad width" className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700" />
+                                  </div>
+                                ) : type === 'date' ? (
+                                  <div className="mt-1.5">
+                                    <select value={v.format || 'YYYY-MM-DD'} onChange={(e) => setVar(i, { format: e.target.value })} className="w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700">
+                                      {DATE_FORMATS.map((f) => <option key={f.key} value={f.key}>{f.label} — {f.key}</option>)}
+                                    </select>
+                                    <p className="mt-1 text-[10.5px] text-slate-400">Prints as {formatStamp(new Date(), v.format || 'YYYY-MM-DD')}</p>
+                                  </div>
+                                ) : (
+                                  <input value={v.default ?? ''} onChange={(e) => setVar(i, { default: e.target.value })} placeholder="default value" className="mt-1.5 w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-600" />
+                                )}
+                              </div>
+                            );
+                          })}
                           {(work.variables || []).length === 0 && <p className="text-[11.5px] text-slate-400">No variables. Use <code className="text-orange-600">{'${name}'}</code> in text/barcode values, then declare them here.</p>}
                         </div>
+                        <p className="mt-2.5 text-[10.5px] text-slate-400"><b>Counter</b> auto-increments each label in a run · <b>Date/time</b> stamps at print.</p>
                       </div>
 
                       <button onClick={() => setMode('print')} className={`${btn} w-full justify-center border border-stone-200 bg-white text-slate-700 hover:border-stone-300`}>

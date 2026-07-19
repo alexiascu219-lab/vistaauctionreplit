@@ -1,6 +1,6 @@
 import React from 'react';
-import { Trash2, Copy, ChevronUp, ChevronDown, Upload, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal } from 'lucide-react';
-import { SYMBOLOGIES, LABEL_FONTS } from '../../config/labelsConfig';
+import { Trash2, Copy, ChevronUp, ChevronDown, Upload, Lock, Unlock, Eye, EyeOff, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal } from 'lucide-react';
+import { SYMBOLOGIES, LABEL_FONTS, MATRIX_SYMBOLOGIES } from '../../config/labelsConfig';
 
 const FIELD = 'w-full rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-[13px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 const LAB = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
@@ -41,12 +41,18 @@ const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReor
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="rounded-lg bg-[#FBFBFA] px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-slate-500">{el.type}</span>
         <div className="flex items-center gap-1">
+          <button onClick={() => set({ locked: !el.locked })} title={el.locked ? 'Unlock' : 'Lock'} className={`${ICONBTN} ${el.locked ? 'border-orange-200 text-orange-600' : ''}`}>{el.locked ? <Lock size={14} /> : <Unlock size={14} />}</button>
+          <button onClick={() => set({ hidden: !el.hidden })} title={el.hidden ? 'Show' : 'Hide'} className={`${ICONBTN} ${el.hidden ? 'border-orange-200 text-orange-600' : ''}`}>{el.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
           <button onClick={() => onReorder(el.id, 'up')} title="Bring forward" className={ICONBTN}><ChevronUp size={14} /></button>
           <button onClick={() => onReorder(el.id, 'down')} title="Send back" className={ICONBTN}><ChevronDown size={14} /></button>
           <button onClick={() => onDuplicate(el.id)} title="Duplicate (Ctrl/Cmd+D)" className={ICONBTN}><Copy size={14} /></button>
           <button onClick={() => onDelete(el.id)} title="Delete (Del)" className={`${ICONBTN} hover:border-red-200 hover:text-red-500`}><Trash2 size={14} /></button>
         </div>
       </div>
+      <label className="mb-3 block">
+        <span className={LAB}>Name</span>
+        <input value={el.name || ''} onChange={(e) => set({ name: e.target.value })} placeholder={el.type} className={FIELD} />
+      </label>
 
       {(el.type === 'text' || el.type === 'barcode') && (
         <label className="mb-3 block">
@@ -96,23 +102,28 @@ const ElementInspector = ({ element: el, onChange, onDelete, onDuplicate, onReor
           </>
         )}
 
-        {el.type === 'barcode' && (
-          <>
-            <label className="block">
-              <span className={LAB}>Symbology</span>
-              <select value={el.symbology || 'code128'} onChange={(e) => set({ symbology: e.target.value })} className={FIELD}>
-                {SYMBOLOGIES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-              </select>
-            </label>
-            <Num label="Height" value={el.height} onChange={(v) => set({ height: v })} />
-            <Num label="Module" value={el.module} onChange={(v) => set({ module: v })} />
-            <Rotation value={el.rotation} onChange={(v) => set({ rotation: v })} />
-            <label className="col-span-2 flex items-center gap-2 pt-1">
-              <input type="checkbox" checked={!!el.showText} onChange={(e) => set({ showText: e.target.checked })} />
-              <span className="text-[12px] font-semibold text-slate-600">Show number under barcode</span>
-            </label>
-          </>
-        )}
+        {el.type === 'barcode' && (() => {
+          const matrix = MATRIX_SYMBOLOGIES.has(el.symbology || 'code128');
+          return (
+            <>
+              <label className="block">
+                <span className={LAB}>Symbology</span>
+                <select value={el.symbology || 'code128'} onChange={(e) => set({ symbology: e.target.value })} className={FIELD}>
+                  {SYMBOLOGIES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                </select>
+              </label>
+              {!matrix && <Num label="Height" value={el.height} onChange={(v) => set({ height: v })} />}
+              <Num label={matrix ? 'Module (size)' : 'Module'} value={el.module} onChange={(v) => set({ module: v })} />
+              <Rotation value={el.rotation} onChange={(v) => set({ rotation: v })} />
+              {!matrix && (
+                <label className="col-span-2 flex items-center gap-2 pt-1">
+                  <input type="checkbox" checked={!!el.showText} onChange={(e) => set({ showText: e.target.checked })} />
+                  <span className="text-[12px] font-semibold text-slate-600">Show number under barcode</span>
+                </label>
+              )}
+            </>
+          );
+        })()}
 
         {el.type === 'box' && (
           <>

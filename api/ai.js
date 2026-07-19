@@ -105,7 +105,13 @@ export default async function handler(req, res) {
     const W = body.base?.width || 609;
     const H = body.base?.height || 406;
     const image = body.image || null;
-    const ask = `Design a label: ${body.prompt || 'based on the attached reference image'}`;
+    // When editing, the caller passes the current design so the model refines it
+    // instead of starting over.
+    const current = body.current && Array.isArray(body.current.elements) ? body.current : null;
+    const editNote = current
+      ? `\n\nHere is the CURRENT design as JSON. MODIFY it to satisfy the request — keep what works, change only what's needed, and return the FULL updated design JSON:\n${JSON.stringify({ width: current.width || W, height: current.height || H, variables: current.variables || [], elements: current.elements })}`
+      : '';
+    const ask = `${current ? 'Edit this label' : 'Design a label'}: ${body.prompt || 'based on the attached reference image'}${editNote}`;
     const messages = image
       ? [{ role: 'user', content: [
           { type: 'text', text: `${ask}\n\nUse the attached image as a visual reference for the layout, style, and wording. Recreate it as a printable Zebra label — do not copy it pixel-for-pixel.` },
