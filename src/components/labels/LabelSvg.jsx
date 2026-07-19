@@ -15,6 +15,8 @@ function bbox(el, values) {
   if (el.type === 'barcode') {
     const v = resolveVars(el.value, values) || '0';
     if (el.symbology === 'qr') { const s = (el.module || 6) * qrMatrix(v).count; return { x: el.x, y: el.y, w: s, h: s }; }
+    if (el.symbology === 'datamatrix') { const s = (el.module || 6) * 20; return { x: el.x, y: el.y, w: s, h: s }; }
+    if (el.symbology === 'pdf417') { const w = Math.min(1200, (v.length * 6 + 40) * (el.module || 3)); return { x: el.x, y: el.y, w, h: (el.module || 3) * 16 }; }
     const w = Math.min(1200, (v.length * 11 + 35) * (el.module || 3));
     return { x: el.x, y: el.y, w, h: (el.height || 100) + (el.showText ? 26 : 0) };
   }
@@ -92,6 +94,42 @@ function ElementVisual({ el, values, W = 609 }) {
           if (m.cells[yy][xx])
             dots.push(<rect key={`${xx}-${yy}`} x={xx * cell} y={yy * cell} width={cell + 0.4} height={cell + 0.4} fill="#111" />);
       return <g transform={`translate(${el.x},${el.y})${rot}`}>{dots}</g>;
+    }
+    if (el.symbology === 'datamatrix') {
+      // Representative Data Matrix: solid "L" finder (left col + bottom row),
+      // dashed top/right timing, hashed interior. The Zebra prints the real one.
+      const n = 16;
+      const cell = b.w / n;
+      let s = 7;
+      for (const ch of String(v)) s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+      const dots = [];
+      for (let yy = 0; yy < n; yy++)
+        for (let xx = 0; xx < n; xx++) {
+          s = (s * 1103515245 + 12345) >>> 0;
+          const finder = xx === 0 || yy === n - 1;
+          const timing = (yy === 0 && xx % 2 === 0) || (xx === n - 1 && yy % 2 === 1);
+          const on = finder || timing || ((s >> 16) & 1);
+          if (on) dots.push(<rect key={`${xx}-${yy}`} x={xx * cell} y={yy * cell} width={cell + 0.4} height={cell + 0.4} fill="#111" />);
+        }
+      return <g transform={`translate(${el.x},${el.y})${rot}`}>{dots}</g>;
+    }
+    if (el.symbology === 'pdf417') {
+      const rows = 6;
+      const rh = b.h / rows;
+      const cols = 60;
+      const unit = b.w / cols;
+      let s = 13;
+      for (const ch of String(v)) s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+      const rects = [];
+      for (let r = 0; r < rows; r++) {
+        let cx = 0;
+        for (let i = 0; i < cols; i++) {
+          s = (s * 1103515245 + 12345) >>> 0;
+          if ((s >> 16) & 1) rects.push(<rect key={`${r}-${i}`} x={cx} y={r * rh} width={Math.max(unit * 0.6, unit * (((s >> 9) & 1) ? 1.4 : 0.8))} height={rh * 0.86} fill="#111" />);
+          cx += unit;
+        }
+      }
+      return <g transform={`translate(${el.x},${el.y})${rot}`}>{rects}</g>;
     }
     return (
       <g transform={`translate(${el.x},${el.y})${rot}`}>
@@ -213,10 +251,10 @@ const LabelSvg = ({ template, values = {}, interactive = false, selectedId, sele
       onPointerDown={interactive ? () => onSelect?.(null) : undefined}
     >
       <rect x="0" y="0" width={W} height={H} fill="#fff" />
-      {(template.elements || []).map((el) => {
+      {(template.elements || []).filter((el) => !el.hidden).map((el) => {
         const b = bbox(el, values);
         const selected = interactive && selSet.has(el.id);
-        const primary = interactive && selSet.size === 1 && selSet.has(el.id);
+        const primary = interactive && selSet.size === 1 && selSet.has(el.id) && !el.locked;
         return (
           <g key={el.id}>
             <ElementVisual el={el} values={values} W={W} />
@@ -228,9 +266,10 @@ const LabelSvg = ({ template, values = {}, interactive = false, selectedId, sele
                 height={b.h + 6}
                 fill="transparent"
                 stroke={selected ? '#ea580c' : 'transparent'}
+                strokeDasharray={selected && el.locked ? '6 4' : undefined}
                 strokeWidth={selected ? 2.5 : 1}
-                style={{ cursor: 'grab' }}
-                onPointerDown={(e) => beginMove(e, el)}
+                style={{ cursor: el.locked ? 'default' : 'grab', pointerEvents: el.locked ? 'none' : 'auto' }}
+                onPointerDown={el.locked ? undefined : (e) => beginMove(e, el)}
               />
             )}
             {primary && (

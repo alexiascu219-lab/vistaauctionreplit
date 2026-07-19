@@ -14,6 +14,30 @@ export const SYMBOLOGIES = [
   { key: 'code128', label: 'Code 128' },
   { key: 'code39', label: 'Code 39' },
   { key: 'qr', label: 'QR code' },
+  { key: 'datamatrix', label: 'Data Matrix' },
+  { key: 'pdf417', label: 'PDF417' },
+];
+
+// 2D symbologies size by module (not a bar height); the inspector hides the
+// height control for these.
+export const MATRIX_SYMBOLOGIES = new Set(['qr', 'datamatrix', 'pdf417']);
+
+// Variable data sources. `text` = a value you type/merge; `counter` = an
+// auto-incrementing serial across a print run; `date` = a stamped date/time.
+export const VARIABLE_TYPES = [
+  { key: 'text', label: 'Text' },
+  { key: 'counter', label: 'Counter' },
+  { key: 'date', label: 'Date / time' },
+];
+
+// Ready-made date/time patterns (tokens: YYYY YY MON MM DAY DD HH mm ss).
+export const DATE_FORMATS = [
+  { key: 'YYYY-MM-DD', label: '2026-07-19' },
+  { key: 'MM/DD/YYYY', label: '07/19/2026' },
+  { key: 'DD MON YYYY', label: '19 Jul 2026' },
+  { key: 'YYYY-MM-DD HH:mm', label: '2026-07-19 14:30' },
+  { key: 'MON DD, YYYY', label: 'Jul 19, 2026' },
+  { key: 'DAY DD MON', label: 'Mon 19 Jul' },
 ];
 
 // Text fonts. `css` drives the on-screen preview; `zpl` is the printer-resident

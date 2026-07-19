@@ -12,6 +12,54 @@ export function resolveVars(str, values = {}) {
   });
 }
 
+// ---- Serialization (Zebra-Pro style counters + date/time) ------------------
+// Format a Date with tokens: YYYY, YY, MM, DD, HH, mm, ss, MON (Jan), DAY (Mon).
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const p2 = (n) => String(n).padStart(2, '0');
+export function formatStamp(date, fmt = 'YYYY-MM-DD') {
+  const d = date || new Date();
+  return String(fmt)
+    .replace(/YYYY/g, d.getFullYear())
+    .replace(/YY/g, p2(d.getFullYear() % 100))
+    .replace(/MON/g, MON[d.getMonth()])
+    .replace(/MM/g, p2(d.getMonth() + 1))
+    .replace(/DAY/g, DAY[d.getDay()])
+    .replace(/DD/g, p2(d.getDate()))
+    .replace(/HH/g, p2(d.getHours()))
+    .replace(/mm/g, p2(d.getMinutes()))
+    .replace(/ss/g, p2(d.getSeconds()));
+}
+
+// Given a template's variables + a base values object, compute the resolved
+// values for label instance `index` (0-based). Counter variables advance by
+// `step` per instance (zero-padded to `pad`); date/time variables stamp now.
+// Plain text variables pass through untouched. Pure — safe on client + server.
+export function resolveDynamic(variables = [], baseValues = {}, index = 0, now = null) {
+  const out = { ...baseValues };
+  for (const v of variables || []) {
+    if (!v || !v.key) continue;
+    if (v.type === 'counter') {
+      // Start from the entered value if given, else the variable's default.
+      const start = parseInt(baseValues[v.key] ?? v.default, 10) || 0;
+      const step = parseInt(v.step, 10) || 1;
+      const pad = parseInt(v.pad, 10) || 0;
+      let s = String(start + index * step);
+      if (pad) s = s.padStart(pad, '0');
+      out[v.key] = s;
+    } else if (v.type === 'date') {
+      out[v.key] = formatStamp(now || new Date(), v.format || 'YYYY-MM-DD');
+    }
+  }
+  return out;
+}
+
+// Does this template serialize (has a counter/date variable)? Used to decide
+// whether a print run must expand into one job per label so serials advance.
+export function hasDynamicVars(variables = []) {
+  return (variables || []).some((v) => v && (v.type === 'counter' || v.type === 'date'));
+}
+
 // ^ and ~ are ZPL command prefixes; neutralize them inside field data.
 export function zplEscape(s) {
   return String(s == null ? '' : s).replace(/[\^~]/g, ' ');
@@ -62,6 +110,12 @@ export function templateToZpl(t, values = {}) {
       const mod = Math.max(1, Math.round(el.module || 3));
       if (el.symbology === 'qr') {
         L.push(`^FO${x},${y}^BQN,2,${Math.max(1, Math.round(el.module || 6))}^FDLA,${v}^FS`);
+      } else if (el.symbology === 'datamatrix') {
+        // ^BX: module height, quality 200 (ECC 200), square aspect.
+        L.push(`^FO${x},${y}^BXN,${Math.max(2, Math.round(el.module || 6))},200,0,0^FD${v}^FS`);
+      } else if (el.symbology === 'pdf417') {
+        // ^B7: row height (module), security level 5, auto columns.
+        L.push(`^FO${x},${y}^B7${el.rotation || 'N'},${Math.max(2, Math.round(el.module || 3))},5,0,0,N^FD${v}^FS`);
       } else {
         const code = el.symbology === 'code39' ? 'B3' : 'BC';
         L.push(`^FO${x},${y}^BY${mod}^${code}${el.rotation || 'N'},${Math.round(el.height || 100)},${el.showText ? 'Y' : 'N'},N,N^FD${v}^FS`);
