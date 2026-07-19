@@ -80,3 +80,32 @@ export async function queueLabelPrints({ template, jobs, quantity = 1, by = null
   if (error) throw new Error(error.message);
   return data;
 }
+
+// ---- ZebraDesigner bridge --------------------------------------------------
+// Queue ONE job that the desktop Print Station expands into a CSV (one row per
+// value set) + trigger in the ZebraDesigner watched folder, so a whole range
+// prints through ZebraDesigner (Automation or Professional) instead of our ZPL
+// engine. `rows` is an array of values objects (e.g. one per number in a range).
+export async function queueBridgePrints({ template, labelFile, rows, quantity = 1, by = null, source = 'web' }) {
+  const q = Math.max(1, Math.min(50, quantity | 0 || 1));
+  const bridgeRows = rows.map((values) => ({ ...values, quantity: q }));
+  const job = {
+    template: 'zebradesigner',
+    title: `${template.name} · ${rows.length} label${rows.length === 1 ? '' : 's'} → ZebraDesigner`,
+    data: {
+      bridge: {
+        label: (labelFile || template.name || '').trim(),
+        columns: (template.variables || []).map((v) => v.key),
+        rows: bridgeRows,
+      },
+      template_name: template.name,
+    },
+    quantity: 1, // per-row copies live in each row's "quantity" column
+    source,
+    requested_by: by,
+    status: 'queued',
+  };
+  const { data, error } = await supabase.from('vista_print_jobs').insert([job]).select();
+  if (error) throw new Error(error.message);
+  return data;
+}

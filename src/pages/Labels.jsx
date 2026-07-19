@@ -15,7 +15,7 @@ import CanvasRulers from '../components/labels/CanvasRulers';
 import DataPanel from '../components/labels/DataPanel';
 import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, VARIABLE_TYPES, DATE_FORMATS, newElement, referencedVars } from '../config/labelsConfig';
 import { expandNumbers, hasDynamicVars, formatStamp, resolveDynamic } from '../lib/zpl';
-import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints } from '../lib/labelsApi';
+import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints, queueBridgePrints } from '../lib/labelsApi';
 import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromRequest } from '../lib/labelsAi';
 import { rasterizeToGF, rasterizeArrowGF } from '../lib/raster';
 
@@ -101,6 +101,8 @@ const Labels = ({ embedded = false }) => {
   const [values, setValues] = useState({});
   const [batch, setBatch] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [printEngine, setPrintEngine] = useState('vista'); // vista (ZPL) | zebradesigner
+  const [zdLabelFile, setZdLabelFile] = useState('');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const [aiPrompt, setAiPrompt] = useState('');
@@ -491,8 +493,14 @@ const Labels = ({ embedded = false }) => {
       const jobs = batchList.length
         ? batchList.map((n) => ({ values: { ...values, [primaryKey]: n }, title: `${work.name} · ${n}` }))
         : [{ values, title: work.name }];
-      await queueLabelPrints({ template: work, jobs, quantity: Math.max(1, quantity | 0 || 1), by: 'Label Studio', source: 'web' });
-      setToast({ message: `Queued ${jobs.length * Math.max(1, quantity | 0 || 1)} label${jobs.length === 1 && quantity <= 1 ? '' : 's'}`, type: 'success' });
+      const copies = Math.max(1, quantity | 0 || 1);
+      if (printEngine === 'zebradesigner') {
+        await queueBridgePrints({ template: work, labelFile: zdLabelFile, rows: jobs.map((j) => j.values), quantity: copies, by: 'Label Studio', source: 'web' });
+        setToast({ message: `Sent ${jobs.length} row${jobs.length === 1 ? '' : 's'} to the ZebraDesigner bridge`, type: 'success' });
+      } else {
+        await queueLabelPrints({ template: work, jobs, quantity: copies, by: 'Label Studio', source: 'web' });
+        setToast({ message: `Queued ${jobs.length * copies} label${jobs.length === 1 && quantity <= 1 ? '' : 's'}`, type: 'success' });
+      }
     } catch (err) {
       setToast({ message: err.message || 'Could not queue print', type: 'error' });
     } finally {
@@ -660,7 +668,23 @@ const Labels = ({ embedded = false }) => {
                       </div>
                     )}
 
-                    <div className="mt-5 rounded-xl border border-stone-200 bg-[#FBFBFA] p-3.5">
+                    <div className="mt-5">
+                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-400">Print engine</span>
+                      <div className="inline-flex overflow-hidden rounded-xl border border-stone-200">
+                        {[{ k: 'vista', label: 'Vista (ZPL)' }, { k: 'zebradesigner', label: 'ZebraDesigner' }].map((e) => (
+                          <button key={e.k} onClick={() => setPrintEngine(e.k)} className={`px-3.5 py-2 text-[12.5px] font-bold transition ${printEngine === e.k ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 hover:text-slate-900'}`}>{e.label}</button>
+                        ))}
+                      </div>
+                      {printEngine === 'zebradesigner' && (
+                        <label className="mt-2 block">
+                          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-400">ZebraDesigner label (.nlbl on the print PC)</span>
+                          <input value={zdLabelFile} onChange={(e) => setZdLabelFile(e.target.value)} placeholder={`${work.name}.nlbl`} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
+                          <span className="mt-1 block text-[10.5px] text-slate-400">The range below is written as a CSV the Print Station drops in your ZebraDesigner watched folder — one label per number, printed by Zebra's software.</span>
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-stone-200 bg-[#FBFBFA] p-3.5">
                       <label className="block">
                         <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400"><Hash size={12} /> Batch numbers / ranges</span>
                         <input value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="e.g. 397-432, 500, 502" className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-[14px] font-semibold text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20" />
@@ -677,7 +701,7 @@ const Labels = ({ embedded = false }) => {
                       </label>
                       <button onClick={doPrint} disabled={busy} className={`${btn} ml-auto bg-orange-600 px-5 py-3 text-white shadow-glow hover:bg-orange-700 disabled:opacity-50`}>
                         {busy ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
-                        Print {batchList.length > 1 ? `${batchList.length}×` : ''}
+                        {printEngine === 'zebradesigner' ? 'Send to ZebraDesigner' : 'Print'} {batchList.length > 1 ? `${batchList.length}×` : ''}
                       </button>
                     </div>
                   </div>

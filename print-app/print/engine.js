@@ -59,18 +59,87 @@ function printWindows(zpl, { printerName, psPath }) {
   });
 }
 
-// Hand the job to ZebraDesigner Automation: drop a data file (+ the chosen
-// .nlbl name) into a watched folder. ZebraDesigner opens the real label and
-// fills the fields. Requires ZebraDesigner Automation to be watching the folder.
+// Hand the job to ZebraDesigner (Automation or Professional): drop a CSV data
+// file (+ a JSON trigger naming the .nlbl) into a watched folder. ZebraDesigner
+// opens the real label, binds its variables to the CSV columns, and prints ONE
+// label per row — so a whole number range prints from a single job.
+//
+// - Automation tier: point a File trigger at this folder → fully hands-off.
+// - Professional: bind the .nlbl to <folder>/vista-data.csv and Print (all
+//   records); every job also rewrites vista-data.csv so the range is current.
 function printZebraDesigner(job, vars, qty, { watchFolder, labelFile }) {
   if (!watchFolder) throw new Error('ZebraDesigner watch folder is not set');
   fs.mkdirSync(watchFolder, { recursive: true });
-  const cols = ['cart_number', 'zone', 'spot', 'quantity', 'label'];
-  const row = { ...vars, quantity: qty, label: labelFile || '' };
-  const csv = `${cols.join(',')}\n${cols.map((c) => csvCell(row[c])).join(',')}\n`;
+
+  const bridge = job.data && job.data.bridge;
+  // Rows: an explicit bridge range, else a single row from this job's vars.
+  const rows = bridge && Array.isArray(bridge.rows) && bridge.rows.length
+    ? bridge.rows.map((r) => ({ ...r }))
+    : [{ ...vars }];
+  const label = (bridge && bridge.label) || labelFile || '';
+
+  // Column set = every key seen across the rows, plus quantity + label.
+  const keys = [];
+  for (const r of rows) for (const k of Object.keys(r)) if (!keys.includes(k)) keys.push(k);
+  const cols = [...keys.filter((k) => k !== 'quantity' && k !== 'label'), 'quantity', 'label'];
+
+  const line = (r) => cols.map((c) => csvCell(c === 'quantity' ? (r.quantity ?? qty) : c === 'label' ? label : r[c])).join(',');
+  const csv = `${cols.join(',')}\n${rows.map(line).join('\n')}\n`;
+
   const base = path.join(watchFolder, `job-${job.id}`);
   fs.writeFileSync(`${base}.csv`, csv, 'utf8');
-  fs.writeFileSync(`${base}.json`, JSON.stringify({ id: job.id, label: labelFile || null, quantity: qty, data: vars }, null, 2));
+  // A stable filename Professional can bind to permanently (always the latest).
+  fs.writeFileSync(path.join(watchFolder, 'vista-data.csv'), csv, 'utf8');
+  fs.writeFileSync(`${base}.json`, JSON.stringify({ id: job.id, label: label || null, quantity: qty, count: rows.length, rows }, null, 2));
+  return rows.length;
+}
+
+// Probe a network Zebra with ~HS (host status) — a quick reachability + status
+// check used by the Printers panel. Resolves { online, detail } and never
+// rejects, so the UI can show a red/green dot.
+function probeNetwork({ host, port }) {
+  return new Promise((resolve) => {
+    if (!host) return resolve({ online: false, detail: 'No IP set' });
+    let buf = '';
+    let done = false;
+    const finish = (online, detail) => { if (!done) { done = true; try { socket.destroy(); } catch { /* noop */ } resolve({ online, detail }); } };
+    const socket = net.connect(port || 9100, host, () => socket.write('~HS', 'latin1'));
+    socket.setTimeout(3500);
+    socket.on('data', (d) => { buf += d.toString('latin1'); if (buf.length > 20) finish(true, statusFromHS(buf)); });
+    socket.on('timeout', () => finish(!!buf, buf ? statusFromHS(buf) : `No response from ${host}:${port || 9100}`));
+    socket.on('error', (e) => finish(false, e.code === 'ECONNREFUSED' ? 'Connection refused' : e.message));
+    socket.on('close', () => finish(!!buf, buf ? statusFromHS(buf) : 'Reachable'));
+  });
+}
+
+// Decode the first line of a ~HS response (comma-separated status flags).
+function statusFromHS(raw) {
+  const clean = raw.replace(/[\r]/g, '');
+  const first = (clean.split('\n').find((l) => l.includes(',')) || '').split(',');
+  if (first.length < 2) return 'Online';
+  const paused = first[1] === '1';
+  const paperOut = first[8] === '1' || first[2] === '1';
+  if (paperOut) return 'Media out';
+  if (paused) return 'Paused';
+  return 'Ready';
+}
+
+// List installed Windows printers (name + whether it looks like a Zebra) via
+// PowerShell Get-Printer. Resolves [] on any failure or non-Windows host.
+function listWindowsPrinters() {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') return resolve([]);
+    execFile('powershell', ['-NoProfile', '-Command', 'Get-Printer | Select-Object Name,DriverName,PortName | ConvertTo-Json -Compress'], { timeout: 8000 }, (err, out) => {
+      if (err || !out) return resolve([]);
+      try {
+        let parsed = JSON.parse(out);
+        if (!Array.isArray(parsed)) parsed = [parsed];
+        resolve(parsed.map((p) => ({ name: p.Name, driver: p.DriverName || '', port: p.PortName || '', zebra: /zebra|zdesigner|zpl/i.test(`${p.Name} ${p.DriverName}`) })));
+      } catch {
+        resolve([]);
+      }
+    });
+  });
 }
 
 function csvCell(v) {
@@ -83,9 +152,11 @@ async function printJob(config, job) {
   const vars = buildVars(job);
   const qty = Math.max(1, Math.min(50, job.quantity || 1));
 
-  if (config.mode === 'zebradesigner') {
-    printZebraDesigner(job, vars, qty, config);
-    return { rendered: null };
+  // A bridge job (or the whole station in ZebraDesigner mode) prints through
+  // ZebraDesigner rather than our ZPL engine, whatever the station's mode.
+  if (config.mode === 'zebradesigner' || (job.data && job.data.bridge)) {
+    const count = printZebraDesigner(job, vars, qty, config);
+    return { rendered: null, bridged: count };
   }
 
   // A job from Label Studio carries finished ZPL; otherwise render the template.
@@ -115,4 +186,4 @@ const DEFAULT_ZPL = `^XA
 ^FO368,278^A0N,24,24^FD#\${barcode}^FS
 ^XZ`;
 
-module.exports = { printJob, renderTemplate, buildVars, DEFAULT_ZPL };
+module.exports = { printJob, renderTemplate, buildVars, probeNetwork, listWindowsPrinters, DEFAULT_ZPL };
