@@ -121,7 +121,7 @@ export function newElement(type, t) {
 export function referencedVars(elements = []) {
   const set = new Set();
   for (const el of elements) {
-    const v = el.value || '';
+    const v = el.type === 'rawzpl' ? (el.zpl || '') : (el.value || '');
     const re = /\$\{(\w+)\}/g;
     let m;
     while ((m = re.exec(v))) set.add(m[1]);

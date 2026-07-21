@@ -71,7 +71,20 @@ function zplFont(f) {
   return /^[0-9A-H]$/.test(f || '') ? f : '0';
 }
 
+// Pull the label dimensions out of raw ZPL (^PW = print width, ^LL = label
+// length), used when importing an existing ZebraDesigner/ZPL design.
+export function zplDimensions(zpl) {
+  const pw = String(zpl || '').match(/\^PW\s*(\d+)/i);
+  const ll = String(zpl || '').match(/\^LL\s*(\d+)/i);
+  return { width: pw ? parseInt(pw[1], 10) : 812, height: ll ? parseInt(ll[1], 10) : 609 };
+}
+
 export function templateToZpl(t, values = {}) {
+  // Imported/raw-ZPL templates carry the printer code verbatim (with ${var}
+  // placeholders) in a single 'rawzpl' element — print it exactly as designed.
+  const raw = (t.elements || []).find((e) => e && e.type === 'rawzpl' && e.zpl);
+  if (raw) return resolveVars(raw.zpl, values);
+
   const w = Math.round(t.width || 609);
   const h = Math.round(t.height || 406);
   const L = ['^XA', '^CI28', `^PW${w}`, `^LL${h}`, '^LH0,0'];
