@@ -48,7 +48,19 @@ export const DATE_FORMATS = [
 // `weight` sets both the preview weight and the rasterised weight.
 export const LABEL_FONTS = [
   { key: '0', label: 'Zebra default (native)', css: "'Inter', Arial, Helvetica, sans-serif", zpl: '0', weight: 700, native: true },
-  { key: 'arial', label: 'Arial', css: "Arial, Helvetica, sans-serif", zpl: '0', weight: 700 },
+  // Thin / light faces (rasterised)
+  { key: 'sans-thin', label: 'Sans Thin', css: "'Inter', Arial, Helvetica, sans-serif", zpl: '0', weight: 200 },
+  { key: 'sans-light', label: 'Sans Light', css: "'Inter', Arial, Helvetica, sans-serif", zpl: '0', weight: 300 },
+  { key: 'sans-regular', label: 'Sans Regular', css: "'Inter', Arial, Helvetica, sans-serif", zpl: '0', weight: 400 },
+  { key: 'sans-medium', label: 'Sans Medium', css: "'Inter', Arial, Helvetica, sans-serif", zpl: '0', weight: 500 },
+  { key: 'arial-regular', label: 'Arial Regular', css: "Arial, Helvetica, sans-serif", zpl: '0', weight: 400 },
+  { key: 'arial-light', label: 'Arial Light', css: "'Arial', Helvetica, sans-serif", zpl: '0', weight: 300 },
+  { key: 'oswald-light', label: 'Oswald Light (condensed)', css: "'Oswald', 'Arial Narrow', sans-serif", zpl: '0', weight: 300 },
+  { key: 'condensed-light', label: 'Condensed Light', css: "'Roboto Condensed', 'Arial Narrow', sans-serif", zpl: '0', weight: 300 },
+  { key: 'mono-light', label: 'Monospace Light', css: "'Roboto Mono', 'Courier New', monospace", zpl: '0', weight: 300 },
+  { key: 'fraunces-light', label: 'Fraunces Light (serif)', css: "'Fraunces', Georgia, 'Times New Roman', serif", zpl: '0', weight: 300 },
+  // Regular → heavy faces
+  { key: 'arial', label: 'Arial (bold)', css: "Arial, Helvetica, sans-serif", zpl: '0', weight: 700 },
   { key: 'arial-bold', label: 'Arial Bold', css: "Arial, Helvetica, sans-serif", zpl: '0', weight: 800 },
   { key: 'arial-black', label: 'Arial Black (heavy)', css: "'Arial Black', 'Arial Bold', Arial, sans-serif", zpl: '0', weight: 900 },
   { key: 'archivo', label: 'Archivo', css: "'Archivo', 'Arial Narrow', sans-serif", zpl: '0', weight: 700 },
