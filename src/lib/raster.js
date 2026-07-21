@@ -56,6 +56,36 @@ export function rasterizeArrowGF(dir, w, h, thickness) {
   return canvasToGF(canvas);
 }
 
+// Render a line of text with a real typeface to a 1-bit ^GF graphic, so the
+// printed label matches the on-screen font pixel-for-pixel (any TrueType face,
+// still driven by a variable). Rendered at 1:1 printer dots.
+// Returns { gfHex, gfBpr, gfRows, x, y, w, h } — x/y are the top-left origin to
+// place the graphic so it lines up with where the text sat.
+export function rasterizeTextGF({ text, fontCss, size, weight = 700, align = 'left', boxW, inverse = false, elX = 0, elY = 0 }) {
+  const s = Math.max(6, Math.round(size));
+  const face = `${weight} ${s}px ${fontCss}`;
+  const meas = document.createElement('canvas').getContext('2d');
+  meas.font = face;
+  const textW = Math.ceil(meas.measureText(String(text)).width) + 6;
+  const block = align === 'center' || align === 'right' ? Math.max(textW, Math.round(boxW || textW)) : textW;
+  const asc = Math.ceil(s * 0.82);
+  const desc = Math.ceil(s * 0.34);
+  const h = asc + desc;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, block);
+  canvas.height = Math.max(1, h);
+  const ctx = canvas.getContext('2d');
+  if (inverse) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#fff'; }
+  else { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#000'; }
+  ctx.font = face;
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = align === 'center' ? 'center' : align === 'right' ? 'right' : 'left';
+  const tx = align === 'center' ? canvas.width / 2 : align === 'right' ? canvas.width - 3 : 3;
+  ctx.fillText(String(text), tx, asc);
+  // The SVG preview draws the glyph top ~= elY; keep the graphic origin there.
+  return { ...canvasToGF(canvas), x: Math.round(elX), y: Math.round(elY), w: canvas.width, h: canvas.height };
+}
+
 // Returns { gfHex, gfBpr, gfRows } — hex-packed monochrome bitmap for ^GFA.
 export function rasterizeToGF(src, w, h) {
   return new Promise((resolve, reject) => {

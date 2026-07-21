@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { resolveVars } from '../../lib/zpl';
 import { qrMatrix } from '../../lib/qr';
-import { fontCss } from '../../config/labelsConfig';
+import { fontCss, fontWeight } from '../../config/labelsConfig';
 import { startPointerDrag, clamp } from '../carts/floorplan/planDrag';
 
 // Estimated on-canvas bounding box of an element (dots), used for hit-testing,
@@ -70,13 +70,13 @@ function ElementVisual({ el, values, W = 609 }) {
       return (
         <g transform={deg ? `rotate(${deg} ${el.x} ${el.y})` : undefined}>
           <rect x={el.x} y={el.y} width={blockW} height={blockH} fill="#0f172a" />
-          <text x={ix} y={el.y + blockH * 0.72} fontSize={size} textAnchor={anchor} fontWeight="700" fill="#fff" style={{ fontFamily: fontCss(el.font) }}>{v}</text>
+          <text x={ix} y={el.y + blockH * 0.72} fontSize={size} textAnchor={anchor} fontWeight={fontWeight(el.font)} fill="#fff" style={{ fontFamily: fontCss(el.font) }}>{v}</text>
         </g>
       );
     }
     return (
       <g transform={deg ? `rotate(${deg} ${el.x} ${el.y})` : undefined}>
-        <text x={tx} y={el.y + size * 0.8} fontSize={size} textAnchor={anchor} fontWeight="700" fill="#0f172a" style={{ fontFamily: fontCss(el.font) }}>
+        <text x={tx} y={el.y + size * 0.8} fontSize={size} textAnchor={anchor} fontWeight={fontWeight(el.font)} fill="#0f172a" style={{ fontFamily: fontCss(el.font) }}>
           {v}
         </text>
       </g>
