@@ -40,23 +40,38 @@ export const DATE_FORMATS = [
   { key: 'DAY DD MON', label: 'Mon 19 Jul' },
 ];
 
-// Text fonts. `css` drives the on-screen preview; `zpl` is the printer-resident
-// font the Zebra renders (only '0' is smoothly scalable, so the display faces
-// map to it for print while staying distinct in the studio preview).
+// Text fonts. `css` drives the on-screen preview AND the rasteriser.
+// - `native:true` (only 'Zebra default') prints with the printer's built-in
+//   scalable font (^A0) — small ZPL, but only that one face.
+// - every other font prints PIXEL-EXACT by rasterising the real typeface to a
+//   1-bit graphic at print time, so the label matches the preview exactly.
+// `weight` sets both the preview weight and the rasterised weight.
 export const LABEL_FONTS = [
-  { key: '0', label: 'Sans (default)', css: "'Inter', Arial, Helvetica, sans-serif", zpl: '0' },
-  { key: 'archivo', label: 'Archivo — display', css: "'Archivo', 'Arial Narrow', sans-serif", zpl: '0' },
-  { key: 'fraunces', label: 'Fraunces — serif', css: "'Fraunces', Georgia, 'Times New Roman', serif", zpl: '0' },
+  { key: '0', label: 'Zebra default (native)', css: "'Inter', Arial, Helvetica, sans-serif", zpl: '0', weight: 700, native: true },
+  { key: 'arial', label: 'Arial', css: "Arial, Helvetica, sans-serif", zpl: '0', weight: 700 },
+  { key: 'arial-bold', label: 'Arial Bold', css: "Arial, Helvetica, sans-serif", zpl: '0', weight: 800 },
+  { key: 'arial-black', label: 'Arial Black (heavy)', css: "'Arial Black', 'Arial Bold', Arial, sans-serif", zpl: '0', weight: 900 },
+  { key: 'archivo', label: 'Archivo', css: "'Archivo', 'Arial Narrow', sans-serif", zpl: '0', weight: 700 },
+  { key: 'archivo-black', label: 'Archivo Black', css: "'Archivo Black', 'Arial Black', sans-serif", zpl: '0', weight: 900 },
+  { key: 'oswald', label: 'Oswald (condensed)', css: "'Oswald', 'Arial Narrow', sans-serif", zpl: '0', weight: 700 },
+  { key: 'roboto-condensed', label: 'Roboto Condensed', css: "'Roboto Condensed', 'Arial Narrow', sans-serif", zpl: '0', weight: 700 },
+  { key: 'mono', label: 'Monospace', css: "'Roboto Mono', 'Courier New', monospace", zpl: '0', weight: 600 },
+  { key: 'fraunces', label: 'Fraunces (serif)', css: "'Fraunces', Georgia, 'Times New Roman', serif", zpl: '0', weight: 500 },
 ];
 
-export function fontCss(key) {
-  return (LABEL_FONTS.find((f) => f.key === key) || LABEL_FONTS[0]).css;
+const fontDef = (key) => LABEL_FONTS.find((f) => f.key === key) || LABEL_FONTS[0];
+export function fontCss(key) { return fontDef(key).css; }
+export function fontWeight(key) { return fontDef(key).weight || 700; }
+// A font prints pixel-exact (rasterised) unless it's the native Zebra font.
+export function isRasterFont(key) {
+  if (!key || key === '0' || /^[A-H]$/.test(key)) return false;
+  return !fontDef(key).native;
 }
 
 // Map an element font key to a valid Zebra font letter for ZPL output.
 export function zplFont(key) {
   if (/^[0-9A-H]$/.test(key || '')) return key;
-  return (LABEL_FONTS.find((f) => f.key === key) || LABEL_FONTS[0]).zpl;
+  return fontDef(key).zpl;
 }
 
 // Common Zebra label stock, in dots at 203 dpi (w × h).
