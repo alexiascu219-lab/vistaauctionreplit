@@ -19,6 +19,7 @@
     "appId": "com.vistaauction.printstation",
     "productName": "Vista Print Station",
     "files": ["**/*", "!**/*.md"],
+    "asarUnpack": ["assets/**"],
     "directories": { "output": "dist" },
     "win": {
       "icon": "build/icon.png",

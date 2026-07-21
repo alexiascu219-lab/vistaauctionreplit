@@ -14,7 +14,10 @@ const SUPABASE_URL = 'https://lovfbqnuxdihjidxacet.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_xnr_6Ad9e9_-tgfOrXsGtw_z6oxB6X_';
 
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
-const PS_PATH = path.join(__dirname, 'assets', 'send-raw.ps1');
+// The raw-print helper must be a real file on disk — PowerShell can't read it
+// from inside app.asar — so point at the unpacked copy (see asarUnpack in
+// package.json). In dev there's no asar and this replace is a no-op.
+const PS_PATH = path.join(__dirname, 'assets', 'send-raw.ps1').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 
 const DEFAULT_CONFIG = {
   vistaUrl: VISTA_URL,
