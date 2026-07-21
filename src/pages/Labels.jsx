@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Printer, Pencil, Plus, Save, Trash2, Type, Barcode, Square, Minus,
   Tag, Hash, Loader2, Check, ArrowRight, Layers, Sparkles, Wand2, Database, ImagePlus, X, RotateCw,
-  Circle, Undo2, Redo2, Grid3x3, Image as ImageIcon, ArrowUp, Copy,
+  Circle, Undo2, Redo2, Grid3x3, Image as ImageIcon, ArrowUp, Copy, FileUp, FileCode,
   AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
 } from 'lucide-react';
 import Toast from '../components/Toast';
@@ -14,7 +14,7 @@ import LayersPanel from '../components/labels/LayersPanel';
 import CanvasRulers from '../components/labels/CanvasRulers';
 import DataPanel from '../components/labels/DataPanel';
 import { LABEL_ELEMENT_TYPES, PRESET_SIZES, DEFAULT_LABEL, VARIABLE_TYPES, DATE_FORMATS, newElement, referencedVars } from '../config/labelsConfig';
-import { expandNumbers, hasDynamicVars, formatStamp, resolveDynamic } from '../lib/zpl';
+import { expandNumbers, hasDynamicVars, formatStamp, resolveDynamic, zplDimensions } from '../lib/zpl';
 import { listTemplates, saveTemplate, archiveTemplate, queueLabelPrints, queueBridgePrints } from '../lib/labelsApi';
 import { generateLabelDesign, enqueueClaudeDesign, fetchAiRequest, templateFromRequest } from '../lib/labelsAi';
 import { rasterizeToGF, rasterizeArrowGF } from '../lib/raster';
@@ -114,6 +114,9 @@ const Labels = ({ embedded = false }) => {
   const [claudeStatus, setClaudeStatus] = useState('idle'); // idle | pending
   const [snap, setSnap] = useState(0); // grid size in dots; 0 = off
   const [zoom, setZoom] = useState(1);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importName, setImportName] = useState('Imported label');
 
   // Undo/redo history + copy-paste clipboard.
   const pastRef = useRef([]);
@@ -202,7 +205,28 @@ const Labels = ({ embedded = false }) => {
     setValues(v);
   };
 
+  // Import an existing ZebraDesigner / ZPL label. The raw ZPL is stored verbatim
+  // (with ${var} placeholders) and printed exactly as designed.
+  const importZpl = (zpl, name) => {
+    const text = String(zpl || '').trim();
+    if (!text || !/\^XA/i.test(text)) { setToast({ message: 'Paste valid ZPL (it should contain ^XA … ^XZ).', type: 'error' }); return; }
+    const { width, height } = zplDimensions(text);
+    resetHistory();
+    const t = {
+      name: (name || 'Imported label').trim() || 'Imported label',
+      description: 'Imported ZPL',
+      width, height, dpi: 203,
+      variables: [],
+      elements: [{ id: `raw${Math.random().toString(36).slice(2, 6)}`, type: 'rawzpl', zpl: text }],
+    };
+    setSelectedId(null); setWork(t); setSelIds([]); setDirty(true); setMode('design');
+    setImportOpen(false); setImportText('');
+    setToast({ message: `Imported ${width}×${height} label — mark changing values with \${cart_number}, then Save`, type: 'success' });
+  };
+
   // ---- Design editing ------------------------------------------------------
+  const rawEl = (work?.elements || []).find((e) => e.type === 'rawzpl') || null;
+  const isRaw = !!rawEl;
   const patchWork = (patch) => { setWork((w) => ({ ...w, ...patch })); setDirty(true); };
   const addEl = (type) => {
     setWork((w) => {
@@ -604,9 +628,12 @@ const Labels = ({ embedded = false }) => {
           <section className="mt-8 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
             {/* Template rail */}
             <aside className="pk-rise">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between gap-1.5">
                 <h2 className="font-fraunces text-[18px] font-medium tracking-tight text-slate-900">Templates</h2>
-                <button onClick={newTemplate} className={`${btn} border border-stone-200 bg-white text-slate-700 hover:border-stone-300`}><Plus size={14} /> New</button>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => { setImportText(''); setImportName('Imported label'); setImportOpen(true); }} className={`${btn} border border-stone-200 bg-white text-slate-700 hover:border-stone-300`} title="Import a ZebraDesigner / ZPL label"><FileUp size={14} /> Import</button>
+                  <button onClick={newTemplate} className={`${btn} border border-stone-200 bg-white text-slate-700 hover:border-stone-300`}><Plus size={14} /> New</button>
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 {templates.map((t) => (
@@ -703,6 +730,77 @@ const Labels = ({ embedded = false }) => {
                         {busy ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
                         {printEngine === 'zebradesigner' ? 'Send to ZebraDesigner' : 'Print'} {batchList.length > 1 ? `${batchList.length}×` : ''}
                       </button>
+                    </div>
+                  </div>
+                </div>
+              ) : isRaw ? (
+                /* ---- IMPORTED ZPL EDITOR ---- */
+                <div>
+                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-stone-200 bg-white p-2.5 shadow-soft">
+                    <span className="ml-1 inline-flex items-center gap-1.5 text-[11px] font-bold tracky text-slate-400"><FileCode size={13} /> IMPORTED ZPL</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      {dirty && <span className="text-[11.5px] font-semibold text-amber-600">Unsaved</span>}
+                      {work.id && <button onClick={del} disabled={busy} className={`${btn} border border-stone-200 bg-white text-slate-400 hover:border-red-200 hover:text-red-500`}><Trash2 size={14} /></button>}
+                      <button onClick={save} disabled={busy || !dirty} className={`${btn} bg-slate-900 px-4 text-white hover:bg-slate-800 disabled:opacity-40`}>{busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Save</button>
+                    </div>
+                  </div>
+                  <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <div>
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">ZPL — prints exactly as written · use {'${cart_number}'} where values change</span>
+                        <textarea value={rawEl.zpl} onChange={(e) => updateEl(rawEl.id, { zpl: e.target.value })} rows={20} spellCheck={false} className="w-full resize-y rounded-xl border border-stone-200 bg-[#0e1216] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-emerald-200/90 focus:border-orange-400 focus:outline-none" />
+                      </label>
+                      <div className="mt-3 grid gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-soft sm:grid-cols-3">
+                        <label className="block sm:col-span-3"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Template name</span><input value={work.name} onChange={(e) => patchWork({ name: e.target.value })} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[14px] font-bold" /></label>
+                        <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Width (dots)</span><input type="number" value={work.width} onChange={(e) => patchWork({ width: Number(e.target.value) })} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[14px] font-semibold" /></label>
+                        <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">Height (dots)</span><input type="number" value={work.height} onChange={(e) => patchWork({ height: Number(e.target.value) })} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[14px] font-semibold" /></label>
+                        <button onClick={() => { const d = zplDimensions(rawEl.zpl); patchWork(d); }} className="self-end rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-[11.5px] font-bold text-slate-600 transition hover:border-stone-300">Read ^PW/^LL</button>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white p-3 shadow-soft"><div className="rounded-lg border border-stone-100"><LabelSvg template={work} values={designPreviewValues} /></div></div>
+                      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
+                        <div className="mb-2.5 flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-slate-700"><Layers size={14} /> Variables</span>
+                          <button onClick={addVar} className="text-[12px] font-bold text-orange-600 hover:text-orange-700">+ Add</button>
+                        </div>
+                        {missingVars.length > 0 && (
+                          <button onClick={() => patchWork({ variables: [...(work.variables || []), ...missingVars.map((k) => ({ key: k, label: k, default: '' }))] })} className="mb-2 w-full rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-[11.5px] font-semibold text-orange-700">
+                            Declare {missingVars.map((v) => `\${${v}}`).join(', ')}
+                          </button>
+                        )}
+                        <div className="space-y-2">
+                          {(work.variables || []).map((v, i) => {
+                            const type = v.type || 'text';
+                            return (
+                              <div key={i} className="rounded-xl border border-stone-200 bg-[#FBFBFA] p-2">
+                                <div className="flex items-center gap-1.5">
+                                  <input value={v.key} onChange={(e) => setVar(i, { key: e.target.value })} placeholder="key" className="w-[40%] rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-bold text-slate-900" />
+                                  <select value={type} onChange={(e) => setVar(i, { type: e.target.value })} className="flex-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-600">
+                                    {VARIABLE_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+                                  </select>
+                                  <button onClick={() => removeVar(i)} className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>
+                                </div>
+                                {type === 'counter' ? (
+                                  <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                                    <input value={v.default ?? ''} onChange={(e) => setVar(i, { default: e.target.value })} placeholder="start" className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700" />
+                                    <input value={v.step ?? ''} onChange={(e) => setVar(i, { step: e.target.value })} placeholder="step" className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700" />
+                                    <input value={v.pad ?? ''} onChange={(e) => setVar(i, { pad: e.target.value })} placeholder="pad" className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700" />
+                                  </div>
+                                ) : type === 'date' ? (
+                                  <select value={v.format || 'YYYY-MM-DD'} onChange={(e) => setVar(i, { format: e.target.value })} className="mt-1.5 w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700">
+                                    {DATE_FORMATS.map((f) => <option key={f.key} value={f.key}>{f.label} — {f.key}</option>)}
+                                  </select>
+                                ) : (
+                                  <input value={v.default ?? ''} onChange={(e) => setVar(i, { default: e.target.value })} placeholder="default value" className="mt-1.5 w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-600" />
+                                )}
+                              </div>
+                            );
+                          })}
+                          {(work.variables || []).length === 0 && <p className="text-[11.5px] text-slate-400">Put <code className="text-orange-600">{'${cart_number}'}</code> in the ZPL where the number goes, then click “Declare”.</p>}
+                        </div>
+                      </div>
+                      <button onClick={() => setMode('print')} className={`${btn} w-full justify-center border border-stone-200 bg-white text-slate-700 hover:border-stone-300`}>Go to Print <ArrowRight size={15} /></button>
                     </div>
                   </div>
                 </div>
@@ -961,6 +1059,36 @@ const Labels = ({ embedded = false }) => {
           <p className="mt-6 text-[13px] text-slate-500">Vista Auction · Label Studio · prints to the Zebra queue</p>
         </footer>
       </main>
+
+      {importOpen && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-900/40 p-4" onClick={() => setImportOpen(false)}>
+          <div className="w-full max-w-xl rounded-2xl border border-stone-200 bg-white p-5 shadow-lift" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center gap-2">
+              <FileCode size={18} className="text-orange-600" />
+              <h3 className="font-fraunces text-[19px] font-medium tracking-tight text-slate-900">Import a Zebra / ZPL label</h3>
+              <button onClick={() => setImportOpen(false)} className="ml-auto rounded-lg p-1.5 text-slate-400 hover:bg-stone-100"><X size={16} /></button>
+            </div>
+            <label className="mb-2 block">
+              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-400">Name</span>
+              <input value={importName} onChange={(e) => setImportName(e.target.value)} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[14px] font-semibold" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-400">Paste ZPL (or upload a .zpl / .prn file)</span>
+              <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={9} spellCheck={false} placeholder="^XA ... ^XZ" className="w-full resize-none rounded-lg border border-stone-200 px-3 py-2 font-mono text-[12px]" />
+            </label>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-stone-300 px-3 py-2 text-[12px] font-bold text-slate-600 transition hover:border-orange-300 hover:text-orange-600">
+                <FileUp size={14} /> Upload file
+                <input type="file" accept=".zpl,.prn,.txt,text/plain" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setImportText(await f.text()); if (!importName || importName === 'Imported label') setImportName(f.name.replace(/\.[^.]+$/, '')); } e.target.value = ''; }} />
+              </label>
+              <button onClick={() => importZpl(importText, importName)} className={`${btn} ml-auto bg-orange-600 px-4 text-white hover:bg-orange-700`}><Check size={15} /> Import</button>
+            </div>
+            <p className="mt-3 text-[11.5px] leading-relaxed text-slate-400">
+              In ZebraDesigner: <b>File → Print</b> with the <b>ZPL</b> driver and tick <b>Print to file</b> to get a .prn, or use <b>Export</b>. Then replace the changing value in the ZPL with <code className="text-orange-600">{'${cart_number}'}</code> so a range can fill it. It prints exactly as designed.
+            </p>
+          </div>
+        </div>
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

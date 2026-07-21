@@ -199,6 +199,20 @@ const LabelSvg = ({ template, values = {}, interactive = false, selectedId, sele
     return rect && rect.width ? W / rect.width : 1;
   };
 
+  // Imported/raw-ZPL templates can't be rasterised in the browser — show a
+  // labelled placeholder at the true aspect ratio instead of blank.
+  const rawEl = (template.elements || []).find((e) => e.type === 'rawzpl');
+  if (rawEl) {
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} className={className} style={{ width: '100%', height: 'auto', display: 'block', background: '#fff', ...style }}>
+        <rect x="0" y="0" width={W} height={H} fill="#fff" />
+        <rect x="6" y="6" width={W - 12} height={H - 12} fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="14 10" rx="10" />
+        <text x={W / 2} y={H / 2 - 6} fontSize={Math.max(22, W / 22)} textAnchor="middle" fontWeight="800" fill="#475569" style={{ fontFamily: 'Arial, sans-serif' }}>IMPORTED ZPL</text>
+        <text x={W / 2} y={H / 2 + Math.max(26, W / 26)} fontSize={Math.max(16, W / 34)} textAnchor="middle" fill="#94a3b8" style={{ fontFamily: 'Arial, sans-serif' }}>prints exactly as designed · {W}×{H} dots</text>
+      </svg>
+    );
+  }
+
   const beginMove = (e, el) => {
     if (!interactive) return;
     // Clicking an element already in a multi-selection drags the whole group;
