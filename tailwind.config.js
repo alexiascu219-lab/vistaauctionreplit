@@ -20,24 +20,34 @@ export default {
         // Missing-items floor app (/missings). Namespaced under `floor` so none
         // of these can collide with the careers palette above.
         //
-        // The design brief is an industrial instrument panel, not a website:
-        // this is equipment, held in one gloved hand, under bad overhead light,
-        // read at arm's length. So: near-black instrument housing, hairline
-        // rules, and three saturated signal colours borrowed from actual
-        // warehouse safety signage. Verdict colours clear 7:1 against ink.
+        // Register: an auction house's operations tool. Vista sells at auction,
+        // so the reference is a catalogue and a saleroom — restraint, deep
+        // neutrals, precious-metal accents — not a hazard placard. An earlier
+        // pass used fluorescent safety colours flooded edge to edge and read
+        // cheap; the discipline now is that colour arrives as TYPE on a dark
+        // ground, and the two verdict fields are deep and rich rather than
+        // saturated. Still clears 7:1 for contrast, still unmistakable across
+        // an aisle, but it looks like it belongs to a company that sells things
+        // for money.
         floor: {
-          ink: "#0A0E14",        // instrument housing
-          panel: "#111823",      // sits on the housing
-          raised: "#1A2431",     // sits on the panel
-          hairline: "#26323F",   // 1px rules
-          brand: "#FF6B1A",      // Vista orange, pushed to safety-cone saturation
-          brandDark: "#E2540A",
-          clear: "#00D67F",      // not on the list — go
-          clearDeep: "#04231A",
-          wanted: "#FFB000",     // on the list — stop and look
-          wantedDeep: "#2A1B00",
-          danger: "#FF3B30",
-          dangerDeep: "#2B0A08",
+          ink: "#0A0A0B",        // true neutral near-black
+          panel: "#121214",      // sits on the ink
+          raised: "#1A1A1D",     // sits on the panel
+          hairline: "#27272B",   // 1px rules, never heavier
+          brand: "#E2571F",      // Vista orange, deepened out of fluorescence
+          brandDark: "#C1440F",
+          brandTint: "#2A1206",  // for accent-tinted grounds
+
+          clear: "#6EE7B7",      // luminous jade — reads as TYPE
+          clearDeep: "#062B1E",  // deep forest field
+          clearMid: "#2F9E6E",   // fills that need a mid tone
+
+          wanted: "#E8C07A",     // antique gold
+          wantedDeep: "#241A08",  // deep bronze field
+          wantedMid: "#B8892F",
+
+          danger: "#E5484D",
+          dangerDeep: "#2A0E0F",
         },
       },
       spacing: {
@@ -69,13 +79,17 @@ export default {
         // studio, so this costs zero extra network — which matters when the
         // whole premise is that it works on bad warehouse Wi-Fi.
         //
-        // Oswald is a condensed signage gothic: it is what warehouse racking
-        // labels and safety signs are actually set in, so it reads as native to
-        // the environment rather than imported from a marketing site.
-        'fl-display': ['Oswald', '"Arial Narrow"', 'sans-serif'],
+        // Fraunces is a high-contrast editorial serif: the register of an
+        // auction catalogue rather than a warehouse placard. Reserved strictly
+        // for display moments — the verdict word and screen titles — where its
+        // contrast is an asset. Replaced Oswald, whose condensed all-caps read
+        // like discount signage everywhere it was used.
+        'fl-display': ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+        // Everything functional. A neutral grotesk carries labels and buttons
+        // without competing with the serif.
+        'fl-ui': ['Archivo', 'system-ui', '-apple-system', 'sans-serif'],
         // Tabular figures, unambiguous 0/O and 1/l — non-negotiable for VALPNs.
         'fl-mono': ['"Roboto Mono"', 'ui-monospace', 'monospace'],
-        'fl-ui': ['"Roboto Condensed"', 'system-ui', 'sans-serif'],
       },
       animation: {
         // Careers site.

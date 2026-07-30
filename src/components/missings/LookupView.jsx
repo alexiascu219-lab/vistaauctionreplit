@@ -47,13 +47,17 @@ export default function LookupView({ onResult }) {
     <div className="space-y-4">
       {/* The readout: fixed-width, tabular, always showing the canonical form so
           there is never any doubt what is about to be submitted. */}
-      <div className="fl-card px-5 py-6 text-center">
+      <div className="fl-card px-5 py-7 text-center">
         <p className="fl-label">VALPN</p>
-        <p className="mt-2 fl-num text-4xl leading-none text-slate-50">
-          <span className="text-slate-600">VALPN-</span>
-          {digits || <span className="text-slate-700">………</span>}
+        <p className="mt-3 fl-num text-[2.25rem] font-light leading-none text-neutral-50">
+          <span className="text-neutral-700">VALPN-</span>
+          {digits || <span className="text-neutral-800">………</span>}
         </p>
-        <p className="mt-3 font-fl-ui text-sm text-slate-500">
+        <p
+          className={`mt-4 font-fl-ui text-[0.6875rem] font-semibold uppercase tracking-[0.2em] ${
+            valpn ? 'text-floor-clear' : 'text-neutral-600'
+          }`}
+        >
           {digits.length === 0
             ? 'Enter at least 5 digits'
             : valpn
@@ -98,17 +102,21 @@ export default function LookupView({ onResult }) {
   );
 }
 
-/** 68px tall — comfortably above the 56px glove minimum, because this pad is
- *  used repeatedly and errors here cost a re-entry. */
+/**
+ * 68px tall — comfortably above the 56px glove minimum, because this pad is used
+ * repeatedly and an error here costs a full re-entry.
+ *
+ * Pressed state brightens the surface rather than dropping the key on an offset
+ * shadow. The shadow version read as a toy; a surface that lights under the
+ * thumb reads as a considered control and is just as perceptible through a glove.
+ */
 function Key({ children, onPress, muted = false, ...rest }) {
   return (
     <button
       type="button"
       onClick={onPress}
-      className={`flex h-[68px] items-center justify-center rounded-xl border text-3xl transition-all duration-100 active:translate-y-[2px] ${
-        muted
-          ? 'border-floor-hairline bg-floor-raised text-slate-400 shadow-[0_3px_0_0_theme(colors.floor.ink)] active:shadow-[0_1px_0_0_theme(colors.floor.ink)]'
-          : 'fl-num border-floor-hairline bg-floor-panel text-slate-50 shadow-[0_3px_0_0_theme(colors.floor.ink)] active:shadow-[0_1px_0_0_theme(colors.floor.ink)]'
+      className={`flex h-[68px] items-center justify-center rounded-lg border border-floor-hairline text-[1.75rem] font-light transition-colors duration-100 active:border-neutral-600 active:bg-floor-raised ${
+        muted ? 'bg-transparent text-neutral-500' : 'fl-num bg-floor-panel text-neutral-50'
       }`}
       {...rest}
     >

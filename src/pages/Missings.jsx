@@ -184,7 +184,7 @@ function FloorApp({ staff, view }) {
       {toast && (
         <div
           role="status"
-          className="animate-fl-rise fixed inset-x-4 z-[60] mx-auto max-w-md rounded-xl border border-floor-hairline bg-floor-raised px-4 py-3 text-center font-fl-ui text-sm font-bold text-slate-100"
+          className="animate-fl-rise fixed inset-x-4 z-[60] mx-auto max-w-md rounded-lg border border-floor-hairline bg-floor-raised px-4 py-3 text-center font-fl-ui text-[0.875rem] font-medium text-neutral-100"
           style={{ bottom: 'calc(var(--fl-nav-offset, 5.5rem) + env(safe-area-inset-bottom))' }}
         >
           {toast}
@@ -199,16 +199,16 @@ function Header({ staff, onSignOut }) {
     <header className="sticky top-0 z-30 border-b border-floor-hairline bg-floor-ink/95 backdrop-blur">
       <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-4 py-3">
         <div className="min-w-0">
-          <p className="truncate font-fl-display text-sm font-medium uppercase tracking-[0.22em] text-floor-brand">
+          <p className="truncate font-fl-ui text-[0.6875rem] font-semibold uppercase tracking-[0.28em] text-neutral-500">
             {staff.facility} · Missing Items
           </p>
-          <p className="truncate font-fl-ui text-sm text-slate-500">{staff.display_name}</p>
+          <p className="fl-title mt-1 truncate text-lg">{staff.display_name}</p>
         </div>
         <button
           type="button"
           onClick={onSignOut}
           aria-label="Sign out"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-floor-hairline text-slate-500"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-floor-hairline text-neutral-500"
         >
           <LogOut className="h-5 w-5" aria-hidden="true" />
         </button>
@@ -244,13 +244,13 @@ function BottomNav({ view }) {
               <Link
                 to={tab.to}
                 aria-current={active ? 'page' : undefined}
-                className={`relative flex h-fl-nav flex-col items-center justify-center gap-1 font-fl-ui text-[0.75rem] font-bold uppercase tracking-[0.14em] transition-colors ${
-                  active ? 'text-floor-brand' : 'text-slate-600'
+                className={`relative flex h-fl-nav flex-col items-center justify-center gap-1 font-fl-ui text-[0.625rem] font-semibold uppercase tracking-[0.2em] transition-colors ${
+                  active ? 'text-neutral-50' : 'text-neutral-600'
                 }`}
               >
                 {/* Active marker is a top rule as well as colour — never colour alone. */}
                 <span
-                  className={`absolute inset-x-5 top-0 h-[3px] rounded-b ${active ? 'bg-floor-brand' : 'bg-transparent'}`}
+                  className={`absolute inset-x-6 top-0 h-px ${active ? 'bg-floor-brand' : 'bg-transparent'}`}
                 />
                 <tab.icon className="h-6 w-6" aria-hidden="true" />
                 {tab.label}
@@ -301,29 +301,29 @@ function LoginScreen() {
   return (
     <Centered>
       <header className="mb-9">
-        <p className="font-fl-display text-xs font-medium uppercase tracking-[0.3em] text-floor-brand">
+        <p className="font-fl-ui text-[0.6875rem] font-semibold uppercase tracking-[0.32em] text-floor-brand">
           Vista Auctions · Sardis
         </p>
-        <h1 className="mt-3 font-fl-display text-6xl font-semibold uppercase leading-[0.92] tracking-[0.01em] text-slate-50">
+        <h1 className="fl-title mt-4 text-[3.5rem] leading-[0.95]">
           Missing
           <br />
           Items
         </h1>
-        <div className="mt-5 h-px w-full bg-floor-hairline" />
-        <p className="mt-5 font-fl-ui text-base leading-relaxed text-slate-400">
+        <div className="mt-6 h-px w-full bg-floor-hairline" />
+        <p className="mt-6 font-fl-ui text-[0.9375rem] leading-relaxed text-neutral-500">
           Scan anything on the floor. Find out in one second whether it&rsquo;s wanted.
         </p>
       </header>
 
       {status === 'sent' ? (
         <div className="fl-card border-floor-clear/40 bg-floor-clearDeep p-5 text-center" role="status">
-          <p className="font-fl-display text-2xl uppercase tracking-wide text-floor-clear">
+          <p className="fl-title text-2xl text-floor-clear">
             Check your email
           </p>
-          <p className="mt-3 break-all font-fl-ui text-base leading-relaxed text-slate-200">
+          <p className="mt-3 break-all font-fl-ui text-base leading-relaxed text-neutral-200">
             Sign-in link sent to <span className="fl-num">{email}</span>
           </p>
-          <p className="mt-3 font-fl-ui text-sm text-slate-500">Open it on this phone.</p>
+          <p className="mt-3 font-fl-ui text-sm text-neutral-500">Open it on this phone.</p>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
@@ -357,7 +357,7 @@ function LoginScreen() {
             {status === 'sending' ? 'Sending…' : 'Send sign-in link'}
           </button>
 
-          <p className="pt-1 text-center font-fl-ui text-sm text-slate-500">
+          <p className="pt-1 text-center font-fl-ui text-sm text-neutral-500">
             No password. We email you a link that signs you in.
           </p>
         </form>
@@ -377,13 +377,13 @@ function NoAccess() {
   return (
     <Centered>
       <div className="fl-card border-floor-wanted/40 bg-floor-wantedDeep p-5">
-        <h1 className="font-fl-display text-3xl uppercase tracking-wide text-floor-wanted">
+        <h1 className="fl-title text-3xl text-floor-wanted">
           Not set up yet
         </h1>
-        <p className="mt-3 font-fl-ui text-base leading-relaxed text-slate-200">
+        <p className="mt-3 font-fl-ui text-base leading-relaxed text-neutral-200">
           You&rsquo;re signed in, but this account isn&rsquo;t on the floor-app roster yet.
         </p>
-        <p className="mt-3 font-fl-ui text-base leading-relaxed text-slate-400">
+        <p className="mt-3 font-fl-ui text-base leading-relaxed text-neutral-400">
           Ask whoever runs the missing-items process to add you, then reload.
         </p>
       </div>
@@ -399,14 +399,14 @@ function SchemaNotExposed() {
   return (
     <Centered>
       <div className="fl-card border-floor-danger/50 bg-floor-dangerDeep p-5">
-        <h1 className="font-fl-display text-3xl uppercase tracking-wide text-red-300">
+        <h1 className="fl-title text-3xl text-red-300">
           Not configured
         </h1>
-        <p className="mt-3 font-fl-ui text-base leading-relaxed text-slate-200">
+        <p className="mt-3 font-fl-ui text-base leading-relaxed text-neutral-200">
           The <code className="fl-num">floor</code> schema isn&rsquo;t exposed to the Supabase
           API, so none of the missing-items tables are reachable.
         </p>
-        <p className="mt-3 font-fl-ui text-base leading-relaxed text-slate-400">
+        <p className="mt-3 font-fl-ui text-base leading-relaxed text-neutral-400">
           Supabase → Settings → API → Exposed schemas → add <code className="fl-num">floor</code>.
         </p>
       </div>
@@ -417,7 +417,7 @@ function SchemaNotExposed() {
 function Splash({ message }) {
   return (
     <Centered>
-      <p className="text-center font-fl-ui text-base uppercase tracking-[0.2em] text-slate-600">
+      <p className="text-center font-fl-ui text-[0.6875rem] font-semibold uppercase tracking-[0.28em] text-neutral-600">
         {message}
       </p>
     </Centered>

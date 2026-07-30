@@ -97,10 +97,10 @@ export default function ScanView({ onResult, paused }) {
     return (
       <div className="px-1 py-6">
         <div className="fl-card p-6 text-center">
-          <p className="font-fl-display text-2xl uppercase tracking-wide text-slate-100">
+          <p className="fl-title text-2xl text-neutral-100">
             Camera unavailable
           </p>
-          <p className="mx-auto mt-3 max-w-xs font-fl-ui text-base leading-relaxed text-slate-400">
+          <p className="mx-auto mt-3 max-w-xs font-fl-ui text-base leading-relaxed text-neutral-400">
             {message}
           </p>
           <Link to="/missings/lookup" className="fl-btn-primary mt-6">
@@ -127,21 +127,21 @@ export default function ScanView({ onResult, paused }) {
           {/* Vignette: darkens the periphery so the eye goes to the reticle. */}
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: 'radial-gradient(ellipse at center, transparent 34%, rgba(10,14,20,0.72) 100%)' }}
+            style={{ background: 'radial-gradient(ellipse at center, transparent 34%, rgba(10,10,11,0.78) 100%)' }}
           />
 
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="fl-reticle relative h-40 w-[78%]">
               {/* The sweep is the only motion on screen — it reads as "actively
                   looking" without competing with the camera feed. */}
-              <div className="absolute inset-x-3 top-1/2 h-[3px] animate-fl-sweep rounded-full bg-floor-brand shadow-[0_0_14px_2px_rgba(255,107,26,0.65)]" />
+              <div className="absolute inset-x-2 top-1/2 h-px animate-fl-sweep bg-floor-brand shadow-[0_0_12px_1px_rgba(226,87,31,0.7)]" />
             </div>
           </div>
 
           {status === 'starting' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-floor-ink/85">
               <Loader2 className="h-8 w-8 animate-spin text-floor-brand" aria-hidden="true" />
-              <p className="font-fl-ui text-sm uppercase tracking-[0.18em] text-slate-400">
+              <p className="font-fl-ui text-sm uppercase tracking-[0.18em] text-neutral-400">
                 Starting camera
               </p>
             </div>
@@ -153,10 +153,10 @@ export default function ScanView({ onResult, paused }) {
               onClick={toggleTorch}
               aria-pressed={torchOn}
               aria-label="Toggle light"
-              className={`absolute right-3 top-3 flex h-14 w-14 items-center justify-center rounded-xl border backdrop-blur transition-colors ${
+              className={`absolute right-3 top-3 flex h-14 w-14 items-center justify-center rounded-lg border backdrop-blur transition-colors ${
                 torchOn
-                  ? 'border-floor-brand bg-floor-brand text-floor-ink'
-                  : 'border-floor-hairline bg-floor-ink/70 text-slate-200'
+                  ? 'border-floor-brand bg-floor-brand text-white'
+                  : 'border-floor-hairline bg-floor-ink/70 text-neutral-200'
               }`}
             >
               <Flashlight className="h-6 w-6" aria-hidden="true" />
@@ -164,7 +164,7 @@ export default function ScanView({ onResult, paused }) {
           )}
         </div>
 
-        <p className="border-t border-floor-hairline bg-floor-panel px-4 py-3 text-center font-fl-ui text-sm uppercase tracking-[0.16em] text-slate-500">
+        <p className="border-t border-floor-hairline bg-floor-panel px-4 py-3.5 text-center font-fl-ui text-[0.6875rem] font-semibold uppercase tracking-[0.24em] text-neutral-500">
           Point at any barcode
         </p>
       </div>

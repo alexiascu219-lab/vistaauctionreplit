@@ -21,7 +21,7 @@ export default function StatusStrip({ online, pending, lastSync, stale, syncing,
   if (!notable) {
     return (
       <div className="flex items-center justify-between px-1 pb-2 pt-1">
-        <span className="flex items-center gap-1.5 font-fl-ui text-xs uppercase tracking-[0.16em] text-slate-600">
+        <span className="flex items-center gap-1.5 font-fl-ui text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-neutral-600">
           <Check className="h-3.5 w-3.5 text-floor-clear" aria-hidden="true" />
           Synced {agoLabel(lastSync)}
         </span>
@@ -29,7 +29,7 @@ export default function StatusStrip({ online, pending, lastSync, stale, syncing,
           type="button"
           onClick={onSync}
           disabled={syncing}
-          className="flex min-h-8 items-center gap-1.5 rounded px-2 font-fl-ui text-xs uppercase tracking-[0.16em] text-slate-500"
+          className="flex min-h-8 items-center gap-1.5 rounded px-2 font-fl-ui text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-neutral-500"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} aria-hidden="true" />
           Refresh
@@ -44,23 +44,23 @@ export default function StatusStrip({ online, pending, lastSync, stale, syncing,
       className={`mb-3 flex items-center gap-3 rounded-xl border px-3.5 py-3 ${
         offline
           ? 'border-floor-wanted/40 bg-floor-wantedDeep'
-          : 'border-floor-hairline bg-floor-raised'
+          : 'border-floor-hairline bg-floor-panel'
       }`}
     >
       {offline ? (
         <CloudOff className="h-5 w-5 shrink-0 text-floor-wanted" aria-hidden="true" />
       ) : (
         <RefreshCw
-          className={`h-5 w-5 shrink-0 text-slate-400 ${syncing ? 'animate-spin' : ''}`}
+          className={`h-5 w-5 shrink-0 text-neutral-400 ${syncing ? 'animate-spin' : ''}`}
           aria-hidden="true"
         />
       )}
 
       <div className="min-w-0 flex-1">
-        <p className={`font-fl-ui text-sm font-bold uppercase tracking-wider ${offline ? 'text-floor-wanted' : 'text-slate-200'}`}>
+        <p className={`font-fl-ui text-[0.8125rem] font-semibold uppercase tracking-[0.14em] ${offline ? 'text-floor-wanted' : 'text-neutral-200'}`}>
           {offline ? 'Offline — scanning still works' : stale ? 'Showing saved list' : 'Syncing'}
         </p>
-        <p className="mt-0.5 font-fl-ui text-xs leading-snug text-slate-400">
+        <p className="mt-0.5 font-fl-ui text-xs leading-snug text-neutral-400">
           {hasPending
             ? `${pending} ${pending === 1 ? 'change' : 'changes'} waiting to send`
             : `List saved ${agoLabel(lastSync)}`}
@@ -72,7 +72,7 @@ export default function StatusStrip({ online, pending, lastSync, stale, syncing,
           type="button"
           onClick={onSync}
           disabled={syncing}
-          className="shrink-0 rounded-lg border border-floor-hairline px-3 py-2 font-fl-ui text-xs font-bold uppercase tracking-wider text-slate-300"
+          className="shrink-0 rounded-lg border border-floor-hairline px-3 py-2 font-fl-ui text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-neutral-300"
         >
           Retry
         </button>

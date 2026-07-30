@@ -33,8 +33,8 @@ export default function ListView({ items, onSelect }) {
   if (!items.length) {
     return (
       <div className="fl-card px-6 py-12 text-center">
-        <p className="font-fl-display text-4xl uppercase tracking-wide text-floor-clear">All clear</p>
-        <p className="mt-3 font-fl-ui text-base text-slate-400">Nothing is marked missing right now.</p>
+        <p className="fl-title text-4xl text-floor-clear">All clear</p>
+        <p className="mt-3 font-fl-ui text-[0.9375rem] text-neutral-500">Nothing is marked missing right now.</p>
       </div>
     );
   }
@@ -42,7 +42,7 @@ export default function ListView({ items, onSelect }) {
   return (
     <div>
       <div className="relative mb-3">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-600" aria-hidden="true" />
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-600" aria-hidden="true" />
         <input
           type="search"
           inputMode="search"
@@ -50,11 +50,11 @@ export default function ListView({ items, onSelect }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter by VALPN, aisle or name"
           aria-label="Filter the open list"
-          className="fl-input !text-base !tracking-normal pl-12"
+          className="fl-input !text-[0.9375rem] !font-fl-ui !tracking-normal pl-12"
         />
       </div>
 
-      <p className="mb-3 px-1 font-fl-ui text-xs uppercase tracking-[0.18em] text-slate-600">
+      <p className="mb-3 px-1 font-fl-ui text-xs uppercase tracking-[0.18em] text-neutral-600">
         {filtered.length} open · oldest first
       </p>
 
@@ -64,33 +64,33 @@ export default function ListView({ items, onSelect }) {
             <button
               type="button"
               onClick={() => onSelect(item)}
-              className="fl-card flex w-full items-stretch overflow-hidden text-left active:translate-y-[1px]"
+              className="fl-card flex w-full items-stretch overflow-hidden text-left transition-colors active:border-neutral-600"
             >
-              <div className="min-w-0 flex-1 p-4">
-                <p className="fl-num text-lg text-slate-50">{formatValpnForDisplay(item.valpn)}</p>
+              <div className="min-w-0 flex-1 px-5 py-4">
+                <p className="fl-num text-[0.9375rem] text-neutral-400">{formatValpnForDisplay(item.valpn)}</p>
 
                 <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="fl-num text-2xl leading-none text-floor-brand">
+                  <span className="fl-num text-[1.75rem] font-light leading-none text-neutral-50">
                     {item.location_last_seen || '—'}
                   </span>
-                  <span className="font-fl-ui text-sm text-slate-500">
+                  <span className="font-fl-ui text-sm text-neutral-500">
                     {ageLabel(item.marked_at)}
                   </span>
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 font-fl-ui text-sm text-slate-500">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 font-fl-ui text-sm text-neutral-500">
                   {item.stacked_by && <span>Stacked {item.stacked_by}</span>}
                   {item.sold_price != null && <span className="fl-num">{formatPrice(item.sold_price)}</span>}
                   {item.order_kind === 'prep' && <span className="uppercase tracking-wider">Prep</span>}
                 </div>
               </div>
 
-              <div className="flex w-14 shrink-0 items-center justify-center border-l border-floor-hairline bg-floor-raised">
+              <div className="flex w-14 shrink-0 items-center justify-center border-l border-floor-hairline">
                 {item.blind_spot ? (
                   <CameraOff className="h-5 w-5 text-floor-wanted" aria-hidden="true" />
                 ) : (
                   <Camera
-                    className={`h-5 w-5 ${item.media_count > 0 ? 'text-floor-clear' : 'text-slate-700'}`}
+                    className={`h-5 w-5 ${item.media_count > 0 ? 'text-floor-clear' : 'text-neutral-700'}`}
                     aria-hidden="true"
                   />
                 )}
@@ -101,7 +101,7 @@ export default function ListView({ items, onSelect }) {
       </ul>
 
       {filtered.length === 0 && (
-        <p className="py-10 text-center font-fl-ui text-base text-slate-500">
+        <p className="py-10 text-center font-fl-ui text-base text-neutral-500">
           Nothing matches &ldquo;{query}&rdquo;.
         </p>
       )}

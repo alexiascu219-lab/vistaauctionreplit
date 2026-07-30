@@ -27,16 +27,15 @@ the spreadsheet. This replaces only the floor-facing half. Out of scope:
 |---|------|-------|
 | 1 | Supabase schema + migrations + RLS + seed | applied to `vistastorage` |
 | 2 | Auth and app shell | done |
-| 3 | Manual VALPN lookup + Vista proxy | built — **needs credentials, see below** |
+| 3 | Manual VALPN lookup + Vista proxy | **working** — cookie authenticating in production |
 | 4 | Camera scanning | done |
 | 5 | Offline cache + write queue + PWA | done |
 | 6 | Found / not-found writeback | done |
 
-## Vista credentials — the one thing that isn't wired
+## Vista credentials
 
-`/api/vista` is written and deployed, but it has no credentials, so lookups
-return `vista_not_configured` and the verdict screen says so plainly. Everything
-else works without it.
+`/api/vista` is live and authenticating: a production lookup returned 200 with
+Vista JSON, confirmed in the runtime logs. Configure via the env vars below.
 
 Set these in **Vercel → the `vistaauctioncareers` project → Settings →
 Environment Variables**. They are read only inside the serverless function and
@@ -81,12 +80,11 @@ it will only authenticate against `api.` if the cookie's domain covers both. If
 lookups come back as `vista_cookie_expired` with a cookie you know is fresh,
 point `VISTA_API_BASE_URL` at the host that actually issued it.
 
-**None of this has been exercised against the real Vista API** — no credentials
-were ever available in the environment where it was written, and outbound access
-to `api.vistaapp.tech` was blocked there. The proxy therefore reads every
-response defensively (multiple candidate field names, tolerant of missing
-history or orders) and degrades to partial data rather than failing. Expect to
-adjust the field mapping in `lookup()` once you see real payloads.
+Authentication is confirmed working. The **field mapping is not** — it has only
+ever seen a "no such product" response, never a populated one. The proxy reads
+every response defensively (multiple candidate field names, tolerant of missing
+history or orders) and degrades to partial data rather than failing, but expect
+to adjust `lookup()` once a real product comes back.
 
 ## Layout
 
@@ -161,27 +159,38 @@ Torch is exposed where the hardware supports it. An aisle at 6am needs it.
 
 ## Design
 
-The brief is an **industrial instrument panel**, not a website: one gloved hand,
-bad overhead light, read at arm's length, unreliable Wi-Fi. Every rule follows
-from that.
+The register is **an auction house's operations tool**. Vista sells at auction,
+so the reference is a saleroom catalogue — restraint, deep neutrals, an editorial
+serif, precious-metal accents — not a hazard placard.
 
-- **Type**: Oswald (condensed signage gothic — what racking labels and safety
-  signs are actually set in), Roboto Mono with tabular figures for every VALPN
-  and location, Roboto Condensed for UI. All three are **already loaded** by
-  `index.css` for the label studio, so the floor app costs zero extra font
-  network — which matters when the premise is bad Wi-Fi. Fallbacks are specified
-  and hold up.
-- **Colour**: near-black instrument housing, hairline rules, and three saturated
-  signal colours from warehouse safety signage. Verdict colours clear 7:1.
+An earlier pass got this wrong: fluorescent safety colours flooded edge to edge,
+condensed all-caps everywhere, 3px offset shadows on every button. It read cheap.
+What changed:
+
+- **Colour arrives as type on a dark ground**, not as saturated fills. The
+  verdict fields are deep (forest, bronze) with luminous type on them, rather
+  than fluorescent walls with dark text.
+- **Type**: Fraunces — a high-contrast editorial serif — reserved strictly for
+  display moments (the verdict word, screen titles). Archivo carries everything
+  functional. Roboto Mono with tabular figures for every VALPN, location and
+  price. All three are **already loaded** by `index.css` for the label studio, so
+  the floor app costs zero extra font network — which matters when the premise is
+  bad Wi-Fi. Fallbacks are specified and hold up.
+- **1px hairlines, never heavier.** Depth comes from layered surfaces, not
+  borders or drop shadows. The diagonal hatch texture is gone; on a phone it read
+  as noise.
+- **Buttons dim rather than jump.** The offset-shadow press read as a toy; a
+  surface that lights under the thumb is just as perceptible through a glove.
+
+What did not change, because the operating constraints still win any tie:
+
 - **The verdict is the product**, so it takes the whole screen. Clear
-  auto-dismisses after 1.8s with a countdown bar — it's the ~95% case and must
-  cost nothing. Wanted persists and requires a decision.
+  auto-dismisses after 1.8s with a countdown — it's the ~95% case and must cost
+  nothing. Wanted persists and requires a decision.
 - **Haptics** carry the verdict before the eyes do: one short buzz for clear, an
   urgent triple for wanted.
-- **Never colour alone** — the two outcomes differ in word, icon, and how long
-  they persist. Nav active state is a bar plus colour.
-- **56px minimum** on everything interactive; the keypad is 68px. Buttons press
-  down mechanically with a collapsing shadow, so feedback survives a glove.
+- **Never colour alone** — the two outcomes differ in word, icon, and duration.
+- **56px minimum** on everything interactive; the keypad is 68px.
 - `prefers-reduced-motion` is respected.
 
 Tokens are namespaced `floor.*` and CSS classes `.fl-*`, scoped under
@@ -268,9 +277,41 @@ are the point. Append-only.
    without it; the app detects this specific failure and names the fix.
 2. Supabase → Authentication → **Redirect URLs** → `https://vistaauction.vercel.app/missings`
 
+## Getting the live list in — `/api/missings-ingest`
+
+The Apps Script keeps owning the spreadsheet. This is the one-way door that
+mirrors it into `floor.missings` so the floor app has something to check scans
+against. Nothing writes back to the Sheet.
+
+**Vercel env vars** (project → Settings → Environment Variables):
+
+```
+MISSINGS_INGEST_SECRET      a long random string, shared with the Apps Script
+SUPABASE_SERVICE_ROLE_KEY   required — RLS denies inserts to everyone else
+```
+
+**Apps Script**: paste `missings_sheet_sync.gs` into the project bound to the
+**missing-items** sheet (not the careers one — that's a different workbook), set
+Script Property `INGEST_SECRET` to the same string, run `syncMissingsToApp` once
+to authorise, then add a 5-minute time-driven trigger.
+
+Column mapping lives in the endpoint, not the script, so the header row can say
+"VALPN" or "Valpn #" or "item number" and still land. The response echoes
+`mappedColumns` — run the sync once and read the log to confirm what matched
+rather than assuming.
+
+Two deliberate choices:
+
+- **Resolutions are never clobbered.** The upsert omits `found`, `found_at`,
+  `found_by` and `found_note`, and PostgREST only updates the columns it is
+  given — so a decision made on the floor survives every later sheet sync. The
+  app's answer beats a sheet that hasn't caught up.
+- **Removal from the sheet does not close an item** unless you opt in by setting
+  `CLOSE_ITEMS_MISSING_FROM_SHEET = true`. "Gone from the sheet" is not the same
+  claim as "found", and guessing wrong quietly empties the floor's work list.
+
 ## Open question
 
-How `floor.missings` gets populated. `sheet_tab` / `sheet_row` imply rows
-originate from the Apps Script day-tabs, so this is designed for the Apps Script
-pushing to Supabase with `service_role` (bypasses RLS, no policy needed). That
-direction is still unconfirmed.
+Whether the 5-minute push above is the right cadence, and whether the day-tab
+naming in `TAB_NAME()` matches your sheet. Both are one-line changes in the
+Apps Script.
