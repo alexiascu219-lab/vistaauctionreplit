@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
 
 import { createClient } from '@/lib/supabase/server';
+import { withBasePath } from '@/lib/urls';
 
 /**
  * Magic-link landing route.
@@ -43,11 +44,11 @@ export async function GET(request: NextRequest) {
     // Reasons here are things like an expired or already-used link. Log it,
     // but send the person back to a form rather than an error dump.
     console.error('[auth/callback] verification failed:', failure);
-    const loginUrl = new URL('/login', origin);
+    const loginUrl = new URL(withBasePath('/login'), origin);
     loginUrl.searchParams.set('expired', '1');
     if (next) loginUrl.searchParams.set('next', next);
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.redirect(new URL(destination, origin));
+  return NextResponse.redirect(new URL(withBasePath(destination), origin));
 }

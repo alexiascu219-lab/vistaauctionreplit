@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { BottomNav } from '@/components/BottomNav';
 import { createClient } from '@/lib/supabase/server';
+import { withBasePath } from '@/lib/urls';
 import type { StaffRole } from '@/lib/types';
 
 /**
@@ -55,7 +56,8 @@ export default async function FloorLayout({ children }: { children: React.ReactN
               {staff.display_name}
             </p>
           </div>
-          <form action="/auth/signout" method="post">
+          {/* Raw form actions are not base-path-prefixed by Next, unlike <Link>. */}
+          <form action={withBasePath('/auth/signout')} method="post">
             <button
               type="submit"
               className="min-h-11 rounded-lg border border-hairline px-3 text-sm font-bold text-slate-400"

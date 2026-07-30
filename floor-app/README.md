@@ -28,7 +28,7 @@ Explicitly out of scope, and staying that way:
 
 | # | Step | State |
 |---|------|-------|
-| 1 | Supabase schema + migrations + RLS + seed | done, validated, **not yet applied** |
+| 1 | Supabase schema + migrations + RLS + seed | **applied to `vistastorage`** |
 | 2 | Auth and app shell | done |
 | 3 | Manual VALPN lookup end to end (proves the Vista proxy) | not started |
 | 4 | Camera scanning | not started |
@@ -48,6 +48,7 @@ floor-app/
 │   └── seed.sql             NOT a migration — see below
 ├── middleware.ts            session refresh + unauthenticated redirect
 └── src/
+    ├── lib/urls.ts          basePath handling — see Deployment
     ├── app/
     │   ├── (floor)/         authorized area: layout enforces the allowlist
     │   ├── auth/            magic-link callback, sign-out
@@ -62,53 +63,94 @@ floor-app/
         └── supabase/        browser / server / middleware clients
 ```
 
-## Setup
+## Database state
 
-### 1. Apply the migrations
+Already applied to project `lovfbqnuxdihjidxacet` (`vistastorage`):
 
-Against project `lovfbqnuxdihjidxacet` (`vistastorage`), in filename order:
+- all three migrations — 5 tables, 1 view, 11 policies, 14 functions, RLS on everything
+- `seed.sql` **section 1** — the staff bootstrap row
+- `seed.sql` **section 2** — the 12 placeholder locations
+
+**Not** applied: `seed.sql` section 3, the fake missing items. `floor.missings` is
+empty, which is correct — real rows come from the Apps Script.
+
+`supabase/seed.sql` is deliberately **not** a migration, because migrations run
+against production and section 3 should never. Every statement is idempotent.
+
+| Section | Contents | Safe for production? | Applied? |
+|---|---|---|---|
+| 1 | Staff bootstrap | Yes | yes |
+| 2 | Aisle map + camera IDs | Placeholder — replace with the real Sardis layout | yes |
+| 3 | Fake missing items | **No.** Dev only | no |
+
+## Remaining manual steps
+
+Neither can be done through an API — both need the dashboard.
+
+### 1. Expose the `floor` schema — required, nothing works without it
+
+Supabase → **Settings → API → Exposed schemas** → add `floor`.
+
+Everything lives in `floor` rather than `public` so it never collides with the 28
+existing `vista_*` / `pickups_*` tables. PostgREST only serves schemas on that
+list, so until `floor` is on it every query 404s. This is the first thing to check
+if `/missings/list` shows its error state.
+
+### 2. Allow the auth callback URL — required for sign-in
+
+Supabase → **Authentication → URL Configuration → Redirect URLs**, add whichever
+apply:
 
 ```
-20260730000100_floor_schema_and_staff.sql
-20260730000200_floor_core_tables.sql
-20260730000300_floor_rls_policies.sql
+https://vista-missings.vercel.app/missings/auth/callback
+https://vistaauction.vercel.app/missings/auth/callback
+http://localhost:3000/missings/auth/callback
 ```
 
-### 2. Expose the `floor` schema — required
+Supabase silently ignores an `emailRedirectTo` that is not on this list and falls
+back to the Site URL, so a magic link would sign you in and then land you on the
+careers homepage instead of the app.
 
-Supabase dashboard → **Settings → API → Exposed schemas** → add `floor`.
+## Deployment
 
-Everything for this app lives in `floor`, not `public`, so it never collides with
-the 28 existing `vista_*` / `pickups_*` tables. Skip this step and PostgREST
-returns 404 for every table here — that is the first thing to check if `/list`
-shows a load error.
+This is a **multi-zone** setup, because one Vercel project builds exactly one
+framework and the careers project is Vite. So:
 
-### 3. Seed
+- `floor-app` is its own Vercel project, with `basePath: '/missings'`
+- the careers project's `vercel.json` proxies `/missings` and `/missings/:path*`
+  through to it
 
-`supabase/seed.sql` is **deliberately not a migration**, because migrations run
-against production and most of that file should not. Three sections, applied by
-hand:
+Those two rewrite rules **must stay above the `/(.*)` SPA catch-all** in the root
+`vercel.json`. The catch-all serves `index.html` for everything it matches, so if
+it comes first the floor app is unreachable. (Vercel validates `vercel.json`
+strictly and JSON has no comments, hence this note living here.)
 
-| Section | Contents | Safe for production? |
-|---|---|---|
-| 1 | Staff bootstrap | **Yes** — you need it to sign in |
-| 2 | Aisle map + camera IDs | Placeholder. Replace with the real Sardis layout |
-| 3 | Fake missing items | **No.** Dev only |
+### Creating the Vercel project
 
-Every statement is idempotent.
+Not done — the Vercel token wired into this environment returned
+`403 You don't have permission to create a project`, which is an account-role
+limit, not something the code can work around.
 
-### 4. Environment
+1. Vercel → **Add New → Project** → import `alexiascu219-lab/vistaauctionreplit`
+2. **Root Directory**: `floor-app`
+3. Framework preset: Next.js (auto-detected)
+4. **Project name**: `vista-missings` — the root `vercel.json` points at
+   `vista-missings.vercel.app`. A different name means updating those two
+   destinations to match.
+5. Environment variables: none are strictly required — `src/lib/env.ts` carries
+   public fallbacks. Set `NEXT_PUBLIC_SITE_URL` once you know the final public
+   origin (see `.env.local.example`).
+
+Importing from git also means it redeploys on push, which a file-upload deploy
+would not have.
+
+### Local development
 
 ```bash
-cp .env.local.example .env.local   # then fill it in
+cp .env.local.example .env.local   # optional; fallbacks cover the public values
 npm install
-npm run dev
+npm run dev                        # http://localhost:3000/missings
 ```
-
-### 5. Deploy
-
-Vercel project with **Root Directory** set to `floor-app`. The repo root is a
-separate Vite app with its own `vercel.json`; the two do not interact.
 
 ## Security model
 

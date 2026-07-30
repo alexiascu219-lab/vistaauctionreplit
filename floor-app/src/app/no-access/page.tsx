@@ -1,3 +1,5 @@
+import { withBasePath } from '@/lib/urls';
+
 /**
  * Where an authenticated user with no active floor.staff row lands.
  *
@@ -22,7 +24,7 @@ export default function NoAccessPage() {
           </p>
         </div>
 
-        <form action="/auth/signout" method="post" className="mt-6">
+        <form action={withBasePath('/auth/signout')} method="post" className="mt-6">
           <button type="submit" className="btn-secondary">
             Sign out
           </button>

@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 
 import { createClient } from '@/lib/supabase/server';
+import { siteUrl } from '@/lib/urls';
 
 export interface LoginState {
   status: 'idle' | 'sent' | 'error';
@@ -11,8 +12,10 @@ export interface LoginState {
 }
 
 /**
- * Work out our own origin from the request rather than an env var, so the magic
- * link works unchanged on localhost, on Vercel previews and in production.
+ * Best-effort origin from the request, used only as the fallback when
+ * NEXT_PUBLIC_SITE_URL is unset. That covers localhost and hitting this
+ * project's own Vercel URL directly; behind the /missings rewrite the env var
+ * is what makes the link correct.
  */
 async function originFromRequest(): Promise<string> {
   const h = await headers();
@@ -37,7 +40,10 @@ export async function sendMagicLink(
   const supabase = await createClient();
   const origin = await originFromRequest();
 
-  const callback = new URL('/auth/callback', origin);
+  // siteUrl adds the base path and prefers NEXT_PUBLIC_SITE_URL, because behind
+  // the /missings rewrite the request host is this project's, not the one the
+  // browser sees. A magic link built from the wrong host would 404 on click.
+  const callback = new URL(siteUrl('/auth/callback', origin));
   if (next.startsWith('/')) callback.searchParams.set('next', next);
 
   const { error } = await supabase.auth.signInWithOtp({
