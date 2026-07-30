@@ -81,9 +81,30 @@ async function callerStaff(req) {
  */
 let tokenCache = { access: null, refresh: null, expiresAt: 0 };
 
+/**
+ * The Cookie header to send, or null if cookie mode is not configured.
+ *
+ * Accepts either form, because both are things a human will reasonably paste:
+ *   "sessionid=.eJx..."   a full cookie header — used verbatim
+ *   ".eJx..."             a bare Django session value — wrapped for you
+ *
+ * Getting this wrong fails in the worst possible way: Django ignores an
+ * unparseable Cookie header, serves the login page with a 200 or a 302, and the
+ * lookup quietly reports "no matching product" instead of "not authenticated".
+ * Hence the normalisation here and the content-type check in vistaGet().
+ */
 function cookieMode() {
-  const cookie = process.env.VISTA_SESSION_COOKIE;
-  return cookie ? cookie.trim() : null;
+  const raw = process.env.VISTA_SESSION_COOKIE;
+  if (!raw) return null;
+
+  const value = raw.trim();
+  if (!value) return null;
+
+  // Already a name=value pair (possibly several), so trust it as written.
+  if (value.includes('=')) return value;
+
+  const name = process.env.VISTA_SESSION_COOKIE_NAME || 'sessionid';
+  return `${name}=${value}`;
 }
 
 function credentials() {
@@ -179,23 +200,36 @@ async function vistaAuthHeaders() {
 async function vistaGet(path) {
   const url = path.startsWith('http') ? path : `${VISTA_BASE}${path}`;
 
-  const attempt = async () => {
-    const res = await fetch(url, {
+  const attempt = async () =>
+    fetch(url, {
       headers: { Accept: 'application/json', ...(await vistaAuthHeaders()) },
+      // Do NOT follow redirects. Session auth answers an unauthenticated request
+      // with a 302 to the login page; following it yields a 200 full of HTML,
+      // which would parse as "no such product" — a silent wrong answer, which is
+      // far worse on the floor than an error.
+      redirect: 'manual',
     });
-    return res;
-  };
 
   let res = await attempt();
 
-  if (res.status === 401 || res.status === 403) {
+  const isAuthFailure = (r) => r.status === 401 || r.status === 403 || (r.status >= 300 && r.status < 400);
+
+  if (isAuthFailure(res)) {
     if (cookieMode()) throw new HttpError(502, 'vista_cookie_expired');
     tokenCache = { access: null, refresh: tokenCache.refresh, expiresAt: 0 };
     res = await attempt();
+    if (isAuthFailure(res)) throw new HttpError(502, 'vista_auth_rejected');
   }
 
   if (res.status === 404) return null;
   if (!res.ok) throw new HttpError(502, `vista_http_${res.status}`);
+
+  // A 200 that isn't JSON is almost always a login page rendered in place of the
+  // resource. Treat it as an auth problem rather than parsing it as data.
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('json')) {
+    throw new HttpError(502, cookieMode() ? 'vista_cookie_expired' : 'vista_bad_response');
+  }
 
   return res.json().catch(() => null);
 }

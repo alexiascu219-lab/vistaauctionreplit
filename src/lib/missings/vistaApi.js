@@ -49,7 +49,11 @@ export function vistaErrorMessage(code) {
     case 'vista_not_configured':
       return 'Vista lookup is not set up yet — the API credentials have not been added on the server.';
     case 'vista_cookie_expired':
-      return 'The saved Vista session has expired. It needs to be refreshed on the server.';
+      return 'The saved Vista session has expired. Someone needs to refresh it on the server.';
+    case 'vista_auth_rejected':
+      return 'Vista rejected the saved credentials. They need updating on the server.';
+    case 'vista_bad_response':
+      return 'Vista returned something unexpected instead of item data.';
     case 'not_floor_staff':
     case 'not_signed_in':
       return 'Your session expired. Sign in again.';

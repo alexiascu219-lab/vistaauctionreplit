@@ -45,8 +45,11 @@ never reach the browser.
 Two auth modes, cookie takes precedence:
 
 ```
-# Cookie mode
-VISTA_SESSION_COOKIE=<the full Cookie header value>
+# Cookie mode — accepts EITHER form:
+#   sessionid=.eJx...   a full Cookie header, used verbatim
+#   .eJx...             a bare Django session value, wrapped for you
+VISTA_SESSION_COOKIE=
+VISTA_SESSION_COOKIE_NAME=   # optional, defaults to "sessionid"
 
 # or JWT mode — logs in once, then refreshes rather than re-logging-in
 VISTA_API_USERNAME=<username>
@@ -56,10 +59,27 @@ VISTA_API_PASSWORD=<password>
 VISTA_API_BASE_URL=
 ```
 
-A cookie will eventually expire; when it does the proxy returns
+**Cookie mode is a bridge, not a solution.** A Django session cookie expires on
+Django's `SESSION_COOKIE_AGE` — two weeks by default, counted from when it was
+issued, not from when you paste it. When it dies the proxy returns
 `vista_cookie_expired` and the UI says the saved session needs refreshing rather
-than showing a generic failure. JWT mode is self-healing and is the better
-long-term choice.
+than showing a generic failure, but somebody has to go and refresh it by hand.
+JWT mode is self-healing. Prefer it.
+
+Two failure modes specific to session auth are handled explicitly, because both
+would otherwise produce a **silent wrong answer** rather than an error:
+
+- Django answers an unauthenticated request with a **302 to the login page**. The
+  proxy uses `redirect: 'manual'` and treats any 3xx as an auth failure, instead
+  of following it and parsing the login HTML as "no such product".
+- A **200 that isn't JSON** is almost always that same login page rendered in
+  place of the resource, so a non-JSON content-type is treated as an auth
+  failure too.
+
+If the cookie was issued by `app.vistaapp.tech` rather than `api.vistaapp.tech`,
+it will only authenticate against `api.` if the cookie's domain covers both. If
+lookups come back as `vista_cookie_expired` with a cookie you know is fresh,
+point `VISTA_API_BASE_URL` at the host that actually issued it.
 
 **None of this has been exercised against the real Vista API** — no credentials
 were ever available in the environment where it was written, and outbound access
