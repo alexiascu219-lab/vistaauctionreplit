@@ -32,11 +32,12 @@ import PickupsLogin from './pages/PickupsLogin';
 import Carts from './pages/Carts';
 import Labels from './pages/Labels';
 import PrintStation from './pages/PrintStation';
+import Missings from './pages/Missings';
 
 // Helper component to handle conditional AI rendering
 const ConditionalAIAssistant = () => {
   const location = useLocation();
-  const hiddenRoutes = ['/login', '/pickups', '/carts', '/labels', '/station'];
+  const hiddenRoutes = ['/login', '/pickups', '/carts', '/labels', '/station', '/missings'];
   const isHidden = hiddenRoutes.some(route => location.pathname.startsWith(route));
   const isHRRoute = location.pathname.startsWith('/hr');
 
@@ -47,7 +48,7 @@ const ConditionalAIAssistant = () => {
 // Pickups and Carts pages render their own minimal header, so suppress the global navbar there.
 const ConditionalNavbar = () => {
   const location = useLocation();
-  if (location.pathname.startsWith('/pickups') || location.pathname.startsWith('/carts') || location.pathname.startsWith('/labels') || location.pathname.startsWith('/station')) return null;
+  if (location.pathname.startsWith('/pickups') || location.pathname.startsWith('/carts') || location.pathname.startsWith('/labels') || location.pathname.startsWith('/station') || location.pathname.startsWith('/missings')) return null;
   return <Navbar />;
 };
 
@@ -89,6 +90,12 @@ function App() {
               <Route path="/carts" element={<Carts />} />
               <Route path="/labels" element={<Labels />} />
               <Route path="/station" element={<PrintStation />} />
+              {/* Missing-items floor app. Scan is the landing view because it is
+                  where staff are 90% of the time. Auth and the floor.staff
+                  allowlist are enforced inside the page itself. */}
+              <Route path="/missings" element={<Missings view="scan" />} />
+              <Route path="/missings/list" element={<Missings view="list" />} />
+              <Route path="/missings/lookup" element={<Missings view="lookup" />} />
             </Routes>
             <SystemAlert />
             <ConditionalNavbar />

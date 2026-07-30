@@ -1,14 +1,6 @@
 {
     "rewrites": [
         {
-            "source": "/missings",
-            "destination": "https://vista-missings.vercel.app/missings"
-        },
-        {
-            "source": "/missings/:path*",
-            "destination": "https://vista-missings.vercel.app/missings/:path*"
-        },
-        {
             "source": "/(.*)",
             "destination": "/index.html"
         }

@@ -46,6 +46,62 @@
   .input-premium {
     @apply bg-white/50 border border-gray-200 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 transition-all duration-300 backdrop-blur-sm;
   }
+
+  /* ---- Missing-items floor app (/missings) --------------------------------
+   * Prefixed .fl-* and scoped to that route. The rest of this site is a light
+   * theme on gray-50; these are dark, high-contrast, and deliberately large.
+   *
+   * Every interactive element is at least 56px tall. That is the floor for a
+   * gloved thumb and it is a hard rule, not a preference — a mis-tap on
+   * "not found" costs someone a second trip across the warehouse.
+   */
+  .fl-btn {
+    @apply inline-flex min-h-fl-touch w-full items-center justify-center gap-3
+           rounded-2xl px-6 text-xl font-bold tracking-wide
+           transition-transform active:scale-[0.98]
+           disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .fl-btn-primary {
+    @apply fl-btn bg-floor-brand text-floor-ink hover:bg-floor-brandDark;
+  }
+
+  .fl-btn-secondary {
+    @apply fl-btn border-2 border-floor-hairline bg-floor-raised text-slate-100 hover:border-floor-brand;
+  }
+
+  .fl-input {
+    @apply min-h-fl-touch w-full rounded-2xl border-2 border-floor-hairline bg-floor-panel
+           px-5 text-2xl font-semibold tracking-wider text-slate-50
+           placeholder:text-base placeholder:font-normal placeholder:tracking-normal
+           placeholder:text-slate-500 focus:border-floor-brand focus:outline-none;
+  }
+
+  .fl-card {
+    @apply rounded-2xl border border-floor-hairline bg-floor-panel p-5;
+  }
+
+  /* Small, but never below 13px. */
+  .fl-label {
+    @apply text-[0.8125rem] font-bold uppercase tracking-[0.12em] text-slate-400;
+  }
+
+  .fl-value {
+    @apply mt-1 text-xl font-semibold text-slate-50;
+  }
+
+  /* The screen is glanced at, not studied, so focus has to be unmissable. */
+  .fl-scope :focus-visible {
+    @apply outline-none ring-4 ring-floor-brand ring-offset-2 ring-offset-floor-ink;
+  }
+
+  /* Gloved thumbs miss. Tap highlight is feedback, not decoration. */
+  .fl-scope button,
+  .fl-scope a,
+  .fl-scope [role='button'] {
+    -webkit-tap-highlight-color: rgb(249 115 22 / 0.25);
+    touch-action: manipulation;
+  }
 }
 
 @layer utilities {
