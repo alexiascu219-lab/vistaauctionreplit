@@ -9,16 +9,15 @@ outcomes:
 
 - **clear** — not on the list, move on
 - **wanted** — on the list; show where it was last seen, price, who stacked it,
-  when it was marked, and any saved camera stills
+  when it was marked, plus live Vista detail
 
 ## What this replaces, and what it doesn't
 
 The Google Sheet and its ~4,200 lines of Apps Script keep running and keep owning
-the spreadsheet. This replaces only the floor-facing half. Out of scope, and
-staying that way:
+the spreadsheet. This replaces only the floor-facing half. Out of scope:
 
-- **Writing to Google Sheets.** Apps Script owns it. `sheet_tab` / `sheet_row` on
-  `floor.missings` are read-only provenance.
+- **Writing to Google Sheets.** Apps Script owns it. `sheet_tab` / `sheet_row` are
+  read-only provenance.
 - **The Slack List sync.** Apps Script owns it.
 - **The Django-admin HTML scraping** that derives the approver field.
 
@@ -26,69 +25,158 @@ staying that way:
 
 | # | Step | State |
 |---|------|-------|
-| 1 | Supabase schema + migrations + RLS + seed | **applied to `vistastorage`** |
+| 1 | Supabase schema + migrations + RLS + seed | applied to `vistastorage` |
 | 2 | Auth and app shell | done |
-| 3 | Manual VALPN lookup (proves the Vista proxy) | not started |
-| 4 | Camera scanning | not started |
-| 5 | Offline cache + write queue | not started |
-| 6 | Found / not-found writeback | schema + RPC ready, no UI |
+| 3 | Manual VALPN lookup + Vista proxy | built — **needs credentials, see below** |
+| 4 | Camera scanning | done |
+| 5 | Offline cache + write queue + PWA | done |
+| 6 | Found / not-found writeback | done |
 
-`/missings` (scan) and `/missings/lookup` are honest placeholders — a scanner that
-half works is worse than one visibly absent, because someone will trust it.
-**`/missings/list` is real**: it reads `floor.open_missings` live, which makes it
-the end-to-end proof that schema, RLS, the exposed schema and the session all line
-up.
+## Vista credentials — the one thing that isn't wired
 
-## Why it's part of the Vite app rather than a separate Next.js project
+`/api/vista` is written and deployed, but it has no credentials, so lookups
+return `vista_not_configured` and the verdict screen says so plainly. Everything
+else works without it.
 
-It was originally built as a standalone Next.js App Router app proxied in at
-`/missings`. That needed a second Vercel project, because **one Vercel project
-builds exactly one framework** and this one is Vite. Creating that project was
-blocked (`403 — You don't have permission to create a project`), and deploying
-Next into *this* project would have replaced the careers site and deleted the 8
-`api/` serverless functions the Print Station and Siri shortcut depend on.
+Set these in **Vercel → the `vistaauctioncareers` project → Settings →
+Environment Variables**. They are read only inside the serverless function and
+never reach the browser.
 
-So it's React Router routes in the existing SPA instead. The security properties
-that mattered all survive:
+Two auth modes, cookie takes precedence:
 
-- Vista credentials still never reach the browser — step 3 puts them in an
-  `api/vista-*.js` serverless function, exactly the pattern the 8 existing
-  functions already use.
-- The browser still only holds the Supabase anon key.
-- Authorization is still RLS plus the `floor.staff` allowlist.
+```
+# Cookie mode
+VISTA_SESSION_COOKIE=<the full Cookie header value>
 
-What was given up: server components, and middleware-based session refresh. Auth
-is client-side via the existing `AuthContext`, which is how the rest of this app
-already works.
+# or JWT mode — logs in once, then refreshes rather than re-logging-in
+VISTA_API_USERNAME=<username>
+VISTA_API_PASSWORD=<password>
+
+# optional, defaults to https://api.vistaapp.tech/api/v1
+VISTA_API_BASE_URL=
+```
+
+A cookie will eventually expire; when it does the proxy returns
+`vista_cookie_expired` and the UI says the saved session needs refreshing rather
+than showing a generic failure. JWT mode is self-healing and is the better
+long-term choice.
+
+**None of this has been exercised against the real Vista API** — no credentials
+were ever available in the environment where it was written, and outbound access
+to `api.vistaapp.tech` was blocked there. The proxy therefore reads every
+response defensively (multiple candidate field names, tolerant of missing
+history or orders) and degrades to partial data rather than failing. Expect to
+adjust the field mapping in `lookup()` once you see real payloads.
 
 ## Layout
 
 ```
-src/pages/Missings.jsx           shell, auth gate, open list, placeholders
-src/lib/missings/missingsApi.js  floor-schema queries and RPCs
-src/lib/missings/valpn.js        VALPN normalization (twin of the SQL function)
-src/lib/missings/location.js     location normalization (twin of the SQL function)
-supabase/migrations/             apply in filename order
-supabase/seed.sql                NOT a migration — see below
+api/vista.js                        Vista proxy: staff-gated, cookie or JWT
+src/pages/Missings.jsx              shell, auth gate, sync orchestration
+src/components/missings/
+  Verdict.jsx                       the verdict screen + resolve sheet
+  ScanView.jsx                      live camera
+  LookupView.jsx                    glove-sized keypad
+  ListView.jsx                      open list
+  StatusStrip.jsx                   connection / queue state
+src/lib/missings/
+  sync.js                           resolve scans, queue writes, flush
+  db.js                             IndexedDB cache + write queue
+  scanner.js                        BarcodeDetector + lazy ZXing
+  vistaApi.js                       client for /api/vista
+  missingsApi.js                    floor-schema queries
+  valpn.js / location.js            normalizers (twins of the SQL functions)
+  pwa.js                            manifest + service worker registration
+public/missings/sw.js               service worker — SCOPED to /missings/
+public/missings/manifest.webmanifest
+supabase/migrations/                apply in filename order
+supabase/seed.sql                   NOT a migration
 ```
 
-Routes are registered in `src/App.jsx`, which also suppresses the global navbar
-and AI assistant on `/missings`, the same way it does for pickups / carts /
-labels / station. Tailwind tokens are namespaced under `floor.*` and CSS
-component classes under `.fl-*`, so nothing can collide with the careers palette.
+## How offline works
 
-No `vercel.json` change was needed — the existing SPA catch-all already serves
-`/missings/*`.
+The promise is that **a scan returns an answer with zero network**. Warehouse
+Wi-Fi drops, and a worker holding an item cannot wait on a round trip that may
+never complete.
+
+- On load, the open list is mirrored into IndexedDB.
+- Every scan resolves against that mirror — a keyed `get`, O(1), instant.
+- Writes (found / not-found, and scan logs) go into a durable queue and flush on
+  reconnect, triggered by the `online` event.
+- Every queued write carries a `clientEventId` generated at the moment of the
+  action. `mark_found` and `log_scan` both dedupe on it server-side, so a flush
+  that succeeds but loses its response retries harmlessly.
+- Resolving an item updates the local mirror **first**, so re-scanning it two
+  seconds later doesn't claim it's still wanted.
+- The status strip always states connection, staleness and queue depth. Hiding
+  that would be the worst possible design here: someone marks ten items found,
+  walks away, and never learns the writes didn't land.
+
+The service worker caches the app shell and the hashed `/assets/*` bundles. It
+**never** caches Supabase or `/api` responses — IndexedDB owns offline data, and
+two competing caches would disagree.
+
+### Service worker scope is load-bearing
+
+`sw.js` lives at `/missings/sw.js`, so its scope is `/missings/`. The careers
+site, HR portal, pickups and label tools are outside it and are never
+intercepted. **Moving that file to the site root would silently put the entire
+domain behind this cache.** The manifest and `theme-color` are likewise injected
+only when the floor app mounts, so a careers visitor is never offered "Vista
+Missing Items" as an install.
+
+## Scanning
+
+`BarcodeDetector` where available — native, hardware-accelerated. ZXing as the
+fallback, loaded by dynamic import so it is a separate 454KB chunk: a careers
+visitor never downloads a barcode decoder, and even here it only loads if the
+native detector is missing. The whole floor app is `React.lazy`'d for the same
+reason.
+
+Same-code repeats within 2.5s are ignored while a *different* code passes
+through instantly, so scanning two items back to back stays fast. The camera is
+released whenever a verdict is showing — a device has to last a whole shift.
+
+Torch is exposed where the hardware supports it. An aisle at 6am needs it.
+
+## Design
+
+The brief is an **industrial instrument panel**, not a website: one gloved hand,
+bad overhead light, read at arm's length, unreliable Wi-Fi. Every rule follows
+from that.
+
+- **Type**: Oswald (condensed signage gothic — what racking labels and safety
+  signs are actually set in), Roboto Mono with tabular figures for every VALPN
+  and location, Roboto Condensed for UI. All three are **already loaded** by
+  `index.css` for the label studio, so the floor app costs zero extra font
+  network — which matters when the premise is bad Wi-Fi. Fallbacks are specified
+  and hold up.
+- **Colour**: near-black instrument housing, hairline rules, and three saturated
+  signal colours from warehouse safety signage. Verdict colours clear 7:1.
+- **The verdict is the product**, so it takes the whole screen. Clear
+  auto-dismisses after 1.8s with a countdown bar — it's the ~95% case and must
+  cost nothing. Wanted persists and requires a decision.
+- **Haptics** carry the verdict before the eyes do: one short buzz for clear, an
+  urgent triple for wanted.
+- **Never colour alone** — the two outcomes differ in word, icon, and how long
+  they persist. Nav active state is a bar plus colour.
+- **56px minimum** on everything interactive; the keypad is 68px. Buttons press
+  down mechanically with a collapsing shadow, so feedback survives a glove.
+- `prefers-reduced-motion` is respected.
+
+Tokens are namespaced `floor.*` and CSS classes `.fl-*`, scoped under
+`.fl-scope`, so nothing can leak into the careers palette.
+
+> **`tailwind.config.js` had `fontFamily`, `animation` and `keyframes` declared
+> twice.** In a JS object literal the later key silently wins, so one set was
+> being dropped. They are now merged into single blocks — don't re-add a second
+> declaration.
 
 ## Database
 
-Already applied to project `lovfbqnuxdihjidxacet` (`vistastorage`): all three
-migrations (5 tables, 1 view, 11 policies, 14 functions, RLS on everything), plus
-`seed.sql` sections 1 and 2. Section 3 (fake items) was deliberately **not**
-applied, so `floor.missings` is empty — real rows come from the Apps Script.
-
-`supabase/seed.sql` is deliberately not a migration, because migrations run
-against production and section 3 should never. Every statement is idempotent.
+Applied to `lovfbqnuxdihjidxacet`: all three migrations (5 tables, 1 view, 11
+policies, 14 functions, RLS on everything), plus `seed.sql` sections 1 and 2.
+Section 3 (fake items) was deliberately not applied.
 
 | Section | Contents | Prod-safe? | Applied? |
 |---|---|---|---|
@@ -96,44 +184,22 @@ against production and section 3 should never. Every statement is idempotent.
 | 2 | Aisle map + camera IDs | Placeholder — replace with the real Sardis layout | yes |
 | 3 | Fake missing items | **No.** Dev only | no |
 
-## Two manual dashboard steps
-
-Neither can be done through an API.
-
-**1. Expose the `floor` schema — required, nothing works without it.**
-Supabase → Settings → API → Exposed schemas → add `floor`.
-
-Everything lives in `floor` rather than `public` so it never collides with the 28
-existing `vista_*` / `pickups_*` tables. PostgREST only serves schemas on that
-list. The app detects this specific failure and shows a "Not configured yet"
-screen naming the fix.
-
-**2. Allow the sign-in redirect.**
-Supabase → Authentication → URL Configuration → Redirect URLs:
-
-```
-https://vistaauction.vercel.app/missings
-http://localhost:5173/missings
-```
-
-Supabase silently ignores an `emailRedirectTo` that isn't listed and falls back to
-the Site URL, so a magic link would sign you in and dump you on the careers
-homepage.
-
 ## Security model
 
 **A session is not authorization.** Supabase Auth will create an account for any
-email address on earth, so signing in is necessary but not sufficient: access
-requires an active row in `floor.staff`. That's checked in the page for UX and by
-every RLS policy for real.
+email address, so access requires an active row in `floor.staff` — checked in the
+page for UX, by every RLS policy for real, and again inside `/api/vista` before
+it will spend a Vista call on you.
 
-Note this shares one Supabase identity with the HR portal — same project, same
-browser session. That's deliberate: one person, one login. *Authorization* stays
-separate, because HR access needs a `vista_employees` row and floor access needs a
-`floor.staff` row, and neither implies the other. Signing out of one signs out of
-both.
+`/api/vista` verifies the caller with their **own** access token under RLS rather
+than `service_role`, so a forged or expired token simply returns nothing.
+Using `service_role` there would bypass the policy that makes it safe.
 
-Verified against a real Postgres:
+This shares one Supabase identity with the HR portal — same project, same browser
+session. Deliberate: one person, one login. Authorization stays separate, because
+HR needs a `vista_employees` row and floor needs `floor.staff`, and neither
+implies the other. Signing out of one signs out of both, and signing out clears
+the local mirror so one person's list doesn't survive onto the next shift's phone.
 
 | Role | Reach |
 |---|---|
@@ -146,69 +212,45 @@ Verified against a real Postgres:
 
 ### Why `mark_found()` instead of an UPDATE policy
 
-Postgres RLS cannot restrict *which columns* an `UPDATE` touches. Rather than
-lean on a policy predicate to keep staff out of `sold_price` or `sheet_row`,
-`authenticated` has **no UPDATE grant on `floor.missings` at all**. The
-found/not-found writeback goes through `floor.mark_found()` and nothing else,
-which also means `found_by` comes from the session rather than the request body —
-a staff member cannot attribute a find to someone else. `floor.log_scan()` exists
-for the same reason: it resolves the hit server-side instead of trusting the
-client's cache.
+Postgres RLS cannot restrict *which columns* an `UPDATE` touches, so rather than
+lean on a predicate to keep staff out of `sold_price` or `sheet_row`,
+`authenticated` has **no UPDATE grant on `floor.missings` at all**. Writeback
+goes through `floor.mark_found()` and nothing else, which also means `found_by`
+comes from the session rather than the request body.
 
-Both take a `p_client_event_id` and are idempotent on it. That's what will make
-the step-5 write queue safe: a flush that succeeds server-side but loses the
-response can retry without double-filing or overwriting a newer decision.
-
-### One RLS behaviour worth knowing
-
-RLS on `UPDATE` does not raise — it silently matches zero rows. A non-admin
-editing `locations` gets no error and no effect. Any admin UI built later must
-check the affected row count rather than assume success.
+RLS on `UPDATE` does not raise — it silently matches zero rows. Any admin UI
+built later must check the affected row count rather than assume success.
 
 ## Schema notes
 
 **`missings.valpn` is UNIQUE, and that's load-bearing.** The old system filed
 duplicates; this makes a second row for the same item impossible at the database
-level rather than something application code has to remember to defend against.
-Normalization runs in a trigger too, so `valpn- 10045821`, `10045821` and
+level. Normalization runs in a trigger too, so `valpn- 10045821`, `10045821` and
 `VALPN-10045821` all collide as they should.
 
-**Normalization is deliberately duplicated** between SQL and JS. The client copy
-exists because a scan must resolve against the local cache with zero network; the
-database copy exists so nothing malformed can be written by a caller that skips
-the app. Change one, change both.
+**Normalization is deliberately duplicated** between SQL and JS — the client copy
+because a scan must resolve with zero network, the database copy so nothing
+malformed can be written by a caller that skips the app. Change one, change both.
 
 **`facts_at`** records when Vista was last queried, so an enrichment pass can skip
-rows that are already fresh instead of re-hitting the API for the whole list.
+rows that are already fresh.
 
-**`item_media` is designed, not built.** The NVR is on the warehouse LAN and
-unreachable from Vercel, so an on-prem agent will push stills and clips using
-`service_role`. The table, the private `item-media` bucket and the read-side RLS
-exist now; the agent does not. `item_media.valpn` is the FK target rather than
-`id` because the agent will know the VALPN off the sheet — only possible because
-`valpn` is unique.
-
-**`locations.blind_spot`** encodes that some aisles have no camera coverage, and a
-check constraint forbids pairing it with a camera ID. The list says "no camera —
-blind spot" rather than implying stills exist.
+**`item_media` is designed, not built.** The NVR is LAN-only, so an on-prem agent
+will push using `service_role`. The table, the private bucket and the read-side
+RLS exist; the agent does not.
 
 **`scan_events` logs every scan including misses.** Misses are the majority and
-are the point — they're what proves an item is clear. Append-only: no update or
-delete policy for anyone.
+are the point. Append-only.
 
-## Design constraints
+## Manual dashboard steps
 
-From the environment, not from taste:
-
-- **Read at arm's length** — the verdict and VALPN use display-scale type
-- **One-handed, in gloves** — nothing interactive under 56px; bottom nav, not top
-- **Bad overhead light** — dark surfaces, one saturated accent, AAA contrast
-- **Not colour alone** — active state is colour *plus* a bar; tags carry text
-- **Zoom is not locked** — someone will need to enlarge a note
+1. Supabase → Settings → API → **Exposed schemas** → add `floor`. Nothing works
+   without it; the app detects this specific failure and names the fix.
+2. Supabase → Authentication → **Redirect URLs** → `https://vistaauction.vercel.app/missings`
 
 ## Open question
 
-How `floor.missings` gets populated. The `sheet_tab` / `sheet_row` columns imply
-rows originate from the Apps Script day-tabs, so this is designed for the Apps
-Script pushing to Supabase with `service_role` (which bypasses RLS — no policy
-needed). That direction has not been confirmed, and it shapes step 3.
+How `floor.missings` gets populated. `sheet_tab` / `sheet_row` imply rows
+originate from the Apps Script day-tabs, so this is designed for the Apps Script
+pushing to Supabase with `service_role` (bypasses RLS, no policy needed). That
+direction is still unconfirmed.

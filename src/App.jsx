@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -32,7 +32,26 @@ import PickupsLogin from './pages/PickupsLogin';
 import Carts from './pages/Carts';
 import Labels from './pages/Labels';
 import PrintStation from './pages/PrintStation';
-import Missings from './pages/Missings';
+
+// Lazy: the floor app pulls in a barcode decoder and its own dark theme, none of
+// which a careers-site visitor should download. Vite splits it into its own
+// chunk, and the ZXing fallback is split again inside that.
+const Missings = lazy(() => import('./pages/Missings'));
+
+// Suspense fallback for the lazily-loaded floor app. Matches its dark theme so
+// the chunk load does not flash the light careers background at a warehouse
+// worker who has their screen brightness down.
+const LazyMissings = (props) => (
+  <Suspense
+    fallback={
+      <div className="fl-scope flex min-h-screen items-center justify-center">
+        <p className="font-fl-ui text-sm uppercase tracking-[0.2em] text-slate-600">Loading…</p>
+      </div>
+    }
+  >
+    <Missings {...props} />
+  </Suspense>
+);
 
 // Helper component to handle conditional AI rendering
 const ConditionalAIAssistant = () => {
@@ -93,9 +112,9 @@ function App() {
               {/* Missing-items floor app. Scan is the landing view because it is
                   where staff are 90% of the time. Auth and the floor.staff
                   allowlist are enforced inside the page itself. */}
-              <Route path="/missings" element={<Missings view="scan" />} />
-              <Route path="/missings/list" element={<Missings view="list" />} />
-              <Route path="/missings/lookup" element={<Missings view="lookup" />} />
+              <Route path="/missings" element={<LazyMissings view="scan" />} />
+              <Route path="/missings/list" element={<LazyMissings view="list" />} />
+              <Route path="/missings/lookup" element={<LazyMissings view="lookup" />} />
             </Routes>
             <SystemAlert />
             <ConditionalNavbar />

@@ -1,0 +1,32 @@
+{
+  "name": "Vista Missing Items",
+  "short_name": "Missings",
+  "description": "Scan any item at the Sardis facility and find out immediately whether it is on the missing list.",
+  "start_url": "/missings",
+  "scope": "/missings/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0E14",
+  "theme_color": "#0A0E14",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open list",
+      "short_name": "List",
+      "url": "/missings/list"
+    },
+    {
+      "name": "Type a VALPN",
+      "short_name": "Type",
+      "url": "/missings/lookup"
+    }
+  ]
+}
